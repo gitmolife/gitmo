@@ -3260,11 +3260,6 @@ decompress-response@^6.0.0:
   dependencies:
     mimic-response "^3.1.0"
 
-deep-entries@3.1.0:
-  version "3.1.0"
-  resolved "https://registry.yarnpkg.com/deep-entries/-/deep-entries-3.1.0.tgz#e456aa791d01b045641c75e41e170c0c95a9d472"
-  integrity sha512-pCpcCqx/hclnT2e4mMlM9geG8XIaxWN+yNKJHHwu1FZyYKErKU/fPztYYSk2HwnqRPf55cDEXraV6MLv8I5FrA==
-
 deep-eql@^3.0.1:
   version "3.0.1"
   resolved "https://registry.yarnpkg.com/deep-eql/-/deep-eql-3.0.1.tgz#dfc9404400ad1c8fe023e7da1df1c147c4b444df"
@@ -5010,6 +5005,11 @@ icss-utils@^5.0.0:
   version "5.0.0"
   resolved "https://registry.yarnpkg.com/icss-utils/-/icss-utils-5.0.0.tgz#03ed56c3accd32f9caaf1752ebf64ef12347bb84"
   integrity sha512-aF2Cf/CkEZrI/vsu5WI/I+akFgdbwQHVE9YRZxATrhH4PVIe6a3BIjwjEcW+z+jP/hNh+YvM3lAAn1wJQ6opSg==
+
+idb-keyval@5.0.1:
+  version "5.0.1"
+  resolved "https://registry.yarnpkg.com/idb-keyval/-/idb-keyval-5.0.1.tgz#d3913debfb58edee299da5cf2dded6c2670c05ef"
+  integrity sha512-bfi+Znn6oSPPgGcVUj2tYMIOQ5TD6V1qj50SdKQecGZx9lqUATcQ7ArHOt9sPcEhACoYe//yr2igmS6SMc59SA==
 
 ieee754@1.1.13, ieee754@^1.1.13, ieee754@^1.1.4:
   version "1.1.13"
@@ -10874,10 +10874,10 @@ webpack-sources@^2.1.1:
     source-list-map "^2.0.1"
     source-map "^0.6.1"
 
-webpack@5.21.0:
-  version "5.21.0"
-  resolved "https://registry.yarnpkg.com/webpack/-/webpack-5.21.0.tgz#0dac2d97a2b274f2bd14c043d60cba11e0eb2198"
-  integrity sha512-DoFw0eAPbh2DXyBn0nP5lMnytPXlkLsdXOpBQyibf+1OCnThxUVPzMbth/+JS97HN0mfl7OhLmEKLw+kg0jmkg==
+webpack@5.21.1:
+  version "5.21.1"
+  resolved "https://registry.yarnpkg.com/webpack/-/webpack-5.21.1.tgz#a5a13965187deeaa674a0ecea219b61060a2c38f"
+  integrity sha512-H/fjQiDETEZDKoZm/LhvDBxOIKf9rfOdqb2pKTHRvBFMIRtwAwYlPCgBd0gc5xiDG5DqkxAiFZgAF/4H41wMuQ==
   dependencies:
     "@types/eslint-scope" "^3.7.0"
     "@types/estree" "^0.0.46"
