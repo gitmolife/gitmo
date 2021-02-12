@@ -6,9 +6,10 @@
 	</div>
 </div>
 <div class="kkjnbbplepmiyuadieoenjgutgcmtsvu" v-show="hide == false">
-	<i v-show="playing == false"><Fa :icon="faEyeSlash" @click="hide = true" /></i>
+	<i class="castr_hide" v-show="playing == false"><Fa :icon="faEyeSlash" @click="hide = true" /></i>
+	<i class="castr_mute" @click="muteToggle()"><Fa v-show="muted == true" :icon="faVolumeMute" /><Fa v-show="muted == false" :icon="faVolumeUp" /></i>
 	<div class="video_container">
-		<video ref="VideoCast" class="video-js vjs-default-skin vjs-big-play-centered vjs-fluid" :title="video.name"></video>
+		<video ref="VideoCast" class="video-js vjs-default-skin vjs-big-play-centered" :title="video.name"></video>
 	</div>
 </div>
 </template>
@@ -17,6 +18,7 @@
 import videojs from 'video.js'
 import 'video.js/dist/video-js.css'
 import { defineComponent } from 'vue';
+import { faVolumeMute, faVolumeDown, faVolumeUp } from '@fortawesome/free-solid-svg-icons';
 import { faExclamationTriangle, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import * as os from '@/os';
 
@@ -32,14 +34,21 @@ export default defineComponent({
 		return {
 			hide: true,
 			playing: false,
+			muted: false,
+			volume: 0.8,
 			player: null,
+			faVolumeMute,
+			faVolumeDown,
+			faVolumeUp,
 			faExclamationTriangle,
 			faEyeSlash,
 			videoOptions: {
+				/*fluid: true,*/
 				autoplay: false,
 				controls: true,
 				preload: "auto",
-				playbackRates: [0.5, 0.7, 1.0, 1.5, 2.0, 2.5],
+				height: 350;
+				playbackRates: [0.5, 0.7, 1.0, 1.5, 2.0, 2.5, 3.1],
 				//poster: this.$props.video.thumbnailUrl, // FIXME: Generate video thumbnails..
 				poster: '/assets/caster-play.jpg'
 				sources: [{
@@ -54,7 +63,7 @@ export default defineComponent({
 	},
 	mounted() {
 		let vm = this;
-		vm.player = videojs(vm.$refs.VideoCast, vm.videoOptions, function onPlayerReady() {
+		this.player = videojs(vm.$refs.VideoCast, vm.videoOptions, function onPlayerReady() {
 				//console.log('onPlayerReady', this);
 				this.on("ended", function() {
 					vm.playing = false;
@@ -68,12 +77,52 @@ export default defineComponent({
 				this.on("waiting", function() {
 					vm.playing = false;
 				});
+				this.on("volumechange", function onCheck() {
+					vm.checkVol();
+				});
 		});
 	},
 	beforeDestroy() {
 		if (this.player) {
 				this.player.dispose();
 		}
+	},
+	methods: {
+		muted: function() {
+			this.checkVol();
+		},
+		muteToggle: function() {
+			if (this.muted == false && this.player.volume() > 0) {
+				this.volume = this.player.volume();
+				this.muted = true;
+				this.player.volume(0);
+			} else {
+				this.muted = false;
+				this.player.muted(false);
+				this.player.volume(this.volume);
+			}
+		},
+		checkVol: function() {
+			if (this.player.volume() > 0.01 && !this.player.muted()) {
+				this.volume = this.player.volume();
+				this.muted = false;
+			} else {
+				this.muted = true;
+			}
+		},
+		seek: function(secs) {
+		  let time = this.player.currentTime() + secs;
+		  if (time < 0) {
+		    time = 0;
+		  }
+		  this.player.currentTime(time);
+		},
+		forward: function() {
+		  this.seek(10);
+		},
+		rewind: function() {
+		  this.seek(-10);
+		},
 	}
 });
 </script>
@@ -96,6 +145,18 @@ export default defineComponent({
 		top: 12px;
 		right: 12px;
 		z-index: 120;
+	}
+
+	> .castr_hide {
+		right: 12px;
+		top: 44px;
+		opacity: 0.36;
+	}
+
+	> .castr_mute {
+		right: 12px;
+		top: 12px;
+		opacity: 0.10;
 	}
 
 	> a {
@@ -130,12 +191,34 @@ export default defineComponent({
 	}
 }
 
+.castr_hide {
+	opacity: 0.64 !important;
+}
+.castr_mute:hover {
+	opacity: 0.62 !important;
+}
+
 .video-js {
-  position: relative !important;
-  width: 100% !important;
-	height: -webkit-fill-available !important;
+  /*position: absolute !important;*/
+  /*width: 100% !important;*/
+	/*height: 350px !important;
+	object-fit: cover !important;*/
+	background-image: url('/assets/caster-play.jpg') !important;
+	background-position: center !important;
+	position: relative !important;
+	width: 100% !important;
+	height: 350px !important;
+	padding-top: unset !important;
+}
+video[VideoCast]{
+	height: 350px !important;
+}
+video[poster]{
+  object-fit: cover !important;
 }
 .vjs-poster {
+	background-size: cover;
+	background-position: inherit;
   position: absolute !important;
   left: 0;
   right: 0;
