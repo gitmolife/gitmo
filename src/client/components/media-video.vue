@@ -198,20 +198,19 @@ export default defineComponent({
 	opacity: 0.62 !important;
 }
 
+.video_container {
+	height: 100%;
+}
 .video-js {
-  /*position: absolute !important;*/
-  /*width: 100% !important;*/
-	/*height: 350px !important;
-	object-fit: cover !important;*/
 	background-image: url('/assets/caster-play.jpg') !important;
 	background-position: center !important;
-	position: relative !important;
+	position: absolute !important;
 	width: 100% !important;
-	height: 350px !important;
+	height: -webkit-fill-available !important;
 	padding-top: unset !important;
 }
 video[VideoCast]{
-	height: 350px !important;
+	/*height: 100%;*/
 }
 video[poster]{
   object-fit: cover !important;
