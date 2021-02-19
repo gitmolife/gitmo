@@ -101,15 +101,15 @@ function getDir {
 
 # Gets the platform we are running on.
 function getPlt {
-    if [ "$(uname)" == "Darwin" ]; then
-        echo 1
-    elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
-        echo 0
-    elif [ "$(expr substr $(uname -s) 1 10)" == "MINGW32_NT" ]; then
-        echo 1
-    elif [ "$(expr substr $(uname -s) 1 10)" == "MINGW64_NT" ]; then
-        echo 1
-    fi
+  if [ "$(uname)" == "Darwin" ]; then
+      echo 1
+  elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+      echo 0
+  elif [ "$(expr substr $(uname -s) 1 10)" == "MINGW32_NT" ]; then
+      echo 1
+  elif [ "$(expr substr $(uname -s) 1 10)" == "MINGW64_NT" ]; then
+      echo 1
+  fi
 }
 
 # Check file exists
@@ -139,64 +139,64 @@ function setup {
   locDir=`dirname "$scrPth"`
   locPth="$locDir/$scrOffset"
   locDir=`realpath "$locPth"`
-    # Directory to use
-    srvDir="${locDir}/"
+  # Directory to use
+  srvDir="${locDir}/"
 
-    # Mode to run daemon as..
-    if [[ $1 = '' ]]; then
-        MODE=`getEnv`
-    else
-        MODE=$1
-    fi
+  # Mode to run daemon as..
+  if [[ $1 = '' ]]; then
+    MODE=`getEnv`
+  else
+    MODE=$1
+  fi
 
-    # User to run application as
-    user=`getUsr`
-    if [[ $user = '' ]]; then
-        user="gitmo"
-    fi
+  # User to run application as
+  user=`getUsr`
+  if [[ $user = '' ]]; then
+    user="gitmo"
+  fi
 
-    # Directory to run application from
-    xDIR=`getDir`
+  # Directory to run application from
+  xDIR=`getDir`
   # Production directory path
   prdDir="${xDIR}/${user}/${scrDir}"
   # Staging directory path
   stgDir="${xDIR}/${user}/${scrDir}"
   # Development directory path
   devDir="${xDIR}/${user}/${scrDir}"
-    # Local directory path
+  # Local directory path
   lclDir="${xDIR}/${user}/${scrDir}"
 
-    if ([ "$MODE" == "prod" ] | [ "$MODE" == "production" ]); then
-        srvDir=$prdDir
-        argCmd=$argPrd
-    elif ([ "$MODE" == "dev" ] | [ "$MODE" == "development" ]); then
-        srvDir=$devDir
-        argCmd=$argDev
-    elif ([ "$MODE" == "stage" ] | [ "$MODE" == "staging" ]); then
-        srvDir=$stgDir
-        argCmd=$argDev
-    elif ([ "$MODE" == "local" ] | [ "$MODE" == "local" ]); then
-        srvDir=$lclDir
-        argCmd=$argDev
-    elif [ -d $srvDir ]; then
-        msgc "WARNING! Directory not found.. ${dark_red}Falling back to local detection!" $red
-        argCmd=$argDev
-    elif [ -d $stgDir ]; then
-        msgc "WARNING! Directory not found.. ${dark_red}Falling back to staging!" $red
-        srvDir=$stgDir
-        argCmd=$argDev
-    else
-        msgc "ERROR! Directory lock location failed.. ${dark_red}Aborting Setup!" $red
-        msgc "> ${cyan}Found Environment: ${light_cyan}'$MODE'" $red
-        msgc "> ${cyan}Found User: ${light_cyan}'$user'" $red
-        msgc "> ${cyan}Found local paths str.. ${light_cyan}'$locPth'" $red
-        msgc "> ${cyan}Found local directory.. ${light_cyan}'$locDir'" $red
-        msgc "> ${cyan}Found source directory: ${light_cyan}'$scrDir'" $red
-        msgc "> ${cyan}Found server directory: ${light_cyan}'$srvDir'" $red
-        msgc "- Setup Check Completed with Errors -" $yellow
-        exit 1
-    fi
-    srcCmd="$argCmd $srcCmd"
+  if ([ "$MODE" == "prod" ] | [ "$MODE" == "production" ]); then
+    srvDir=$prdDir
+    argCmd=$argPrd
+  elif ([ "$MODE" == "dev" ] | [ "$MODE" == "development" ]); then
+    srvDir=$devDir
+    argCmd=$argDev
+  elif ([ "$MODE" == "stage" ] | [ "$MODE" == "staging" ]); then
+    srvDir=$stgDir
+    argCmd=$argDev
+  elif ([ "$MODE" == "local" ] | [ "$MODE" == "local" ]); then
+    srvDir=$lclDir
+    argCmd=$argDev
+  elif [ -d $srvDir ]; then
+    msgc "WARNING! Directory not found.. ${dark_red}Falling back to local detection!" $red
+    argCmd=$argDev
+  elif [ -d $stgDir ]; then
+    msgc "WARNING! Directory not found.. ${dark_red}Falling back to staging!" $red
+    srvDir=$stgDir
+    argCmd=$argDev
+  else
+    msgc "ERROR! Directory lock location failed.. ${dark_red}Aborting Setup!" $red
+    msgc "> ${cyan}Found Environment: ${light_cyan}'$MODE'" $red
+    msgc "> ${cyan}Found User: ${light_cyan}'$user'" $red
+    msgc "> ${cyan}Found local paths str.. ${light_cyan}'$locPth'" $red
+    msgc "> ${cyan}Found local directory.. ${light_cyan}'$locDir'" $red
+    msgc "> ${cyan}Found source directory: ${light_cyan}'$scrDir'" $red
+    msgc "> ${cyan}Found server directory: ${light_cyan}'$srvDir'" $red
+    msgc "- Setup Check Completed with Errors -" $yellow
+    exit 1
+  fi
+  srcCmd="$argCmd $srcCmd"
 }
 
 #############################
@@ -211,18 +211,18 @@ if [ -z "$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')" ]; then
   sleep 1
   if [ $user == $curUsr ]; then
     tmux -S $tmuxFile new-session -s $tmuxName -d "cd $srvDir; $srcCmd"
-    elif [ `getPlt` == 1 ]; then
-        msgc "Booting misskey as local..." $green
-        sleep 1
-      eval "cd ${srvDir} && $argCmd ${srcCmd}"
-        msgc "\nExited." $dark_red
-        exit 0
+  elif [ `getPlt` == 1 ]; then
+    msgc "Booting misskey as local..." $green
+    sleep 1
+    eval "cd ${srvDir} && $argCmd ${srcCmd}"
+    msgc "\nExited." $dark_red
+    exit 0
   else
     sudo -u $user tmux -S $tmuxFile new-session -s $tmuxName -d "cd $srvDir; $srcCmd"
   fi
   sleep 1
   if [ -n "$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')" ]; then
-        stat=$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')
+    stat=$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')
     msgc "Gitmo Started! ${stat}" $green
   else
     msgc "Gitmo Start Fail!" $dark_red
@@ -276,7 +276,7 @@ setup $2
 # Running Instance Check
 if [ -n "$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')" ]; then
   msgc "> ${dark_green}Run Currently Active for ${gold}'$srcCmd'" $magenta
-    msgc ">> ${yellow}Please stop the instance first." $magenta
+  msgc ">> ${yellow}Please stop the instance first." $magenta
   exit 0
 else
   msgc "> ${yellow}Run Currently Not Active for ${gold}'$srcCmd'" $magenta
@@ -318,7 +318,7 @@ if [ -n "$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')" ]; then
   msgc "> ${dark_green}Found Currently Active Run for ${gold}'$srcCmd'" $magenta
 else
   msgc "> ${yellow}Run Currently Not Active for ${gold}'$srcCmd'" $magenta
-    exit 0
+  exit 0
 fi
 
 msgc ">> ${red}Warden Complex Lockdown Initialized.. ${dark_red}<<" $dark_red
@@ -343,7 +343,7 @@ if [ -n "$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')" ]; then
     msgc "Gitmo Daemon Stopped." $gold
 else
     msgc "Gitmo Daemon not running." $red
-        exit 0
+    exit 0
 fi
 
 # Do Update Process..
@@ -374,22 +374,22 @@ sleep 1
 
 # Start New Instance..
 if [ $user == $curUsr ]; then
-    tmux -S $tmuxFile new-session -s $tmuxName -d "cd $srvDir; $srcCmd"
+  tmux -S $tmuxFile new-session -s $tmuxName -d "cd $srvDir; $srcCmd"
 elif [ `getPlt` == 1 ]; then
-    msgc "Booting MissKey-Gitmo as local..." $green
-    sleep 1
-    eval "cd ${srvDir} && $argCmd ${srcCmd}"
-    msgc "\nExited." $dark_red
-    exit 0
+  msgc "Booting MissKey-Gitmo as local..." $green
+  sleep 1
+  eval "cd ${srvDir} && $argCmd ${srcCmd}"
+  msgc "\nExited." $dark_red
+  exit 0
 else
-    sudo -u $user tmux -S $tmuxFile new-session -s $tmuxName -d "cd $srvDir; $srcCmd"
+  sudo -u $user tmux -S $tmuxFile new-session -s $tmuxName -d "cd $srvDir; $srcCmd"
 fi
 sleep 1
 if [ -n "$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')" ]; then
-    stat=$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')
-    msgc "Gitmo Started! ${stat}" $green
+  stat=$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')
+  msgc "Gitmo Started! ${stat}" $green
 else
-    msgc "Gitmo Start Fail!" $dark_red
+  msgc "Gitmo Start Fail!" $dark_red
 fi
 
 sleep 1
@@ -416,7 +416,7 @@ setup $2
 msgc "> ${cyan}Using Environment: ${light_cyan}'$MODE'" $magenta
 msgc "> ${cyan}Using Local User:  ${light_cyan}'$user'" $magenta
 if [ $user != $curUsr ]; then
-    msgc ">> ${gold}Current User ${yellow}'$curUsr' ${gold}does not match User ${yellow}'$user' ${gold}from .env ${dark_green}- ${green}OK.." $magenta
+  msgc ">> ${gold}Current User ${yellow}'$curUsr' ${gold}does not match User ${yellow}'$user' ${gold}from .env ${dark_green}- ${green}OK.." $magenta
 fi
 msgc "> ${cyan}Found local paths str.. ${light_cyan}'$locPth'" $magenta
 msgc "> ${cyan}Found local directory.. ${light_cyan}'$locDir'" $magenta
