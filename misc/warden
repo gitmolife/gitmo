@@ -1,0 +1,450 @@
+#!/bin/bash
+
+# Application Name
+projName="gitmo"
+
+# Script to execute
+srcScr="yarn.lock"
+# Script arguments
+argDev="NODE_ENV=development"
+argPrd="NODE_ENV=production"
+argCmd=""
+# Script Cmd to execute
+srcCmd="npm start"
+
+# Tmux instance variables
+tmuxFile="/tmp/worker"
+tmuxName="mk_gitmo"
+
+checkCmd="git checkout gitmo-develop"
+fetchCmd="git pull origin gitmo-develop"
+yarncCmd="yarn clean"
+yarniCmd="yarn install"
+buildCmd="yarn build"
+migraCmd="yarn migrate"
+
+
+#############################
+#DO NOT EDIT BELOW THIS LINE#
+#############################
+
+# Fancy Console Colors
+nc='\033[0m'
+black='\033[0;30m'
+dark_gray='\033[1;30m'
+red='\033[1;31m'
+dark_red='\033[0;31m'
+green='\033[1;32m'
+dark_green='\033[0;32m'
+gold='\033[0;33m'
+yellow='\033[1;33m'
+blue='\033[0;34m'
+light_blue='\033[1;34m'
+purple='\033[0;35m'
+magenta='\033[1;35m'
+cyan='\033[0;36m'
+light_cyan='\033[1;36m'
+gray='\033[0;37m'
+white='\033[1;37m'
+
+#############################
+### Functions and Methods ###
+#############################
+
+function send {
+  tmux -S $tmuxFile send-keys -t $tmuxName $1
+}
+
+# Console message functions
+function msg {
+  echo -e "${1}${nc}"
+}
+function msgc {
+  echo -e "${2}${1}${nc}"
+}
+
+# Get application environment
+function getEnv {
+  envf="${locDir}/.config/.env"
+  if [ -f $envf ]; then
+    ENV=$(sed -n "/APP_ENV=/p" $envf)
+    arrIN=(${ENV//=/ })
+    echo ${arrIN[1]}
+  else
+    echo ''
+  fi
+}
+
+# Get application user
+function getUsr {
+  envf="${locDir}/.config/.env"
+  if [ -f $envf ]; then
+    ENV=$(sed -n "/APP_USR=/p" $envf)
+    arrIN=(${ENV//=/ })
+    echo ${arrIN[1]}
+  else
+    echo ''
+  fi
+}
+
+# Get application root directory
+function getDir {
+  envf="${locDir}/.config/.env"
+  if [ -f $envf ]; then
+    ENV=$(sed -n "/APP_DIR=/p" $envf)
+    arrIN=(${ENV//=/ })
+    echo ${arrIN[1]}
+  else
+    echo ''
+  fi
+}
+
+# Gets the platform we are running on.
+function getPlt {
+  if [ "$(uname)" == "Darwin" ]; then
+      echo 1
+  elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+      echo 0
+  elif [ "$(expr substr $(uname -s) 1 10)" == "MINGW32_NT" ]; then
+      echo 1
+  elif [ "$(expr substr $(uname -s) 1 10)" == "MINGW64_NT" ]; then
+      echo 1
+  fi
+}
+
+# Check file exists
+function fileExist {
+  if [ -f "$1" ]; then
+    echo 1
+  else
+    echo 0
+  fi
+}
+
+#############################
+#############################
+
+# Load variables..
+function setup {
+  SRC_PTH=`realpath "$BASH_SOURCE"`
+  SRC_DIR=`dirname "$SRC_PTH"`
+  curUsr=$(whoami)
+
+  # Application directory paths
+  scrDir="${projName}/"
+  scrOffset="../"
+
+  # Setup Paths
+  scrPth=`realpath "$BASH_SOURCE"`
+  locDir=`dirname "$scrPth"`
+  locPth="$locDir/$scrOffset"
+  locDir=`realpath "$locPth"`
+  # Directory to use
+  srvDir="${locDir}/"
+
+  # Mode to run daemon as..
+  if [[ $1 = '' ]]; then
+    MODE=`getEnv`
+  else
+    MODE=$1
+  fi
+
+  # User to run application as
+  user=`getUsr`
+  if [[ $user = '' ]]; then
+    user="gitmo"
+  fi
+
+  # Directory to run application from
+  xDIR=`getDir`
+  # Production directory path
+  prdDir="${xDIR}/${user}/${scrDir}"
+  # Staging directory path
+  stgDir="${xDIR}/${user}/${scrDir}"
+  # Development directory path
+  devDir="${xDIR}/${user}/${scrDir}"
+  # Local directory path
+  lclDir="${xDIR}/${user}/${scrDir}"
+
+  if ([ "$MODE" == "prod" ] | [ "$MODE" == "production" ]); then
+    srvDir=$prdDir
+    argCmd=$argPrd
+  elif ([ "$MODE" == "dev" ] | [ "$MODE" == "development" ]); then
+    srvDir=$devDir
+    argCmd=$argDev
+  elif ([ "$MODE" == "stage" ] | [ "$MODE" == "staging" ]); then
+    srvDir=$stgDir
+    argCmd=$argDev
+  elif ([ "$MODE" == "local" ] | [ "$MODE" == "local" ]); then
+    srvDir=$lclDir
+    argCmd=$argDev
+  elif [ -d $srvDir ]; then
+    msgc "WARNING! Directory not found.. ${dark_red}Falling back to local detection!" $red
+    argCmd=$argDev
+  elif [ -d $stgDir ]; then
+    msgc "WARNING! Directory not found.. ${dark_red}Falling back to staging!" $red
+    srvDir=$stgDir
+    argCmd=$argDev
+  else
+    msgc "ERROR! Directory lock location failed.. ${dark_red}Aborting Setup!" $red
+    msgc "> ${cyan}Found Environment: ${light_cyan}'$MODE'" $red
+    msgc "> ${cyan}Found User: ${light_cyan}'$user'" $red
+    msgc "> ${cyan}Found local paths str.. ${light_cyan}'$locPth'" $red
+    msgc "> ${cyan}Found local directory.. ${light_cyan}'$locDir'" $red
+    msgc "> ${cyan}Found source directory: ${light_cyan}'$scrDir'" $red
+    msgc "> ${cyan}Found server directory: ${light_cyan}'$srvDir'" $red
+    msgc "- Setup Check Completed with Errors -" $yellow
+    exit 1
+  fi
+  srcCmd="$argCmd $srcCmd"
+}
+
+#############################
+## Script Main Init Switch ##
+#############################
+case "$1" in
+
+start)
+if [ -z "$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')" ]; then
+  setup $2
+  msgc "Starting misskey daemon.." $dark_green
+  sleep 1
+  if [ $user == $curUsr ]; then
+    tmux -S $tmuxFile new-session -s $tmuxName -d "cd $srvDir; $srcCmd"
+  elif [ `getPlt` == 1 ]; then
+    msgc "Booting misskey as local..." $green
+    sleep 1
+    eval "cd ${srvDir} && $argCmd ${srcCmd}"
+    msgc "\nExited." $dark_red
+    exit 0
+  else
+    sudo -u $user tmux -S $tmuxFile new-session -s $tmuxName -d "cd $srvDir; $srcCmd"
+  fi
+  sleep 1
+  if [ -n "$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')" ]; then
+    stat=$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')
+    msgc "Gitmo Started! ${stat}" $green
+  else
+    msgc "Gitmo Start Fail!" $dark_red
+  fi
+else
+  msgc "Gitmo Start Aborted! ${red}Already Running." $yellow
+fi
+;;
+
+stop)
+if [ -n "$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')" ]; then
+    setup $2
+    if [ $user == $curUsr ]; then
+      stat=$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')
+    else
+      stat=$(sudo -u $user ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')
+    fi
+    msgc "Gitmo Daemon Stopping.. $stat" $yellow && sleep 1
+    if [ $user == $curUsr ]; then
+      ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}' | xargs kill
+    else
+      sudo -u $user ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}' | sudo -u $user xargs kill
+    fi
+    sleep 1
+    msgc "Gitmo Daemon Stopped." $gold
+else
+    msgc "Gitmo Daemon not running." $red
+fi
+;;
+
+attach)
+if [ -n "$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')" ]; then
+  setup $2
+  msgc "Attaching..." $gold
+  msgc "Press CTRL-b then d to detach" $white
+  sleep 2
+  if [ $user == $curUsr ]; then
+    tmux -S $tmuxFile attach -t $tmuxName
+  else
+    sudo -u $user tmux -S $tmuxFile attach -t $tmuxName
+  fi
+else
+  msgc "Gitmo Daemon not running." $red
+fi
+;;
+
+upgrade)
+# Grab the setup data
+setup $2
+
+# Running Instance Check
+if [ -n "$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')" ]; then
+  msgc "> ${dark_green}Run Currently Active for ${gold}'$srcCmd'" $magenta
+  msgc ">> ${yellow}Please stop the instance first." $magenta
+  exit 0
+else
+  msgc "> ${yellow}Run Currently Not Active for ${gold}'$srcCmd'" $magenta
+fi
+
+# Do Update Process..
+msgc ">>> ${red}Warden will now update Gitmo ${dark_red}<<<" $dark_red
+sleep 1
+cd ${srvDir}
+$checkCmd
+msgc "Fetching Latest Data.." $dark_green
+$fetchCmd
+msgc "Checkout Complete! Cleaning Cells.." $dark_green
+sleep 1
+$yarncCmd
+msgc "Complex Cleansed! Rebuilding Complex Cells.." $dark_green
+sleep 1
+$yarniCmd
+sleep 1
+# Rebuild..
+eval "$argCmd $buildCmd"
+msgc "Build Complete! Migrating Inmate Data.." $dark_green
+sleep 1
+$migraCmd
+sleep 1
+
+msgc "Gitmo Upgrade Complete!" $green
+sleep 1
+msgc ">>> ${green}Warden has completed upgrade to Gitmo ${gold}<<<" $gold
+msgc "You may now start MissKey-Gitmo" $dark_green
+;;
+
+upgrade-live)
+# Grab the setup data
+setup $2
+
+# Running Instance Check
+if [ -n "$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')" ]; then
+  msgc "> ${dark_green}Found Currently Active Run for ${gold}'$srcCmd'" $magenta
+else
+  msgc "> ${yellow}Run Currently Not Active for ${gold}'$srcCmd'" $magenta
+  exit 0
+fi
+
+msgc ">> ${red}Warden Complex Lockdown Initialized.. ${dark_red}<<" $dark_red
+msgc ">> ${red}This will Stop the Instance!  ${yellow}You have 5 seconds to abort!! ${dark_red}<<" $dark_red
+sleep 5
+msgc "..." $white
+
+# Stop Running Instance..
+if [ -n "$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')" ]; then
+    if [ $user == $curUsr ]; then
+      stat=$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')
+    else
+      stat=$(sudo -u $user ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')
+    fi
+    msgc "Gitmo Stopping.. $stat" $yellow && sleep 1
+    if [ $user == $curUsr ]; then
+      ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}' | xargs kill
+    else
+      sudo -u $user ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}' | sudo -u $user xargs kill
+    fi
+    sleep 1
+    msgc "Gitmo Daemon Stopped." $gold
+else
+    msgc "Gitmo Daemon not running." $red
+    exit 0
+fi
+
+# Do Update Process..
+msgc ">>> ${red}Warden will now update Gitmo ${dark_red}<<<" $dark_red
+sleep 1
+cd ${srvDir}
+$checkCmd
+msgc "Fetching Latest Complex Data.." $dark_green
+$fetchCmd
+msgc "Checkout Complete! Cleaning Cells.." $dark_green
+sleep 1
+$yarncCmd
+msgc "Complex Cleansed! Rebuilding Complex Cells.." $dark_green
+sleep 1
+$yarniCmd
+sleep 1
+# Rebuild..
+eval "$argCmd $buildCmd"
+msgc "Build Complete! Migrating Inmate Data.." $dark_green
+sleep 1
+$migraCmd
+sleep 1
+
+msgc "Gitmo Upgrade Complete!" $green
+sleep 1
+msgc "Starting Gitmo daemon.." $dark_green
+sleep 1
+
+# Start New Instance..
+if [ $user == $curUsr ]; then
+  tmux -S $tmuxFile new-session -s $tmuxName -d "cd $srvDir; $srcCmd"
+elif [ `getPlt` == 1 ]; then
+  msgc "Booting MissKey-Gitmo as local..." $green
+  sleep 1
+  eval "cd ${srvDir} && $argCmd ${srcCmd}"
+  msgc "\nExited." $dark_red
+  exit 0
+else
+  sudo -u $user tmux -S $tmuxFile new-session -s $tmuxName -d "cd $srvDir; $srcCmd"
+fi
+sleep 1
+if [ -n "$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')" ]; then
+  stat=$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')
+  msgc "Gitmo Started! ${stat}" $green
+else
+  msgc "Gitmo Start Fail!" $dark_red
+fi
+
+sleep 1
+msgc ">>> ${green}Warden has completed upgrade to Gitmo ${gold}<<<" $gold
+;;
+
+fixpermissions)
+if [[ $EUID -ne 0 ]] ; then
+  echo -e "${dark_red}Please run this as root or use sudo${nc}" 2>&1
+  exit 1
+else
+  setup $2
+  chown -R $user:$user $srvDir
+  chown $user:$user $tmuxFile
+  chmod -R g+rw $srvDir
+  sleep 1
+  msgc "Gitmo Permissions update complete." $green
+fi
+;;
+
+debug)
+msgc "--- Warden Debug Check ---" $gold
+setup $2
+msgc "> ${cyan}Using Environment: ${light_cyan}'$MODE'" $magenta
+msgc "> ${cyan}Using Local User:  ${light_cyan}'$user'" $magenta
+if [ $user != $curUsr ]; then
+  msgc ">> ${gold}Current User ${yellow}'$curUsr' ${gold}does not match User ${yellow}'$user' ${gold}from .env ${dark_green}- ${green}OK.." $magenta
+fi
+msgc "> ${cyan}Found local paths str.. ${light_cyan}'$locPth'" $magenta
+msgc "> ${cyan}Found local directory.. ${light_cyan}'$locDir'" $magenta
+msgc "> ${cyan}Using app directory.... ${light_cyan}'$scrDir'" $magenta
+msgc "> ${cyan}Using server directory: ${light_cyan}'$srvDir'" $magenta
+if [ -d $srvDir ]; then
+  msg "${magenta}>> ${dark_green}Directory Check Passed!"
+else
+  msg "${magenta}>> ${red}Directory Check Failed!"
+fi
+msgc "> ${cyan}Tested Script: ${light_cyan}'$srcScr'" $magenta
+msgc "> ${cyan}Executed Path: ${light_cyan}'$srvDir$srcScr'" $magenta
+msgc "> ${cyan}Executed Cmds: ${light_cyan}'$srcCmd'" $magenta
+if [ $(fileExist $srvDir$srcScr) == 1 ]; then
+  msg "${magenta}>> ${dark_green}File Check Passed!"
+else
+  msg "${magenta}>> ${red}File Check Failed!"
+fi
+if [ -n "$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')" ]; then
+  msgc "> ${dark_green}Run Currently Active for ${gold}'$srcCmd'" $magenta
+else
+  msgc "> ${yellow}Run Currently NOT Active for ${gold}'$srcCmd'" $magenta
+fi
+msgc "- Debug Check Complete -" $green
+;;
+
+*)
+# Default response.
+msg "${green}Command Arguments: ${cyan}start,stop,attach,fixpermissions,debug,upgrade,upgrade-live"
+;;
+esac
