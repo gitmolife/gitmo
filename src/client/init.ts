@@ -56,6 +56,7 @@ import { defaultStore, ColdDeviceStorage } from '@/store';
 import { fetchInstance, instance } from '@/instance';
 import { makeHotkey } from './scripts/hotkey';
 import { search } from './scripts/search';
+import { isMobile } from '@/scripts/is-mobile';
 import { getThemes } from './theme-store';
 import { initializeSw } from './scripts/initialize-sw';
 import { reloadChannel } from '@/scripts/unison-reload';
