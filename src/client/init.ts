@@ -49,7 +49,7 @@ import { router } from '@/router';
 import { applyTheme } from '@/scripts/theme';
 import { isDeviceDarkmode } from '@/scripts/is-device-darkmode';
 import { i18n } from '@/i18n';
-import { stream, isMobile, dialog, post } from '@/os';
+import { stream, dialog, post } from '@/os';
 import * as sound from '@/scripts/sound';
 import { $i, refreshAccount, login, updateAccount, signout } from '@/account';
 import { defaultStore, ColdDeviceStorage } from '@/store';
@@ -58,6 +58,7 @@ import { makeHotkey } from './scripts/hotkey';
 import { search } from './scripts/search';
 import { getThemes } from './theme-store';
 import { initializeSw } from './scripts/initialize-sw';
+import { reloadChannel } from '@/scripts/unison-reload';
 import Appsignal from "@appsignal/javascript";
 import { errorHandler } from "@appsignal/vue";
 
@@ -106,6 +107,9 @@ if (defaultStore.state.reportError && !_DEV_) {
 
 // タッチデバイスでCSSの:hoverを機能させる
 document.addEventListener('touchend', () => {}, { passive: true });
+
+// 一斉リロード
+reloadChannel.addEventListener('message', () => location.reload());
 
 //#region SEE: https://css-tricks.com/the-trick-to-viewport-units-on-mobile/
 // TODO: いつの日にか消したい
@@ -190,6 +194,7 @@ const app = createApp(await (
 	!$i                               ? import('@/ui/visitor.vue') :
 	ui === 'deck'                     ? import('@/ui/deck.vue') :
 	ui === 'desktop'                  ? import('@/ui/desktop.vue') :
+	ui === 'chat'                     ? import('@/ui/chat/index.vue') :
 	import('@/ui/default.vue')
 ).then(x => x.default));
 
