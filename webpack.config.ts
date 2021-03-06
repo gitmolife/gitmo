@@ -6,6 +6,8 @@ import * as fs from 'fs';
 import * as webpack from 'webpack';
 const { VueLoaderPlugin } = require('vue-loader');
 
+require('dotenv').config({path: './.config/.env'});
+
 class WebpackOnBuildPlugin {
 	constructor(readonly callback: (stats: any) => void) {
 	}
@@ -140,6 +142,8 @@ module.exports = {
 			_DATA_TRANSFER_DECK_COLUMN_: JSON.stringify('mk_deck_column'),
 			__VUE_OPTIONS_API__: true,
 			__VUE_PROD_DEVTOOLS__: false,
+			_APPSIGNAL_NAME_: JSON.stringify(process.env.AppSignalName),
+			_APPSIGNAL_KEY_: JSON.stringify(process.env.AppSignalKey),
 		}),
 		new VueLoaderPlugin(),
 		new WebpackOnBuildPlugin((stats: any) => {
