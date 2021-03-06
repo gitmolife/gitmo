@@ -140,6 +140,7 @@ import { checkWordMute } from '@/scripts/check-word-mute';
 import { userPage } from '@/filters/user';
 import * as os from '@/os';
 import { noteActions, noteViewInterruptors } from '@/store';
+import { reactionPicker } from '@/scripts/reaction-picker';
 
 function markRawAll(...xs) {
 	for (const x of xs) {
@@ -523,20 +524,14 @@ export default defineComponent({
 		react(viaKeyboard = false) {
 			pleaseLogin();
 			this.blur();
-			os.popup(import('@/components/emoji-picker.vue'), {
-				src: this.$refs.reactButton,
-				asReactionPicker: true
-			}, {
-				done: reaction => {
-					if (reaction) {
-						os.api('notes/reactions/create', {
-							noteId: this.appearNote.id,
-							reaction: reaction
-						});
-					}
-					this.focus();
-				},
-			}, 'closed');
+			reactionPicker.show(this.$refs.reactButton, reaction => {
+				os.api('notes/reactions/create', {
+					noteId: this.appearNote.id,
+					reaction: reaction
+				});
+			}, () => {
+				this.focus();
+			});
 		},
 
 		reactDirectly(reaction) {
@@ -756,7 +751,13 @@ export default defineComponent({
 			};
 			if (isLink(e.target)) return;
 			if (window.getSelection().toString() !== '') return;
-			os.contextMenu(this.getMenu(), e).then(this.focus);
+
+			if (this.$store.state.useReactionPickerForContextMenu) {
+				e.preventDefault();
+				this.react();
+			} else {
+				os.contextMenu(this.getMenu(), e).then(this.focus);
+			}
 		},
 
 		menu(viaKeyboard = false) {

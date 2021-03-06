@@ -15,16 +15,18 @@ if (localStorage.getItem('vuex') != null) {
 	localStorage.setItem('accounts', JSON.stringify(vuex.device.accounts));
 	localStorage.setItem('miux:themes', JSON.stringify(vuex.device.themes));
 
-	for (const [k, v] of 	Object.entries(vuex.device.userData)) {
-		localStorage.setItem('pizzax::base::' + k, JSON.stringify({
-			widgets: v.widgets
-		}));
-
-		if (v.deck) {
-			localStorage.setItem('pizzax::deck::' + k, JSON.stringify({
-				columns: v.deck.columns,
-				layout: v.deck.layout,
+	if (vuex.device.userData) {
+		for (const [k, v] of 	Object.entries(vuex.device.userData)) {
+			localStorage.setItem('pizzax::base::' + k, JSON.stringify({
+				widgets: v.widgets
 			}));
+
+			if (v.deck) {
+				localStorage.setItem('pizzax::deck::' + k, JSON.stringify({
+					columns: v.deck.columns,
+					layout: v.deck.layout,
+				}));
+			}
 		}
 	}
 
@@ -44,7 +46,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import widgets from '@/widgets';
 import directives from '@/directives';
 import components from '@/components';
-import { version, ui, lang, host, appsignalName, appsignalKey } from '@/config';
+import { version, ui, lang, host } from '@/config';
 import { router } from '@/router';
 import { applyTheme } from '@/scripts/theme';
 import { isDeviceDarkmode } from '@/scripts/is-device-darkmode';
@@ -54,16 +56,19 @@ import * as sound from '@/scripts/sound';
 import { $i, refreshAccount, login, updateAccount, signout } from '@/account';
 import { defaultStore, ColdDeviceStorage } from '@/store';
 import { fetchInstance, instance } from '@/instance';
-import { makeHotkey } from './scripts/hotkey';
-import { search } from './scripts/search';
+import { makeHotkey } from '@/scripts/hotkey';
+import { search } from '@/scripts/search';
 import { isMobile } from '@/scripts/is-mobile';
-import { getThemes } from './theme-store';
-import { initializeSw } from './scripts/initialize-sw';
+import { getThemes } from '@/theme-store';
+import { initializeSw } from '@/scripts/initialize-sw';
 import { reloadChannel } from '@/scripts/unison-reload';
-import Appsignal from "@appsignal/javascript";
-import { errorHandler } from "@appsignal/vue";
+import { reactionPicker } from '@/scripts/reaction-picker';
 
 console.info(`Misskey v${version}`);
+
+// boot.jsのやつを解除
+window.onerror = null;
+window.onunhandledrejection = null;
 
 if (_DEV_) {
 	console.warn('Development mode!!!');
@@ -184,12 +189,6 @@ fetchInstance().then(() => {
 
 stream.init($i);
 
-const appsignal = new Appsignal({
-	active: true,
-	name: appsignalName,
-  key: appsignalKey
-});
-
 const app = createApp(await (
 	window.location.search === '?zen' ? import('@/ui/zen.vue') :
 	!$i                               ? import('@/ui/visitor.vue') :
@@ -202,8 +201,6 @@ const app = createApp(await (
 if (_DEV_) {
 	app.config.performance = true;
 }
-
-app.config.errorHandler = errorHandler(appsignal),
 
 app.config.globalProperties = {
 	$i,
@@ -223,9 +220,22 @@ components(app);
 
 await router.isReady();
 
-//document.body.innerHTML = '<div id="app"></div>';
+const splash = document.getElementById('splash');
+// 念のためnullチェック(HTMLが古い場合があるため(そのうち消す))
+if (splash) splash.addEventListener('transitionend', () => {
+	splash.remove();
+});
 
-app.mount('body');
+const rootEl = document.createElement('div');
+document.body.appendChild(rootEl);
+app.mount(rootEl);
+
+reactionPicker.init();
+
+if (splash) {
+	splash.style.opacity = '0';
+	splash.style.pointerEvents = 'none';
+}
 
 watch(defaultStore.reactiveState.darkMode, (darkMode) => {
 	import('@/scripts/theme').then(({ builtinThemes }) => {

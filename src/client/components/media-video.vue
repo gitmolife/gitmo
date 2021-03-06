@@ -1,29 +1,33 @@
 <template>
-<div class="icozogqfvdetwohsdglrbswgrejoxbdj" v-if="hide == true" v-show="hide == true" @click="hide = false">
+<div class="icozogqfvdetwohsdglrbswgrejoxbdj" v-if="hide" @click="hide = false">
 	<div>
 		<b><Fa :icon="faExclamationTriangle"/> {{ $ts.sensitive }}</b>
 		<span>{{ $ts.clickToShow }}</span>
 	</div>
 </div>
-<div class="kkjnbbplepmiyuadieoenjgutgcmtsvu" v-show="hide == false">
-	<i class="castr_hide" v-show="playing == false"><Fa :icon="faEyeSlash" @click="hide = true" /></i>
-	<i class="castr_mute" @click="muteToggle()"><Fa v-show="muted == true" :icon="faVolumeMute" /><Fa v-show="muted == false" :icon="faVolumeUp" /></i>
-	<div class="video_container">
-		<video ref="VideoCast" class="video-js vjs-default-skin vjs-big-play-centered" :title="video.name"></video>
-	</div>
+<div class="kkjnbbplepmiyuadieoenjgutgcmtsvu" v-else>
+	<video
+		:poster="video.thumbnailUrl"
+		:title="video.name"
+		crossorigin="anonymous"
+		preload="none"
+		controls
+	>
+		<source 
+			:src="video.url" 
+			:type="video.type"
+		>
+	</video>
+	<i><Fa :icon="faEyeSlash" @click="hide = true"/></i>
 </div>
 </template>
 
 <script lang="ts">
-import videojs from 'video.js'
-import 'video.js/dist/video-js.css'
 import { defineComponent } from 'vue';
-import { faVolumeMute, faVolumeDown, faVolumeUp } from '@fortawesome/free-solid-svg-icons';
 import { faExclamationTriangle, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import * as os from '@/os';
 
 export default defineComponent({
-	name: "VideoCaster",
 	props: {
 		video: {
 			type: Object,
@@ -33,97 +37,13 @@ export default defineComponent({
 	data() {
 		return {
 			hide: true,
-			playing: false,
-			muted: false,
-			volume: 0.8,
-			player: null,
-			faVolumeMute,
-			faVolumeDown,
-			faVolumeUp,
 			faExclamationTriangle,
-			faEyeSlash,
-			videoOptions: {
-				/*fluid: true,*/
-				autoplay: false,
-				controls: true,
-				preload: "auto",
-				height: 350;
-				playbackRates: [0.5, 0.7, 1.0, 1.5, 2.0, 2.5, 3.1],
-				//poster: this.$props.video.thumbnailUrl, // FIXME: Generate video thumbnails..
-				poster: '/assets/caster-play.jpg'
-				sources: [{
-					src: this.$props.video.url,
-					type: "video/mp4"
-				}]
-			}
+			faEyeSlash
 		};
 	},
 	created() {
 		this.hide = (this.$store.state.nsfw === 'force') ? true : this.video.isSensitive && (this.$store.state.nsfw !== 'ignore');
 	},
-	mounted() {
-		let vm = this;
-		this.player = videojs(vm.$refs.VideoCast, vm.videoOptions, function onPlayerReady() {
-				//console.log('onPlayerReady', this);
-				this.on("ended", function() {
-					vm.playing = false;
-				});
-				this.on("play", function() {
-					vm.playing = true;
-				});
-				this.on("pause", function() {
-					vm.playing = false;
-				});
-				this.on("waiting", function() {
-					vm.playing = false;
-				});
-				this.on("volumechange", function onCheck() {
-					vm.checkVol();
-				});
-		});
-	},
-	beforeDestroy() {
-		if (this.player) {
-				this.player.dispose();
-		}
-	},
-	methods: {
-		muted: function() {
-			this.checkVol();
-		},
-		muteToggle: function() {
-			if (this.muted == false && this.player.volume() > 0) {
-				this.volume = this.player.volume();
-				this.muted = true;
-				this.player.volume(0);
-			} else {
-				this.muted = false;
-				this.player.muted(false);
-				this.player.volume(this.volume);
-			}
-		},
-		checkVol: function() {
-			if (this.player.volume() > 0.01 && !this.player.muted()) {
-				this.volume = this.player.volume();
-				this.muted = false;
-			} else {
-				this.muted = true;
-			}
-		},
-		seek: function(secs) {
-		  let time = this.player.currentTime() + secs;
-		  if (time < 0) {
-		    time = 0;
-		  }
-		  this.player.currentTime(time);
-		},
-		forward: function() {
-		  this.seek(10);
-		},
-		rewind: function() {
-		  this.seek(-10);
-		},
-	}
 });
 </script>
 
@@ -144,22 +64,9 @@ export default defineComponent({
 		cursor: pointer;
 		top: 12px;
 		right: 12px;
-		z-index: 120;
 	}
 
-	> .castr_hide {
-		right: 12px;
-		top: 44px;
-		opacity: 0.36;
-	}
-
-	> .castr_mute {
-		right: 12px;
-		top: 12px;
-		opacity: 0.10;
-	}
-
-	> a {
+	> video {
 		display: flex;
 		justify-content: center;
 		align-items: center;
@@ -189,39 +96,5 @@ export default defineComponent({
 			display: block;
 		}
 	}
-}
-
-.castr_hide {
-	opacity: 0.64 !important;
-}
-.castr_mute:hover {
-	opacity: 0.62 !important;
-}
-
-.video_container {
-	height: 100%;
-}
-.video-js {
-	background-image: url('/assets/caster-play.jpg') !important;
-	background-position: center !important;
-	position: absolute !important;
-	width: 100% !important;
-	height: -webkit-fill-available !important;
-	padding-top: unset !important;
-}
-video[VideoCast]{
-	/*height: 100%;*/
-}
-video[poster]{
-  object-fit: cover !important;
-}
-.vjs-poster {
-	background-size: cover;
-	background-position: inherit;
-  position: absolute !important;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
 }
 </style>

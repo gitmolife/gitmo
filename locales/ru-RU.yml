@@ -704,6 +704,11 @@ editCode: "Редактировать исходный текст"
 apply: "Применить"
 receiveAnnouncementFromInstance: "Получать оповещения с инстанса"
 emailNotification: "Уведомления по электронной почте"
+inChannelSearch: "Поиск по каналу"
+useReactionPickerForContextMenu: "Открывать палитру реакций правой кнопкой"
+typingUsers: "Стук клавиш. Это {users}…"
+jumpToSpecifiedDate: "Перейти к заданной дате"
+showingPastTimeline: "Отображается старая лента"
 _email:
   _follow:
     title: "Новый подписчик"
