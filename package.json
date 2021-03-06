@@ -1,7 +1,7 @@
 {
 	"name": "misskey",
 	"author": "syuilo <syuilotan@yahoo.co.jp>",
-	"version": "12.74.0",
+	"version": "12.74.1",
 	"codename": "indigo",
 	"repository": {
 		"type": "git",
@@ -125,6 +125,7 @@
 		"cbor": "7.0.3",
 		"chalk": "4.1.0",
 		"chart.js": "2.9.4",
+		"chokidar": "^3.3.1",
 		"cli-highlight": "2.1.10",
 		"commander": "4.1.1",
 		"content-disposition": "0.5.3",
@@ -179,6 +180,7 @@
 		"koa-slow": "2.1.0",
 		"koa-views": "6.3.1",
 		"langmap": "0.0.16",
+		"lodash": "^4.17.20",
 		"lookup-dns-cache": "2.1.0",
 		"markdown-it": "12.0.4",
 		"markdown-it-anchor": "7.0.2",
