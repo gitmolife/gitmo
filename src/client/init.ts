@@ -191,7 +191,7 @@ fetchInstance().then(() => {
 
 stream.init($i);
 
-const appsignal = new Appsignal({
+const appsignal = await new Appsignal({
   active: true,
   name: appsignalName,
   key: appsignalKey
