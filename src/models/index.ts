@@ -58,6 +58,8 @@ import { MutedNote } from './entities/muted-note';
 import { ChannelFollowing } from './entities/channel-following';
 import { ChannelNotePining } from './entities/channel-note-pining';
 import { RegistryItem } from './entities/registry-item';
+//import { UserWalletRepository } from './repositories/user-wallet-address';
+import { UserWalletAddress } from './entities/user-wallet-address';
 
 export const Announcements = getRepository(Announcement);
 export const AnnouncementReads = getRepository(AnnouncementRead);
@@ -118,3 +120,5 @@ export const Channels = getCustomRepository(ChannelRepository);
 export const ChannelFollowings = getRepository(ChannelFollowing);
 export const ChannelNotePinings = getRepository(ChannelNotePining);
 export const RegistryItems = getRepository(RegistryItem);
+//export const UserWallets = getCustomRepository(UserWalletRepository);
+export const UserWalletAddresses = getRepository(UserWalletAddress);

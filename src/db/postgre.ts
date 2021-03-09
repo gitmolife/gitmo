@@ -44,6 +44,7 @@ import { UserKeypair } from '../models/entities/user-keypair';
 import { UserPublickey } from '../models/entities/user-publickey';
 import { UserProfile } from '../models/entities/user-profile';
 import { UserSecurityKey } from '../models/entities/user-security-key';
+import { UserWalletAddress } from '../models/entities/user-wallet-address';
 import { AttestationChallenge } from '../models/entities/attestation-challenge';
 import { Page } from '../models/entities/page';
 import { PageLike } from '../models/entities/page-like';
@@ -120,6 +121,7 @@ export const entities = [
 	UserGroupInvitation,
 	UserNotePining,
 	UserSecurityKey,
+	UserWalletAddress,
 	UsedUsername,
 	AttestationChallenge,
 	Following,

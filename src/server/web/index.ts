@@ -17,7 +17,7 @@ import packFeed from './feed';
 import { fetchMeta } from '../../misc/fetch-meta';
 import { genOpenapiSpec } from '../api/openapi/gen-spec';
 import config from '../../config';
-import { Users, Notes, Emojis, UserProfiles, Pages, Channels, Clips } from '../../models';
+import { Users, Notes, Emojis, UserProfiles, Pages, Channels, Clips, UserWalletAddresses } from '../../models';
 import parseAcct from '../../misc/acct/parse';
 import { getNoteSummary } from '../../misc/get-note-summary';
 import { getConnection } from 'typeorm';
@@ -241,6 +241,30 @@ router.get('/users/:user', async ctx => {
 	}
 
 	ctx.redirect(`/@${user.username}${ user.host == null ? '' : '@' + user.host}`);
+});
+
+// User wallet
+router.get('/@:user/wallet', async ctx => {
+	const { username, host } = parseAcct(ctx.params.user);
+	const user = await Users.findOne({
+		usernameLower: username.toLowerCase(),
+		host,
+		isSuspended: false
+	});
+
+	if (user != null) {
+		const wallet = await UserWalletAddresses.findOneOrFail(user.id);
+		const meta = await fetchMeta();
+
+		await ctx.render('wallet', {
+			user, wallet,
+			instanceName: meta.name || 'Misskey',
+			icon: meta.iconUrl
+		});
+		ctx.set('Cache-Control', 'public, max-age=30');
+	} else {
+		ctx.status = 404;
+	}
 });
 
 // Note
