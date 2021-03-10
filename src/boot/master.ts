@@ -13,8 +13,13 @@ import { program } from '../argv';
 import { showMachineInfo } from '../misc/show-machine-info';
 import { initDb } from '../db/postgre';
 import * as meta from '../meta.json';
+import IntercomBroker from '../services/intercom/intercom-broker';
+
+// for intercom broker
+let intercomBroker;
 
 const logger = new Logger('core', 'cyan');
+const brokerLogger = new Logger('intercom', 'gold');
 const bootLogger = logger.createSubLogger('boot', 'magenta', false);
 
 function greet() {
@@ -67,6 +72,13 @@ export async function masterMain() {
 		}
 	} catch (e) {
 		bootLogger.error('Fatal error occurred during initialization', null, true);
+		process.exit(1);
+	}
+
+	try {
+		await spawnIntercom();
+	} catch (e) {
+		bootLogger.error('Fatal error occurred during initialization of Intercom2', null, true);
 		process.exit(1);
 	}
 
@@ -178,4 +190,41 @@ function spawnWorker(): Promise<void> {
 			res();
 		});
 	});
+}
+
+function checkIsValidDomain(domain: string): boolean {
+	var re = new RegExp(/^((?:(?:(?:\w[\.\-\+]?)*)\w)+)((?:(?:(?:\w[\.\-\+]?){0,62})\w)+)\.(\w{2,6})$/);
+	return domain.match(re);
+}
+
+async function spawnIntercom() {
+	if (process.env.INTERCOM_MODE && Number(process.env.INTERCOM_MODE) > 0) {
+		if (process.env.SITE_INTERCOM_ID == null || Number.isNaN(process.env.SITE_INTERCOM_ID)) {
+			bootLogger.error('The site id for Intercom2 is not configured. Please configure site id in .env config file.', null, true);
+			process.exit(1);
+		}
+		if (process.env.SITE_INTERCOM_PORT == null || Number.isNaN(process.env.SITE_INTERCOM_PORT)) {
+			bootLogger.error('The port for Intercom2 is not configured. Please configure port in .env config file.', null, true);
+			process.exit(1);
+		}
+		if (process.platform === 'linux' && isWellKnownPort(process.env.SITE_INTERCOM_PORT) && !isRoot()) {
+			bootLogger.error('You need root privileges to listen on well-known port on Linux for Intercom2', null, true);
+			process.exit(1);
+		}
+		if (!await isPortAvailable(process.env.SITE_INTERCOM_PORT)) {
+			bootLogger.error(`Port ${process.env.SITE_INTERCOM_PORT} for Intercom2 is already in use`, null, true);
+			process.exit(1);
+		}
+		if (process.env.SITE_INTERCOM_HOST == null || !checkIsValidDomain(process.env.SITE_INTERCOM_HOST)) {
+			bootLogger.error('The host for Intercom2 is not valid. Please set a valid FQDN for host in .env config file.', null, true);
+			process.exit(1);
+		}
+		// Initialize intercom2 broker
+		intercomBroker = await new IntercomBroker(brokerLogger);
+		if (intercomBroker) {
+			bootLogger.succ(`Intercom2 Broker initialized! Mode: [${process.env.INTERCOM_MODE}]`);
+		} else {
+			bootLogger.error('Intercom2 Broker failed to initialize!');
+		}
+	}
 }
