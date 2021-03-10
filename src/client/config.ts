@@ -13,5 +13,3 @@ export const version = _VERSION_;
 export const instanceName = siteName === 'Misskey' ? host : siteName;
 export const ui = localStorage.getItem('ui');
 export const debug = localStorage.getItem('debug') === 'true';
-export const appsignalName = _APPSIGNAL_NAME_;
-export const appsignalKey = _APPSIGNAL_KEY_;

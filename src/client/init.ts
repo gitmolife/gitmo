@@ -46,7 +46,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import widgets from '@/widgets';
 import directives from '@/directives';
 import components from '@/components';
-import { version, ui, lang, host, appsignalName, appsignalKey } from '@/config';
+import { version, ui, lang, host } from '@/config';
 import { router } from '@/router';
 import { applyTheme } from '@/scripts/theme';
 import { isDeviceDarkmode } from '@/scripts/is-device-darkmode';
@@ -63,8 +63,6 @@ import { getThemes } from '@/theme-store';
 import { initializeSw } from '@/scripts/initialize-sw';
 import { reloadChannel } from '@/scripts/unison-reload';
 import { reactionPicker } from '@/scripts/reaction-picker';
-import Appsignal from "@appsignal/javascript";
-import { errorHandler } from "@appsignal/vue";
 
 console.info(`Misskey v${version}`);
 
@@ -191,12 +189,6 @@ fetchInstance().then(() => {
 
 stream.init($i);
 
-const appsignal = await new Appsignal({
-  active: true,
-  name: appsignalName,
-  key: appsignalKey
-});
-
 const app = createApp(await (
 	window.location.search === '?zen' ? import('@/ui/zen.vue') :
 	!$i                               ? import('@/ui/visitor.vue') :
@@ -209,8 +201,6 @@ const app = createApp(await (
 if (_DEV_) {
 	app.config.performance = true;
 }
-
-app.config.errorHandler = errorHandler(appsignal);
 
 app.config.globalProperties = {
 	$i,
