@@ -4,6 +4,7 @@ import * as chalk from 'chalk';
 import * as portscanner from 'portscanner';
 import * as isRoot from 'is-root';
 import { getConnection } from 'typeorm';
+import { fork, ChildProcess } from 'child_process';
 
 import Logger from '../services/logger';
 import loadConfig from '../config/load';
@@ -13,14 +14,12 @@ import { program } from '../argv';
 import { showMachineInfo } from '../misc/show-machine-info';
 import { initDb } from '../db/postgre';
 import * as meta from '../meta.json';
-import IntercomBroker from '../services/intercom/intercom-broker';
-
-// for intercom broker
-let intercomBroker;
 
 const logger = new Logger('core', 'cyan');
-const brokerLogger = new Logger('intercom', 'gold');
 const bootLogger = logger.createSubLogger('boot', 'magenta', false);
+const intercomLogger = logger.createSubLogger('intercom', 'green', false);
+const brokerLogger = intercomLogger.createSubLogger('broker', 'gold', false);
+const brokerBootLogger = brokerLogger.createSubLogger('boot', 'magenta', false);
 
 function greet() {
 	if (!program.quiet) {
@@ -49,6 +48,7 @@ function greet() {
  */
 export async function masterMain() {
 	let config!: Config;
+	let icWorker: ChildProcess | undefined;
 
 	try {
 		greet();
@@ -75,14 +75,15 @@ export async function masterMain() {
 		process.exit(1);
 	}
 
+	bootLogger.succ('Misskey initialized');
+
 	try {
 		await spawnIntercom();
 	} catch (e) {
-		bootLogger.error('Fatal error occurred during initialization of Intercom2', null, true);
+		intercomLogger.error('Fatal error occurred during initialization attempt for Intercom2', null, true);
+		intercomLogger.error(e);
 		process.exit(1);
 	}
-
-	bootLogger.succ('Misskey initialized');
 
 	if (!program.disableClustering) {
 		await spawnWorkers(config.clusterLimit);
@@ -95,6 +96,10 @@ export async function masterMain() {
 		require('../daemons/queue-stats').default();
 		require('../daemons/janitor').default();
 	}
+	if (icWorker !== undefined) {
+		icWorker.send('master-ready');
+	}
+	bootLogger.succ('Misskey Ready');
 }
 
 const runningNodejsVersion = process.version.slice(1).split('.').map(x => parseInt(x, 10));
@@ -120,6 +125,24 @@ function showEnvironment(): void {
 	}
 
 	logger.info(`You ${isRoot() ? '' : 'do not '}have root privileges`);
+}
+
+function checkIsValidDomain(domain: string): boolean {
+	var re = new RegExp(/^((?:(?:(?:\w[\.\-\+]?)*)\w)+)((?:(?:(?:\w[\.\-\+]?){0,62})\w)+)\.(\w{2,6})$/);
+	return domain.match(re) != null;
+}
+
+function isJson(item: any) {
+    try {
+			  item = typeof item !== "string" ? JSON.stringify(item) : item;
+        item = JSON.parse(item);
+    } catch (e) {
+        return false;
+    }
+    if (typeof item === "object" && item !== null) {
+        return true;
+    }
+    return false;
 }
 
 /**
@@ -192,39 +215,61 @@ function spawnWorker(): Promise<void> {
 	});
 }
 
-function checkIsValidDomain(domain: string): boolean {
-	var re = new RegExp(/^((?:(?:(?:\w[\.\-\+]?)*)\w)+)((?:(?:(?:\w[\.\-\+]?){0,62})\w)+)\.(\w{2,6})$/);
-	return domain.match(re);
-}
-
-async function spawnIntercom() {
+/**
+ * Spawn worker instance of intercom
+ */
+async function spawnIntercom(): Promise<ChildProcess | undefined> {
 	if (process.env.INTERCOM_MODE && Number(process.env.INTERCOM_MODE) > 0) {
+		brokerBootLogger.debug('Setup site daemon..');
 		if (process.env.SITE_INTERCOM_ID == null || Number.isNaN(process.env.SITE_INTERCOM_ID)) {
-			bootLogger.error('The site id for Intercom2 is not configured. Please configure site id in .env config file.', null, true);
+			brokerBootLogger.error('The site id for Intercom2 is not configured. Please configure site id in .env config file.', null, true);
 			process.exit(1);
 		}
 		if (process.env.SITE_INTERCOM_PORT == null || Number.isNaN(process.env.SITE_INTERCOM_PORT)) {
-			bootLogger.error('The port for Intercom2 is not configured. Please configure port in .env config file.', null, true);
+			brokerBootLogger.error('The port for Intercom2 is not configured. Please configure port in .env config file.', null, true);
 			process.exit(1);
 		}
-		if (process.platform === 'linux' && isWellKnownPort(process.env.SITE_INTERCOM_PORT) && !isRoot()) {
-			bootLogger.error('You need root privileges to listen on well-known port on Linux for Intercom2', null, true);
+		if (process.platform === 'linux' && isWellKnownPort(Number(process.env.SITE_INTERCOM_PORT)) && !isRoot()) {
+			brokerBootLogger.error('You need root privileges to listen on well-known port on Linux for Intercom2', null, true);
 			process.exit(1);
 		}
-		if (!await isPortAvailable(process.env.SITE_INTERCOM_PORT)) {
-			bootLogger.error(`Port ${process.env.SITE_INTERCOM_PORT} for Intercom2 is already in use`, null, true);
+		if (!await isPortAvailable(Number(process.env.SITE_INTERCOM_PORT))) {
+			brokerBootLogger.error(`Port ${process.env.SITE_INTERCOM_PORT} for Intercom2 is already in use`, null, true);
 			process.exit(1);
 		}
 		if (process.env.SITE_INTERCOM_HOST == null || !checkIsValidDomain(process.env.SITE_INTERCOM_HOST)) {
-			bootLogger.error('The host for Intercom2 is not valid. Please set a valid FQDN for host in .env config file.', null, true);
+			brokerBootLogger.error('The host for Intercom2 is not valid. Please set a valid FQDN for host in .env config file.', null, true);
 			process.exit(1);
 		}
-		// Initialize intercom2 broker
-		intercomBroker = await new IntercomBroker(brokerLogger);
-		if (intercomBroker) {
-			bootLogger.succ(`Intercom2 Broker initialized! Mode: [${process.env.INTERCOM_MODE}]`);
-		} else {
-			bootLogger.error('Intercom2 Broker failed to initialize!');
-		}
+
+		return new Promise(res => {
+			const broker = fork('./built/boot/xbroker', ['normal'], {});
+
+			broker.on('message', function(msg, hndl) {
+				if (isJson(msg)) {
+					const res = JSON.parse(JSON.stringify(msg));
+					if (res.boot === 'ready') {
+					  brokerLogger.succ('Ready!');
+					} else if (res.boot === 'error') {
+						brokerLogger.error('Did not start!');
+						process.exit(1);
+					}
+				}
+			});
+
+			broker.on('error', function(e) {
+				brokerLogger.warn(e.message);
+				brokerLogger.error(e.stack as string);
+			});
+
+			broker.on('exit', function(code) {
+				brokerLogger.debug("Exit " + code);
+			});
+
+			brokerBootLogger.succ('Daemon worker started');
+			res(broker);
+		});
+	} else {
+		return undefined;
 	}
 }

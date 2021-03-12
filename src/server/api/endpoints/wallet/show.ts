@@ -2,9 +2,12 @@ import $ from 'cafy';
 import define from '../../define';
 import { ApiError } from '../../error';
 import { Users, UserWalletAddresses } from '../../../../models';
+import { UserWalletAddress } from '../../../../models/entities/user-wallet-address';
 import { ID } from '../../../../misc/cafy-id';
 import { toPunyNullable } from '../../../../misc/convert-host';
-
+//import IntercomBroker from '../../../../services/intercom/intercom-broker';
+//import { getIntercom } from '../../../../boot/master';
+//import { getBroker } from '../../../../boot/xbroker';
 
 export const meta = {
 	tags: ['wallet'],
@@ -53,7 +56,19 @@ export default define(meta, async (ps, me) => {
 		throw new ApiError(meta.errors.noSuchUser);
 	}
 
-	const wallet = await UserWalletAddresses.findOneOrFail({ userId: user.id} );
+	let wallet = (await UserWalletAddresses.findOne({ userId: user.id} ) as UserWalletAddress);
+
+	if (!wallet) {
+		/*const broker: IntercomBroker | undefined = getBroker();
+		if (broker) {
+			console.log('getNewAddress()');
+			broker.getNewAddress(user.id);
+		} else {
+			console.log("Broker undefined.");
+		}*/
+	} else {
+		console.log("Wallet Exists.");
+	}
 
 	return wallet;
 });

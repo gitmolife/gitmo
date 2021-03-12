@@ -429,7 +429,7 @@ class EndPoint implements Intercom2_EndPoint
             }
         return dotCount == 3 && digitCount > 0;
         }
-    
+
     public makeWebRequestOpts(sslConf : Intercom2_SSL_Conf | null, byteLen : number, uriExtension : string | null) : RequestOptions
         {
         let opts : RequestOptions =
@@ -602,10 +602,12 @@ class Intercom2
     private ownId = 0;
     private msgsById : Map<string, (sender : Intercom2_EndPoint, rxData : string, sendReply : (txData : string) => void) => any> = new Map<string, (sender : Intercom2_EndPoint, rxData : string, sendReply : (txData : string) => void) => any>();
     private endPointsById : Map<number, EndPoint> = new Map<number, EndPoint>();
+    private logger: any | undefined;
 
-    public constructor(sslConf : Intercom2_SSL_Conf | null = null)
+    public constructor(sslConf : Intercom2_SSL_Conf | null = null, logger: any | undefined)
         {
         this.sslConf = sslConf;
+        this.logger = logger;
         }
 
     public configSelf(id : number, port : number) : void
@@ -685,7 +687,7 @@ class Intercom2
         server.listen(this.ownPort, () : void =>
             {
             const protocol = this.sslConf ? "https" : "http";
-            console.log(`Intercom2: ID ${this.ownId} listening at ${protocol}://localhost:${this.ownPort}${INTERCOM2_URI}`);
+            this.logger.succ(`Intercom2: ID ${this.ownId} listening at ${protocol}://localhost:${this.ownPort}${INTERCOM2_URI}`);
             eventHandler(null);
             });
         }

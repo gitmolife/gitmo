@@ -55,12 +55,13 @@ import {
   Intercom2_EndPoint,
   Intercom2_SSL_2WayConf,
 } from './intercom2/src/intercom2';
+import Logger from '../logger';
 
-let CA_CERTIFICATE_FILE;
-let SERVER_PRIVATE_KEY_FILE;
-let SERVER_CERTIFICATE_FILE;
-let CLIENT_PRIVATE_KEY_FILE;
-let CLIENT_CERTIFICATE_FILE;
+let CA_CERTIFICATE_FILE: string;
+let SERVER_PRIVATE_KEY_FILE: string;
+let SERVER_CERTIFICATE_FILE: string;
+let CLIENT_PRIVATE_KEY_FILE: string;
+let CLIENT_CERTIFICATE_FILE: string;
 
 function setupSSL(site: string) {
   const path = require('path');
@@ -110,15 +111,17 @@ function setupSSL(site: string) {
 export default class IntercomBroker {
   private ic: Intercom2;
   private wallet: Intercom2_EndPoint;
-  private logger: object;
-  constructor(logger: object) {
+  private logger: Logger;
+  private ready: boolean;
+  constructor(logger: Logger) {
+    this.ready = false;
     this.logger = logger;
-    this.logger.info(`Starting Broker for site '${_SITE_INTERCOM_ID_}' ...`);
+    this.logger.info(`Starting for site '${_SITE_INTERCOM_ID_}' ...`);
     let SSL_CONF: Intercom2_SSL_2WayConf | null = null;
     if (Number(_INTERCOM_MODE_) === 2) {
       try {
-        this.logger.info(`Setup Broker SSL for site '${_SITE_INTERCOM_ID_}' ...`);
-        setupSSL(_INTERCOM_SITENAME_);
+        this.logger.info(`Setup SSL for site '${_SITE_INTERCOM_ID_}' ...`);
+        setupSSL(String(_INTERCOM_SITENAME_));
         this.logger.debug(`Using CA Cert file '${CA_CERTIFICATE_FILE}'`);
         SSL_CONF = new Intercom2_SSL_2WayConf()
           .setPassphrase(_INTERCOM_PASSPHRASE_ as string)
@@ -130,7 +133,7 @@ export default class IntercomBroker {
         process.exit(1);
       }
     }
-    this.ic = new Intercom2(SSL_CONF);
+    this.ic = new Intercom2(SSL_CONF, logger);
     this.ic.configSelf(
       Number(_SITE_INTERCOM_ID_),
       Number(_SITE_INTERCOM_PORT_)
@@ -145,8 +148,9 @@ export default class IntercomBroker {
         this.logger.error(e);
       }
     );
-    this.logger.debug(`Setup Broker for site '${_SITE_INTERCOM_ID_}' on port '${_SITE_INTERCOM_PORT_}' ...`);
+    this.logger.debug(`Setup for site '${_SITE_INTERCOM_ID_}' on port '${_SITE_INTERCOM_PORT_}' ...`);
     this.setup();
+    this.ready = true;
   }
 
   private setup() {
@@ -183,6 +187,10 @@ export default class IntercomBroker {
         process.exit(1);
       }
     });
+  }
+
+  public isReady(): boolean {
+    return this.ready;
   }
 
   public start() {
@@ -319,6 +327,7 @@ export default class IntercomBroker {
           if (json.isError === true) {
             this.logger.error(new Error(json.message));
           } else {
+            //UserWalletAddresses.create({ userId: user.id, address: rxData });
             this.logger.info(rxData);
           }
         }
