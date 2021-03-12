@@ -202,11 +202,20 @@ export default class IntercomBroker {
         if (e) {
           this.logger.error(e);
         } else {
-          let json = JSON.parse(rxData);
-          if (json.isError === true) {
-            this.logger.error(new Error(json.message));
-          } else {
-            this.logger.info(rxData);
+          let json;
+          try {
+            json = JSON.parse(rxData);
+            if (json != undefined && json.isError === true) {
+              this.logger.error(new Error(json.message));
+            } else {
+              this.logger.info(rxData);
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) {
+              this.logger.error(rxData);
+            } else {
+              this.logger.error(e);
+            }
           }
         }
       }
@@ -222,11 +231,20 @@ export default class IntercomBroker {
         if (e) {
           this.logger.error(e);
         } else {
-          let json = JSON.parse(rxData);
-          if (json.isError === true) {
-            this.logger.error(new Error(json.message));
-          } else {
-            this.logger.info(rxData);
+          let json;
+          try {
+            json = JSON.parse(rxData);
+            if (json != undefined && json.isError === true) {
+              this.logger.error(new Error(json.message));
+            } else {
+              this.logger.info(rxData);
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) {
+              this.logger.error(rxData);
+            } else {
+              this.logger.error(e);
+            }
           }
         }
       }
@@ -242,11 +260,20 @@ export default class IntercomBroker {
         if (e) {
           this.logger.error(e);
         } else {
-          let json = JSON.parse(rxData);
-          if (json.isError === true) {
-            this.logger.error(new Error(json.message));
-          } else {
-            this.logger.info(rxData);
+          let json;
+          try {
+            json = JSON.parse(rxData);
+            if (json != undefined && json.isError === true) {
+              this.logger.error(new Error(json.message));
+            } else {
+              this.logger.info(rxData);
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) {
+              this.logger.error(rxData);
+            } else {
+              this.logger.error(e);
+            }
           }
         }
       }
@@ -262,11 +289,20 @@ export default class IntercomBroker {
         if (e) {
           this.logger.error(e);
         } else {
-          let json = JSON.parse(rxData);
-          if (json.isError === true) {
-            this.logger.error(new Error(json.message));
-          } else {
-            this.logger.info(rxData);
+          let json;
+          try {
+            json = JSON.parse(rxData);
+            if (json != undefined && json.isError === true) {
+              this.logger.error(new Error(json.message));
+            } else {
+              this.logger.info(rxData);
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) {
+              this.logger.error(rxData);
+            } else {
+              this.logger.error(e);
+            }
           }
         }
       }
@@ -282,11 +318,20 @@ export default class IntercomBroker {
         if (e) {
           this.logger.error(e);
         } else {
-          let json = JSON.parse(rxData);
-          if (json.isError === true) {
-            this.logger.error(new Error(json.message));
-          } else {
-            this.logger.info(rxData);
+          let json;
+          try {
+            json = JSON.parse(rxData);
+            if (json != undefined && json.isError === true) {
+              this.logger.error(new Error(json.message));
+            } else {
+              this.logger.info(rxData);
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) {
+              this.logger.error(rxData);
+            } else {
+              this.logger.error(e);
+            }
           }
         }
       }
@@ -302,11 +347,20 @@ export default class IntercomBroker {
         if (e) {
           this.logger.error(e);
         } else {
-          let json = JSON.parse(rxData);
-          if (json.isError === true) {
-            this.logger.error(new Error(json.message));
-          } else {
-            this.logger.info(rxData);
+          let json;
+          try {
+            json = JSON.parse(rxData);
+            if (json != undefined && json.isError === true) {
+              this.logger.error(new Error(json.message));
+            } else {
+              this.logger.info(rxData);
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) {
+              this.logger.error(rxData);
+            } else {
+              this.logger.error(e);
+            }
           }
         }
       }
@@ -323,12 +377,20 @@ export default class IntercomBroker {
         if (e) {
           this.logger.error(e);
         } else {
-          let json = JSON.parse(rxData);
-          if (json.isError === true) {
-            this.logger.error(new Error(json.message));
-          } else {
-            //UserWalletAddresses.create({ userId: user.id, address: rxData });
-            this.logger.info(rxData);
+          let json;
+          try {
+            json = JSON.parse(rxData);
+            if (json != undefined && json.isError === true) {
+              this.logger.error(new Error(json.message));
+            } else {
+              this.logger.info(rxData);
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) {
+              this.logger.error(rxData);
+            } else {
+              this.logger.error(e);
+            }
           }
         }
       }
@@ -344,11 +406,20 @@ export default class IntercomBroker {
         if (e) {
           this.logger.error(e);
         } else {
-          let json = JSON.parse(rxData);
-          if (json.isError === true) {
-            this.logger.error(new Error(json.message));
-          } else {
-            this.logger.info(rxData);
+          let json;
+          try {
+            json = JSON.parse(rxData);
+            if (json != undefined && json.isError === true) {
+              this.logger.error(new Error(json.message));
+            } else {
+              this.logger.info(rxData);
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) {
+              this.logger.error(rxData);
+            } else {
+              this.logger.error(e);
+            }
           }
         }
       }
@@ -365,11 +436,20 @@ export default class IntercomBroker {
         if (e) {
           this.logger.error(e);
         } else {
-          let json = JSON.parse(rxData);
-          if (json.isError === true) {
-            this.logger.error(new Error(json.message));
-          } else {
-            this.logger.info(rxData);
+          let json;
+          try {
+            json = JSON.parse(rxData);
+            if (json != undefined && json.isError === true) {
+              this.logger.error(new Error(json.message));
+            } else {
+              this.logger.info(rxData);
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) {
+              this.logger.error(rxData);
+            } else {
+              this.logger.error(e);
+            }
           }
         }
       }
@@ -385,11 +465,20 @@ export default class IntercomBroker {
         if (e) {
           this.logger.error(e);
         } else {
-          let json = JSON.parse(rxData);
-          if (json.isError === true) {
-            this.logger.error(new Error(json.message));
-          } else {
-            this.logger.info(rxData);
+          let json;
+          try {
+            json = JSON.parse(rxData);
+            if (json != undefined && json.isError === true) {
+              this.logger.error(new Error(json.message));
+            } else {
+              this.logger.info(rxData);
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) {
+              this.logger.error(rxData);
+            } else {
+              this.logger.error(e);
+            }
           }
         }
       }
@@ -405,11 +494,20 @@ export default class IntercomBroker {
         if (e) {
           this.logger.error(e);
         } else {
-          let json = JSON.parse(rxData);
-          if (json.isError === true) {
-            this.logger.error(new Error(json.message));
-          } else {
-            this.logger.info(rxData);
+          let json;
+          try {
+            json = JSON.parse(rxData);
+            if (json != undefined && json.isError === true) {
+              this.logger.error(new Error(json.message));
+            } else {
+              this.logger.info(rxData);
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) {
+              this.logger.error(rxData);
+            } else {
+              this.logger.error(e);
+            }
           }
         }
       }
@@ -425,11 +523,20 @@ export default class IntercomBroker {
         if (e) {
           this.logger.error(e);
         } else {
-          let json = JSON.parse(rxData);
-          if (json.isError === true) {
-            this.logger.error(new Error(json.message));
-          } else {
-            this.logger.info(rxData);
+          let json;
+          try {
+            json = JSON.parse(rxData);
+            if (json != undefined && json.isError === true) {
+              this.logger.error(new Error(json.message));
+            } else {
+              this.logger.info(rxData);
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) {
+              this.logger.error(rxData);
+            } else {
+              this.logger.error(e);
+            }
           }
         }
       }
@@ -446,11 +553,20 @@ export default class IntercomBroker {
         if (e) {
           this.logger.error(e);
         } else {
-          let json = JSON.parse(rxData);
-          if (json.isError === true) {
-            this.logger.error(new Error(json.message));
-          } else {
-            this.logger.info(rxData);
+          let json;
+          try {
+            json = JSON.parse(rxData);
+            if (json != undefined && json.isError === true) {
+              this.logger.error(new Error(json.message));
+            } else {
+              this.logger.info(rxData);
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) {
+              this.logger.error(rxData);
+            } else {
+              this.logger.error(e);
+            }
           }
         }
       }
@@ -467,11 +583,20 @@ export default class IntercomBroker {
         if (e) {
           this.logger.error(e);
         } else {
-          let json = JSON.parse(rxData);
-          if (json.isError === true) {
-            this.logger.error(new Error(json.message));
-          } else {
-            this.logger.info(rxData);
+          let json;
+          try {
+            json = JSON.parse(rxData);
+            if (json != undefined && json.isError === true) {
+              this.logger.error(new Error(json.message));
+            } else {
+              this.logger.info(rxData);
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) {
+              this.logger.error(rxData);
+            } else {
+              this.logger.error(e);
+            }
           }
         }
       }
@@ -491,11 +616,17 @@ export default class IntercomBroker {
           let json;
           try {
             json = JSON.parse(rxData);
-          } catch (e) {}
-          if (json != undefined && json.isError === true) {
-            this.logger.error(new Error(json.message));
-          } else {
-            this.logger.info(rxData);
+            if (json != undefined && json.isError === true) {
+              this.logger.error(new Error(json.message));
+            } else {
+              this.logger.info(rxData);
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) {
+              this.logger.error(rxData);
+            } else {
+              this.logger.error(e);
+            }
           }
         }
       }
