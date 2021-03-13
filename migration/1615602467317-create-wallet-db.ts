@@ -1,7 +1,7 @@
 import {MigrationInterface, QueryRunner} from "typeorm";
 
-export class registry1615205248628 implements MigrationInterface {
-    name = 'registry1615205248628'
+export class registry1615602467317 implements MigrationInterface {
+    name = 'registry1615602467317'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`CREATE TABLE user_wallet_address
@@ -43,12 +43,25 @@ export class registry1615205248628 implements MigrationInterface {
                 CONSTRAINT fk_user_wallet_address_userId FOREIGN KEY(userId) REFERENCES public.user (id)
             );`
         );
+				await queryRunner.query(`CREATE TABLE user_wallet_job
+						(
+								id SERIAL PRIMARY KEY,
+                job VARCHAR(256) NOT NULL,
+								type VARCHAR(16) NOT NULL,
+                state INTEGER NOT NULL DEFAULT 0,
+								userId VARCHAR(32) DEFAULT NULL,
+    						data TEXT DEFAULT NULL,
+								result TEXT DEFAULT NULL,
+                createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_user_wallet_job_userId FOREIGN KEY(userId) REFERENCES public.user (id)
+							);`
+					);
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`DROP TABLE "user_wallet_address"`);
         await queryRunner.query(`DROP TABLE "user_wallet_balance"`);
         await queryRunner.query(`DROP TABLE "user_wallet_tx"`);
+				//await queryRunner.query(`DROP TABLE "user_wallet_job"`);
     }
-
 }

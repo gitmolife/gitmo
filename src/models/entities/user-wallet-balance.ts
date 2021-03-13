@@ -3,7 +3,7 @@ import { User } from './user';
 import { id } from '../id';
 
 @Entity()
-export class UserWalletAddress {
+export class UserWalletBalance {
 	@PrimaryColumn(id())
 	public id: string;
 
@@ -20,24 +20,11 @@ export class UserWalletAddress {
 	})
 	public coinType: number;
 
-	@Index()
-	@Column('varchar', {
-		length: 64,
-		comment: 'The wallet address of the User.'
-	})
-	public address: string;
-
 	@Column('decimal', {
 		default: 0,
-		comment: 'The balance of this address.'
+		comment: 'The balance of for this user wallet.'
 	})
 	public balance: number;
-
-	@Column('boolean', {
-		default: true,
-		comment: 'Whether the Address is active.'
-	})
-	public active: boolean;
 
 	@ManyToOne(type => User, {
 		onDelete: 'CASCADE'
@@ -45,13 +32,7 @@ export class UserWalletAddress {
 	@JoinColumn()
 	public user: User | null;
 
-	@Index()
-	@Column('timestamp with time zone', {
-		comment: 'The created date of the wallet address.'
-	})
-	public createdAt: Date;
-
-	constructor(data: Partial<UserWalletAddress>) {
+	constructor(data: Partial<UserWalletBalance>) {
 		if (data == null) return;
 
 		for (const [k, v] of Object.entries(data)) {

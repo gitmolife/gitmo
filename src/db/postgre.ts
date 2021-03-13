@@ -45,6 +45,9 @@ import { UserPublickey } from '../models/entities/user-publickey';
 import { UserProfile } from '../models/entities/user-profile';
 import { UserSecurityKey } from '../models/entities/user-security-key';
 import { UserWalletAddress } from '../models/entities/user-wallet-address';
+import { UserWalletBalance } from '../models/entities/user-wallet-balance';
+import { UserWalletJob } from '../models/entities/user-wallet-job';
+import { UserWalletTx } from '../models/entities/user-wallet-tx';
 import { AttestationChallenge } from '../models/entities/attestation-challenge';
 import { Page } from '../models/entities/page';
 import { PageLike } from '../models/entities/page-like';
@@ -122,6 +125,9 @@ export const entities = [
 	UserNotePining,
 	UserSecurityKey,
 	UserWalletAddress,
+	UserWalletBalance,
+	UserWalletJob,
+	UserWalletTx,
 	UsedUsername,
 	AttestationChallenge,
 	Following,
