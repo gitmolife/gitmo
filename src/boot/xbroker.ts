@@ -27,10 +27,8 @@ const init = new Promise<void>( async (resolve: (result: any) => any, reject: (e
 
 	try {
 		daemonLogger.debug('Initializing...');
-		// intercom broker
-		let intercomBroker : IntercomBroker | undefined;
 		// Initialize intercom2 broker
-		intercomBroker = new IntercomBroker(brokerLogger);
+		const intercomBroker : IntercomBroker | undefined = new IntercomBroker(brokerLogger);
 		if (intercomBroker) {
 			brokerLogger.succ(`Intercom2 initialized! Mode: [${process.env.INTERCOM_MODE}]`, null, true);
 		} else {
