@@ -58,14 +58,13 @@ export default define(meta, async (ps, me) => {
 
 	let wallet = (await UserWalletAddresses.findOne({ userId: user.id} ) as UserWalletAddress);
 
+	var cb = function(data, callback) {
+		console.log('getNewAddress().callback');
+	}
+
 	if (!wallet) {
-		/*const broker: IntercomBroker | undefined = getBroker();
-		if (broker) {
-			console.log('getNewAddress()');
-			broker.getNewAddress(user.id);
-		} else {
-			console.log("Broker undefined.");
-		}*/
+		console.log('getNewAddress()');
+		process.send!({ cmd: 'getNewAddress', userId: user.id, callback: cb });
 	} else {
 		console.log("Wallet Exists.");
 	}

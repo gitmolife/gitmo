@@ -116,7 +116,7 @@ export default class IntercomBroker {
   constructor(logger: Logger) {
     this.ready = false;
     this.logger = logger;
-    this.logger.info(`Starting for site '${_SITE_INTERCOM_ID_}' ...`);
+    this.logger.debug(`Starting site '${_SITE_INTERCOM_ID_}' ...`);
     let SSL_CONF: Intercom2_SSL_2WayConf | null = null;
     if (Number(_INTERCOM_MODE_) === 2) {
       try {
@@ -148,7 +148,7 @@ export default class IntercomBroker {
         this.logger.error(e);
       }
     );
-    this.logger.debug(`Setup for site '${_SITE_INTERCOM_ID_}' on port '${_SITE_INTERCOM_PORT_}' ...`);
+    this.logger.info(`Setup site '${_SITE_INTERCOM_ID_}' on port '${_SITE_INTERCOM_PORT_}' ...`);
     this.setup();
     this.ready = true;
   }
@@ -191,6 +191,10 @@ export default class IntercomBroker {
 
   public isReady(): boolean {
     return this.ready;
+  }
+
+  public getId(): number {
+    return this.ic.getOwnId();
   }
 
   public start() {

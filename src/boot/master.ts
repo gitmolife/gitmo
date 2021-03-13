@@ -48,6 +48,7 @@ function greet() {
  */
 export async function masterMain() {
 	let config!: Config;
+	// for Intercom2 worker
 	let icWorker: ChildProcess | undefined;
 
 	try {
@@ -78,10 +79,10 @@ export async function masterMain() {
 	bootLogger.succ('Misskey initialized');
 
 	try {
-		await spawnIntercom();
+		icWorker = await spawnIntercom();
 	} catch (e) {
-		intercomLogger.error('Fatal error occurred during initialization attempt for Intercom2', null, true);
-		intercomLogger.error(e);
+		bootLogger.error('Fatal error occurred during initialization attempt for Intercom2', null, true);
+		intercomLogger.error(e, null, true);
 		process.exit(1);
 	}
 
@@ -96,10 +97,15 @@ export async function masterMain() {
 		require('../daemons/queue-stats').default();
 		require('../daemons/janitor').default();
 	}
-	if (icWorker !== undefined) {
-		icWorker.send('master-ready');
-	}
-	bootLogger.succ('Misskey Ready');
+
+	process.on('message', msg => {
+		if (msg === 'ok') {
+			if (icWorker !== undefined) {
+				icWorker.send('master-ready');
+			}
+			bootLogger.succ('Misskey Ready!');
+		}
+	});
 }
 
 const runningNodejsVersion = process.version.slice(1).split('.').map(x => parseInt(x, 10));
@@ -133,16 +139,16 @@ function checkIsValidDomain(domain: string): boolean {
 }
 
 function isJson(item: any) {
-    try {
-			  item = typeof item !== "string" ? JSON.stringify(item) : item;
-        item = JSON.parse(item);
-    } catch (e) {
-        return false;
-    }
-    if (typeof item === "object" && item !== null) {
-        return true;
-    }
-    return false;
+	try {
+		item = typeof item !== "string" ? JSON.stringify(item) : item;
+		item = JSON.parse(item);
+	} catch (e) {
+		return false;
+	}
+	if (typeof item === "object" && item !== null) {
+		return true;
+	}
+	return false;
 }
 
 /**
@@ -245,14 +251,17 @@ async function spawnIntercom(): Promise<ChildProcess | undefined> {
 		return new Promise(res => {
 			const broker = fork('./built/boot/xbroker', ['normal'], {});
 
-			broker.on('message', function(msg, hndl) {
+			broker.on('message', function(msg) {
 				if (isJson(msg)) {
 					const res = JSON.parse(JSON.stringify(msg));
 					if (res.boot === 'ready') {
-					  brokerLogger.succ('Ready!');
+					  intercomLogger.succ('Ready!');
 					} else if (res.boot === 'error') {
-						brokerLogger.error('Did not start!');
+						intercomLogger.error('Did not start!');
 						process.exit(1);
+					}
+					if (res.cmd == "response") {
+						brokerLogger.debug(res.result);
 					}
 				}
 			});
@@ -262,8 +271,9 @@ async function spawnIntercom(): Promise<ChildProcess | undefined> {
 				brokerLogger.error(e.stack as string);
 			});
 
-			broker.on('exit', function(code) {
-				brokerLogger.debug("Exit " + code);
+			broker.on('exit', function(code: number | undefined) {
+				brokerLogger.warn("Exit " + code);
+				process.exit(code);
 			});
 
 			brokerBootLogger.succ('Daemon worker started');
