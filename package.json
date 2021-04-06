@@ -136,11 +136,7 @@
 		"cssnano": "4.1.10",
 		"dateformat": "4.5.1",
 		"diskusage": "1.1.3",
-<<<<<<< HEAD
 		"dotenv": "8.2.0",
-		"double-ended-queue": "2.1.0-0",
-=======
->>>>>>> source/develop
 		"escape-regexp": "0.0.1",
 		"eslint": "7.22.0",
 		"eslint-plugin-vue": "7.7.0",
@@ -207,11 +203,7 @@
 		"probe-image-size": "7.0.1",
 		"promise-limit": "2.7.0",
 		"promise-sequential": "1.1.1",
-<<<<<<< HEAD
-		"pug": "3.0.1",
-=======
 		"pug": "3.0.2",
->>>>>>> source/develop
 		"punycode": "2.1.1",
 		"pureimage": "0.2.7",
 		"qrcode": "1.4.4",
