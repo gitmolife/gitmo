@@ -1,9 +1,9 @@
 import $ from 'cafy';
-import config from '../../../config';
+import config from '@/config';
 import define from '../define';
-import { fetchMeta } from '../../../misc/fetch-meta';
+import { fetchMeta } from '@/misc/fetch-meta';
 import { Emojis, Users } from '../../../models';
-import { DB_MAX_NOTE_TEXT_LENGTH } from '../../../misc/hard-limits';
+import { DB_MAX_NOTE_TEXT_LENGTH } from '@/misc/hard-limits';
 
 export const meta = {
 	desc: {
@@ -71,12 +71,12 @@ export const meta = {
 			repositoryUrl: {
 				type: 'string' as const,
 				optional: false as const, nullable: false as const,
-				default: 'https://github.com/syuilo/misskey'
+				default: 'https://github.com/misskey-dev/misskey'
 			},
 			feedbackUrl: {
 				type: 'string' as const,
 				optional: false as const, nullable: false as const,
-				default: 'https://github.com/syuilo/misskey/issues/new'
+				default: 'https://github.com/misskey-dev/misskey/issues/new'
 			},
 			secure: {
 				type: 'boolean' as const,

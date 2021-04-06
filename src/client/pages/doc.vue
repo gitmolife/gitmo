@@ -3,7 +3,7 @@
 	<div class="title">{{ title }}</div>
 	<div class="body" v-html="body"></div>
 	<div class="footer">
-		<MkLink :url="`https://github.com/syuilo/misskey/blob/master/src/docs/${lang}/${doc}.md`" class="at">{{ $ts.docSource }}</MkLink>
+		<MkLink :url="`https://github.com/misskey-dev/misskey/blob/master/src/docs/${lang}/${doc}.md`" class="at">{{ $ts.docSource }}</MkLink>
 	</div>
 </div>
 </template>
@@ -13,8 +13,8 @@ import { computed, defineComponent } from 'vue';
 import { faQuestionCircle } from '@fortawesome/free-solid-svg-icons'
 import MarkdownIt from 'markdown-it';
 import MarkdownItAnchor from 'markdown-it-anchor';
-import { url, lang } from '@/config';
-import MkLink from '@/components/link.vue';
+import { url, lang } from '@client/config';
+import MkLink from '@client/components/link.vue';
 
 const markdown = MarkdownIt({
 	html: true
@@ -60,7 +60,7 @@ export default defineComponent({
 
 	methods: {
 		fetchDoc() {
-			fetch(`${url}/assets/docs/${lang}/${this.doc}.md`).then(res => res.text()).then(md => {
+			fetch(`${url}/doc-assets/${lang}/${this.doc}.md`).then(res => res.text()).then(md => {
 				this.parse(md);
 			});
 		},

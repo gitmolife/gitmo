@@ -52,25 +52,25 @@ import { faReply, faQuoteRight, faPaperPlane, faTimes, faUpload, faPollH, faGlob
 import { faEyeSlash, faLaughSquint } from '@fortawesome/free-regular-svg-icons';
 import insertTextAtCursor from 'insert-text-at-cursor';
 import { length } from 'stringz';
-import { toASCII } from 'punycode';
-import { parse } from '../../../mfm/parse';
-import { host, url } from '@/config';
+import { toASCII } from 'punycode/';
+import * as mfm from 'mfm-js';
+import { host, url } from '@client/config';
 import { erase, unique } from '../../../prelude/array';
-import extractMentions from '../../../misc/extract-mentions';
-import getAcct from '../../../misc/acct/render';
-import { formatTimeString } from '../../../misc/format-time-string';
-import { Autocomplete } from '@/scripts/autocomplete';
+import extractMentions from '@/misc/extract-mentions';
+import getAcct from '@/misc/acct/render';
+import { formatTimeString } from '@/misc/format-time-string';
+import { Autocomplete } from '@client/scripts/autocomplete';
 import { noteVisibilities } from '../../../types';
-import * as os from '@/os';
-import { selectFile } from '@/scripts/select-file';
-import { notePostInterruptors, postFormActions } from '@/store';
-import { isMobile } from '@/scripts/is-mobile';
+import * as os from '@client/os';
+import { selectFile } from '@client/scripts/select-file';
+import { notePostInterruptors, postFormActions } from '@client/store';
+import { isMobile } from '@client/scripts/is-mobile';
 import { throttle } from 'throttle-debounce';
 
 export default defineComponent({
 	components: {
-		XPostFormAttaches: defineAsyncComponent(() => import('@/components/post-form-attaches.vue')),
-		XPollEditor: defineAsyncComponent(() => import('@/components/poll-editor.vue'))
+		XPostFormAttaches: defineAsyncComponent(() => import('@client/components/post-form-attaches.vue')),
+		XPollEditor: defineAsyncComponent(() => import('@client/components/poll-editor.vue'))
 	},
 
 	props: {
@@ -216,7 +216,7 @@ export default defineComponent({
 		}
 
 		if (this.reply && this.reply.text != null) {
-			const ast = parse(this.reply.text);
+			const ast = mfm.parse(this.reply.text);
 
 			for (const x of extractMentions(ast)) {
 				const mention = x.host ? `@${x.username}@${toASCII(x.host)}` : `@${x.username}`;
@@ -387,7 +387,7 @@ export default defineComponent({
 				return;
 			}
 
-			os.popup(import('@/components/visibility-picker.vue'), {
+			os.popup(import('@client/components/visibility-picker.vue'), {
 				currentVisibility: this.visibility,
 				currentLocalOnly: this.localOnly,
 				src: this.$refs.visibilityButton
@@ -567,7 +567,7 @@ export default defineComponent({
 					this.deleteDraft();
 					this.$emit('posted');
 					if (this.text && this.text != '') {
-						const hashtags = parse(this.text).filter(x => x.node.type === 'hashtag').map(x => x.node.props.hashtag);
+						const hashtags = mfm.parse(this.text).filter(x => x.type === 'hashtag').map(x => x.props.hashtag);
 						const history = JSON.parse(localStorage.getItem('hashtags') || '[]') as string[];
 						localStorage.setItem('hashtags', JSON.stringify(unique(hashtags.concat(history))));
 					}
