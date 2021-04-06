@@ -1,6 +1,6 @@
 import endpoints from '../endpoints';
 import { Context } from 'cafy';
-import config from '../../../config';
+import config from '@/config';
 import { errors as basicErrors } from './errors';
 import { schemas, convertSchemaToOpenApiSchema } from './schemas';
 import { getDescription } from './description';
@@ -18,7 +18,7 @@ export function genOpenapiSpec(lang = 'ja-JP') {
 
 		externalDocs: {
 			description: 'Repository',
-			url: 'https://github.com/syuilo/misskey'
+			url: 'https://github.com/misskey-dev/misskey'
 		},
 
 		servers: [{
@@ -120,7 +120,7 @@ export function genOpenapiSpec(lang = 'ja-JP') {
 			description: desc,
 			externalDocs: {
 				description: 'Source code',
-				url: `https://github.com/syuilo/misskey/blob/develop/src/server/api/endpoints/${endpoint.name}.ts`
+				url: `https://github.com/misskey-dev/misskey/blob/develop/src/server/api/endpoints/${endpoint.name}.ts`
 			},
 			...(endpoint.meta.tags ? {
 				tags: [endpoint.meta.tags[0]]

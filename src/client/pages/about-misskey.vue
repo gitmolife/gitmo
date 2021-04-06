@@ -14,7 +14,7 @@
 			{{ $ts._aboutMisskey.about }}
 		</section>
 		<FormGroup>
-			<FormLink to="https://github.com/syuilo/misskey" external>
+			<FormLink to="https://github.com/misskey-dev/misskey" external>
 				<template #icon><Fa :icon="faCode"/></template>
 				{{ $ts._aboutMisskey.source }}
 				<template #suffix>GitHub</template>
@@ -40,7 +40,8 @@
 			<FormLink to="https://github.com/rinsuki" external>@rinsuki</FormLink>
 			<FormLink to="https://github.com/Xeltica" external>@Xeltica</FormLink>
 			<FormLink to="https://github.com/u1-liquid" external>@u1-liquid</FormLink>
-			<template #caption><MkLink url="https://github.com/syuilo/misskey/graphs/contributors">{{ $ts._aboutMisskey.allContributors }}</MkLink></template>
+			<FormLink to="https://github.com/marihachi" external>@marihachi</FormLink>
+			<template #caption><MkLink url="https://github.com/misskey-dev/misskey/graphs/contributors">{{ $ts._aboutMisskey.allContributors }}</MkLink></template>
 		</FormGroup>
 		<FormGroup>
 			<template #label><Mfm text="[jelly ❤]"/> {{ $ts._aboutMisskey.patrons }}</template>
@@ -55,14 +56,14 @@
 import { defineComponent } from 'vue';
 import { faInfoCircle, faCode, faLanguage, faHandHoldingMedical, } from '@fortawesome/free-solid-svg-icons';
 import VanillaTilt from 'vanilla-tilt';
-import { version } from '@/config';
-import FormLink from '@/components/form/link.vue';
-import FormBase from '@/components/form/base.vue';
-import FormGroup from '@/components/form/group.vue';
-import FormKeyValueView from '@/components/form/key-value-view.vue';
-import MkLink from '@/components/link.vue';
-import { physics } from '@/scripts/physics.ts';
-import * as os from '@/os';
+import { version } from '@client/config';
+import FormLink from '@client/components/form/link.vue';
+import FormBase from '@client/components/form/base.vue';
+import FormGroup from '@client/components/form/group.vue';
+import FormKeyValueView from '@client/components/form/key-value-view.vue';
+import MkLink from '@client/components/link.vue';
+import { physics } from '@client/scripts/physics.ts';
+import * as os from '@client/os';
 
 const patrons = [
 	'Satsuki Yanagi',

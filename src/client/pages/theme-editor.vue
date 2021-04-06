@@ -52,21 +52,21 @@
 <script lang="ts">
 import { defineComponent } from 'vue';
 import { faPalette, faSave, faEye, faCode } from '@fortawesome/free-solid-svg-icons';
-import { toUnicode } from 'punycode';
+import { toUnicode } from 'punycode/';
 import * as tinycolor from 'tinycolor2';
 import { v4 as uuid} from 'uuid';
 import * as JSON5 from 'json5';
 
-import FormBase from '@/components/form/base.vue';
-import FormButton from '@/components/form/button.vue';
-import FormTextarea from '@/components/form/textarea.vue';
-import FormGroup from '@/components/form/group.vue';
+import FormBase from '@client/components/form/base.vue';
+import FormButton from '@client/components/form/button.vue';
+import FormTextarea from '@client/components/form/textarea.vue';
+import FormGroup from '@client/components/form/group.vue';
 
-import { Theme, applyTheme, validateTheme, darkTheme, lightTheme } from '@/scripts/theme';
-import { host } from '@/config';
-import * as os from '@/os';
-import { ColdDeviceStorage } from '@/store';
-import { addTheme } from '@/theme-store';
+import { Theme, applyTheme, validateTheme, darkTheme, lightTheme } from '@client/scripts/theme';
+import { host } from '@client/config';
+import * as os from '@client/os';
+import { ColdDeviceStorage } from '@client/store';
+import { addTheme } from '@client/theme-store';
 
 export default defineComponent({
 	components: {
