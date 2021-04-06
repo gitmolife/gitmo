@@ -9,8 +9,8 @@
 <script lang="ts">
 import { computed, defineComponent } from 'vue';
 //import { Wallet } from '@/scripts/wallet/wallet';
-import parseAcct from '../../../misc/acct/parse';
-import Progress from '@/scripts/loading';
+import parseAcct from '@/misc/acct/parse';
+import Progress from '@client/scripts/loading';
 //import XPreview from './preview.vue';
 //const storeItems = require('@/scripts/room/furnitures.json5');
 import { faBoxOpen, faUndo, faArrowsAlt, faBan, faBroom } from '@fortawesome/free-solid-svg-icons';
@@ -20,7 +20,7 @@ import MkButton from '@/components/ui/button.vue';
 import MkSelect from '@/components/ui/select.vue';
 import { selectFile } from '@/scripts/select-file';
 import { acct as getAcct } from '../../filters/user';
-import * as os from '@/os';
+import * as os from '@client/os';
 //import { ColdDeviceStorage } from '@/store';
 
 //let wallet: Wallet;
