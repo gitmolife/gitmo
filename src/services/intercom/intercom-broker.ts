@@ -372,7 +372,7 @@ export default class IntercomBroker {
   }
 
   // parameter is a wallet account as string
-  public getNewAddress(id: string) {
+  public getNewAddress(id: string, cb: (error: Error | null, data: any) => void ) {
     this.ic.sendMsg(
       this.wallet,
       NEW_ADDRESS,
@@ -385,15 +385,18 @@ export default class IntercomBroker {
           try {
             json = JSON.parse(rxData);
             if (json != undefined && json.isError === true) {
-              this.logger.error(new Error(json.message));
+              //this.logger.error(new Error(json.message));
+              throw new Error(json.message);
             } else {
-              this.logger.info(rxData);
+              //this.logger.info(rxData);
+              cb(null, json.message);
             }
           } catch (e) {
             if (e instanceof SyntaxError) {
-              this.logger.error(rxData);
+              cb(null, rxData);
             } else {
-              this.logger.error(e);
+              //this.logger.error(e);
+              cb(e, null);
             }
           }
         }

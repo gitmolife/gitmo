@@ -105,6 +105,21 @@ export async function masterMain() {
 			}
 			bootLogger.succ('Misskey Ready!');
 		}
+		if (isJson(msg)) {
+			const res = JSON.parse(JSON.stringify(msg));
+			if (res.cmd === 'getNewAddress') {
+				console.log(msg);
+				if (icWorker !== undefined) {
+					icWorker.send(msg);
+				}
+			}
+			if (res.cmd === 'gotNewAddress') {
+				console.log(msg);
+				if (icWorker !== undefined) {
+					icWorker.send(msg);
+				}
+			}
+		}
 	});
 }
 

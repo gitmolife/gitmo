@@ -3,7 +3,7 @@ import define from '../../define';
 import { ApiError } from '../../error';
 import { Users, UserWalletAddresses } from '../../../../models';
 import { UserWalletAddress } from '../../../../models/entities/user-wallet-address';
-import { ID } from '../../../../misc/cafy-id';
+import { ID } from '@/misc/cafy-id';
 import { toPunyNullable } from '../../../../misc/convert-host';
 //import IntercomBroker from '../../../../services/intercom/intercom-broker';
 //import { getIntercom } from '../../../../boot/master';
@@ -58,16 +58,48 @@ export default define(meta, async (ps, me) => {
 
 	let wallet = (await UserWalletAddresses.findOne({ userId: user.id} ) as UserWalletAddress);
 
-	var cb = function(data, callback) {
-		console.log('getNewAddress().callback');
+	var cb: (error: Error | null) => void = (error: Error | null) => {
+		if (error) {
+			// errored
+			console.log('getNewAddress().callback.Error');
+		} else {
+			console.log('getNewAddress().callback.Complete');
+		}
+	}
+
+	function isJson(item: any) {
+		try {
+			item = typeof item !== "string" ? JSON.stringify(item) : item;
+			item = JSON.parse(item);
+		} catch (e) {
+			return false;
+		}
+		if (typeof item === "object" && item !== null) {
+			return true;
+		}
+		return false;
 	}
 
 	if (!wallet) {
-		console.log('getNewAddress()');
-		process.send!({ cmd: 'getNewAddress', userId: user.id, callback: cb });
+		if (process.send) {
+			console.log('getNewAddress() requested');
+			process.send({ cmd: 'getNewAddress', userId: user.id }, undefined, {}, cb);
+		} else {
+			console.log('getNewAddress() error');
+		}
 	} else {
 		console.log("Wallet Exists.");
 	}
+
+	process.on('message', msg => {
+		if (isJson(msg)) {
+			const res = JSON.parse(JSON.stringify(msg));
+			if (res.cmd === 'gotNewAddress') {
+				console.log(msg);
+				// TODO: cleanup..
+			}
+		}
+	});
 
 	return wallet;
 });
