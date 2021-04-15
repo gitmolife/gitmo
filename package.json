@@ -1,11 +1,11 @@
 {
 	"name": "misskey",
 	"author": "syuilo <syuilotan@yahoo.co.jp>",
-	"version": "12.76.101",
+	"version": "12.76.102",
 	"codename": "indigo",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/gitmolife/gitmo"
+		"url": "https://github.com/gitmolife/gitmo.git"
 	},
 	"main": "./index.js",
 	"private": true,
