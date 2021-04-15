@@ -56,7 +56,7 @@ import { toASCII } from 'punycode/';
 import * as mfm from 'mfm-js';
 import { host, url } from '@client/config';
 import { erase, unique } from '../../../prelude/array';
-import extractMentions from '@/misc/extract-mentions';
+import { extractMentions } from '@/misc/extract-mentions';
 import getAcct from '@/misc/acct/render';
 import { formatTimeString } from '@/misc/format-time-string';
 import { Autocomplete } from '@client/scripts/autocomplete';
@@ -615,7 +615,7 @@ export default defineComponent({
 <style lang="scss" scoped>
 .pxiwixjf {
 	position: relative;
-	border: solid 1px var(--divider);
+	border: solid 0.5px var(--divider);
 	border-radius: 8px;
 
 	> .form {
@@ -696,7 +696,7 @@ export default defineComponent({
 		> .cw {
 			z-index: 1;
 			padding-bottom: 8px;
-			border-bottom: solid 1px var(--divider);
+			border-bottom: solid 0.5px var(--divider);
 		}
 
 		> .text {
