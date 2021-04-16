@@ -63,9 +63,9 @@
 							<div class="_keyValue"><b>Balance</b><span class="monospace" style="font-size: 1.07em;">{{ wallet.balance }} OHM</span></div>
 						</div>
 						<div class="_content">
-							<div class="_keyValue"><b>Deposit</b><span class="monospace"><a>{{ wallet.account.address }}</a></span></div>
-							<div class="_keyValue"><b>Transfer</b><span><a><Fa :icon="faBoxOpen"/> Withdraw Offsite</a></span></div>
-							<div class="_keyValue"><b>Help</b><span><a><Fa :icon="faInfoCircle"/> Usage FAQ</a></span></div>
+							<div class="_keyValue"><b>Deposit</b><span class="monospace"><a @click="showAddress()">{{ wallet.account.address }}</a></span></div>
+							<div class="_keyValue"><b>Transfer</b><span><a @click="showWithdraw()"><Fa :icon="faBoxOpen"/> Withdraw Offsite</a></span></div>
+							<div class="_keyValue"><b>Help</b><span><a @click="showHelp()"><Fa :icon="faInfoCircle"/> Usage FAQ</a></span></div>
 						</div>
 					</MkContainer>
 
@@ -99,10 +99,9 @@
 
 <script lang="ts">
 import { computed, defineComponent } from 'vue';
-//import { Wallet } from '@/scripts/wallet/wallet';
 import parseAcct from '@/misc/acct/parse';
 import Progress from '@client/scripts/loading';
-import { faBoxOpen, faDatabase, faInfoCircle, faTachometerAlt, } from '@fortawesome/free-solid-svg-icons';
+import { faBoxOpen, faDatabase, faInfoCircle, faTachometerAlt, faTicketAlt } from '@fortawesome/free-solid-svg-icons';
 import { faBtc } from '@fortawesome/free-brands-svg-icons';
 import { query as urlQuery } from '../../../prelude/url';
 import MkButton from '@client/components/ui/button.vue';
@@ -111,10 +110,8 @@ import MkInput from '@client/components/ui/input.vue';
 import MkContainer from '@client/components/ui/container.vue';
 import MkFolder from '@client/components/ui/folder.vue';
 import number from '../../filters/number';
-import { selectFile } from '@/scripts/select-file';
 import { userPage, acct as getAcct } from '../../filters/user';
 import * as os from '@client/os';
-
 
 export default defineComponent({
   components: {
@@ -123,6 +120,7 @@ export default defineComponent({
 		MkInput,
 		MkContainer,
 		MkFolder,
+		Progress,
   },
 
   props: {
@@ -152,12 +150,21 @@ export default defineComponent({
   methods: {
     getAcct,
 
+		async showAddress() {
+			os.modalPageWindow("/my/wallet/address");
+		},
+		async showWithdraw() {
+			os.modalPageWindow("/my/wallet/withdraw");
+		},
+		async showHelp() {
+			os.modalPageWindow("/my/wallet/help");
+		},
     fetch() {
       Progress.start();
       os.api('wallet/show').then(wallet => {
-        console.log(wallet);
+        //console.log(wallet);
         this.wallet = wallet;
-				thos.colorize();
+				this.colorize();
       }).catch(e => {
         this.error = e;
       }).finally(() => {

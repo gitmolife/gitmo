@@ -12,7 +12,7 @@ import { toPunyNullable } from '../../../../misc/convert-host';
 export const meta = {
 	tags: ['wallet'],
 
-	requireCredential: false as const,
+	requireCredential: true as const,
 
 	params: {
 		userId: {
@@ -49,9 +49,6 @@ export const meta = {
 
 export default define(meta, async (ps, me) => {
 	const user = await Users.findOne(me != null ? me.id : null);
-	/*const user = await Users.findOne(ps.userId != null
-		? { id: ps.userId }
-		: { usernameLower: ps.username!.toLowerCase(), host: toPunyNullable(ps.host) });*/
 
 	if (user == null) {
 		throw new ApiError(meta.errors.noSuchUser);
@@ -62,9 +59,9 @@ export default define(meta, async (ps, me) => {
 	var cb: (error: Error | null) => void = (error: Error | null) => {
 		if (error) {
 			// errored
-			console.log('getNewAddress().callback.Error');
+			console.log('doWithdraw().callback.Error');
 		} else {
-			console.log('getNewAddress().callback.Complete');
+			console.log('doWithdraw().callback.Complete');
 		}
 	}
 
@@ -81,21 +78,21 @@ export default define(meta, async (ps, me) => {
 		return false;
 	}
 
-	if (!wallet) {
+	if (wallet) {
 		if (process.send) {
-			console.log('getNewAddress() requested');
+			console.log('doWithdraw() requested');
 			process.send({ cmd: 'getNewAddress', userId: user.id }, undefined, {}, cb);
 		} else {
-			console.log('getNewAddress() error');
+			console.log('doWithdraw() error');
 		}
 	} else {
-		console.log("Wallet Exists.");
+		console.log("Wallet doesnt Exists.");
 	}
 
 	process.on('message', msg => {
 		if (isJson(msg)) {
 			const res = JSON.parse(JSON.stringify(msg));
-			if (res.cmd === 'gotNewAddress') {
+			if (res.cmd === 'doneWithdraw') {
 				console.log(msg);
 				// TODO: cleanup..
 			}

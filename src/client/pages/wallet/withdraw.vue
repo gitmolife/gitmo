@@ -1,0 +1,101 @@
+<template>
+    <div>
+
+			<MkFolder>
+				<template #header><Fa :icon="faBtc"/> CryptoWallet Transfer</template>
+				<div class="contents">
+
+					<MkContainer :body-togglable="true" class="_gap">
+						<template #header><Fa :icon="faTachometerAlt"/> Wallet Withdraw - OHM</template>
+
+						<div class="_content">
+							<div class="_keyValue"><b>Current Balance</b><span class="monospace" style="font-size: 1.07em;">{{ wallet.balance }} OHM</span></div>
+						</div>
+						<div class="_content">
+							<div class="_keyValue"><b>Withdraw Location</b><MkInput v-model:value="name"><span class="monospace">External Public Address</span></MkInput></div>
+						</div>
+						<div style="width: 67%; margin: auto;">
+							<MkButton full primary @click="doWithdraw()"><Fa :icon="faExternalLinkSquareAlt"/> Confirm Withdraw</MkButton>
+						</div>
+					</MkContainer>
+
+		    </div>
+			</MkFolder>
+
+    </div>
+</template>
+
+<script lang="ts">
+import { computed, defineComponent } from 'vue';
+import parseAcct from '@/misc/acct/parse';
+import Progress from '@client/scripts/loading';
+import { faBoxOpen, faUndo, faArrowsAlt, faBan, faBroom, faExternalLinkSquareAlt } from '@fortawesome/free-solid-svg-icons';
+import { faSave } from '@fortawesome/free-regular-svg-icons';
+import { query as urlQuery } from '../../../prelude/url';
+import MkButton from '@client/components/ui/button.vue';
+import MkInput from '@client/components/ui/input.vue';
+import MkContainer from '@client/components/ui/container.vue';
+import MkFolder from '@client/components/ui/folder.vue';
+import { userPage, acct as getAcct } from '../../filters/user';
+import * as os from '@client/os';
+
+
+export default defineComponent({
+  components: {
+			MkButton, faSave, MkInput, MkContainer, MkFolder, Progress,
+  },
+
+  props: {
+		acct: {
+			type: String,
+			required: true
+		},
+  },
+
+  data() {
+    return {
+			user: null,
+			error: null,
+      wallet: ""
+    };
+  },
+
+	watch: {
+		acct: 'fetch'
+	},
+
+  created() {
+    this.fetch();
+  },
+
+  methods: {
+    getAcct,
+
+    fetch() {
+      Progress.start();
+      os.api('wallet/balance').then(wallet => {
+        //console.log(wallet);
+        this.wallet = wallet;
+      }).catch(e => {
+        this.error = e;
+      }).finally(() => {
+        Progress.done();
+      });
+    },
+
+		doWithdraw() {
+			// TODO: withdraw things
+		},
+
+  }
+
+});
+</script>
+
+<style lang="scss" scoped>
+
+.monospace {
+  font-family: Lucida Console, Courier, monospace;
+}
+
+</style>

@@ -120,6 +120,7 @@ export default define(meta, async (ps, me) => {
 	});
 
 	var accountHistory: any[] = [];
+	// TODO: setup history..
 	var entry6: any[] = ["X WITHDRAW", "SEND_EXT", "2021-04-15 05:40:01", 5];
 	var entry5: any[] = ["RAIN CLOUD", "SEND_INT", "2021-04-15 04:20:01", 3];
 	var entry4: any[] = ["RAIN DROPS", "RECEIVE", "2021-04-15 03:40:01", 0.1];
