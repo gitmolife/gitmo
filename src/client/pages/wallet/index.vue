@@ -1,0 +1,301 @@
+<template>
+    <div>
+			<MkFolder>
+				<template #header><Fa :icon="faBtc"/> CryptoWallet Overview</template>
+
+			<div class="ftskorzw wide _section" v-if="wallet">
+
+				<MkContainer :body-togglable="true" class="_gap">
+					<template #header><Fa :icon="faInfoCircle"/> Wallet Info - OHM</template>
+
+					<div class="zbcjwnqg" v-size="{ max: [550, 1000] }">
+						<div class="stats">
+							<div class="_panel">
+								<div>
+									<small>Account</small>
+									<b><img src="/static-assets/client/coin/ohmie128.png" style="height: 42px;" /></b>
+								</div>
+								<div>
+									<dl class="total">
+										<dt>Balance</dt>
+										<dd>{{ number(wallet.balance + wallet.pending) }}</dd>
+									</dl>
+									<dl class="diff">
+										<dt>Pending</dt>
+										<dd>{{ number(wallet.pending) }}</dd>
+									</dl>
+									<dl class="diff">
+										<dt>Available</dt>
+										<dd>{{ number(wallet.balance) }}</dd>
+									</dl>
+								</div>
+							</div>
+							<div class="_panel">
+								<div>
+									<small>System</small>
+									<b><img src="/static-assets/client/coin/ohm100.png" style="height: 42px;" /></b>
+								</div>
+								<div>
+									<dl class="total">
+										<dt>Status</dt>
+										<dd v-bind:style="{ color: statusColor}">{{ wallet.server.status }}</dd>
+									</dl>
+									<dl class="diff">
+										<dt>Synced</dt>
+										<dd>{{ wallet.server.synced ? "Yes" : "No" }}</dd>
+									</dl>
+									<dl class="diff">
+										<dt>Latency</dt>
+										<dd>{{ number(wallet.server.latency) }} ms.</dd>
+									</dl>
+								</div>
+							</div>
+						</div>
+					</div>
+				</MkContainer>
+
+				<div class="contents">
+
+					<MkContainer :body-togglable="true" class="_gap">
+						<template #header><Fa :icon="faTachometerAlt"/> Wallet Control - OHM</template>
+
+						<div class="_content">
+							<div class="_keyValue"><b>Balance</b><span class="monospace" style="font-size: 1.07em;">{{ wallet.balance }} OHM</span></div>
+						</div>
+						<div class="_content">
+							<div class="_keyValue"><b>Deposit</b><span class="monospace"><a>{{ wallet.account.address }}</a></span></div>
+							<div class="_keyValue"><b>Transfer</b><span><a><Fa :icon="faBoxOpen"/> Withdraw Offsite</a></span></div>
+							<div class="_keyValue"><b>Help</b><span><a><Fa :icon="faInfoCircle"/> Usage FAQ</a></span></div>
+						</div>
+					</MkContainer>
+
+					<MkContainer :body-togglable="true" :scrollable="true" class="_gap" style="height: 300px;">
+						<template #header><Fa :icon="faDatabase"/> Action History</template>
+
+						<div class="_content" v-if="wallet.walletHist">
+							<table style="border-collapse: collapse; width: 100%;">
+								<tr style="opacity: 0.7;">
+									<th style="text-align: left; padding: 0 8px 8px 0;">Action</th>
+									<th style="text-align: left; padding: 0 8px 8px 0;">Type</th>
+									<th style="text-align: left; padding: 0 8px 8px 0;">DateTime</th>
+									<th style="text-align: left; padding: 0 0 8px 0;">Amount</th>
+								</tr>
+								<tr v-for="table in wallet.walletHist" :key="table[0]">
+									<th style="text-align: left; padding: 0 8px 0 0; word-break: break-all;" class="monospace">{{ table[0] }}</th>
+									<td style="padding: 0 8px 0 0; opacity: 0.8;" class="monospace">{{ table[1] }}</td>
+									<td style="padding: 0 8px 0 0;" class="monospace">{{ table[2] }}</td>
+									<td style="padding: 0;" class="monospace">{{ table[3] }}</td>
+								</tr>
+							</table>
+						</div>
+					</MkContainer>
+
+				</div>
+
+    	</div>
+			</MkFolder>
+    </div>
+</template>
+
+<script lang="ts">
+import { computed, defineComponent } from 'vue';
+//import { Wallet } from '@/scripts/wallet/wallet';
+import parseAcct from '@/misc/acct/parse';
+import Progress from '@client/scripts/loading';
+import { faBoxOpen, faDatabase, faInfoCircle, faTachometerAlt, } from '@fortawesome/free-solid-svg-icons';
+import { faBtc } from '@fortawesome/free-brands-svg-icons';
+import { query as urlQuery } from '../../../prelude/url';
+import MkButton from '@client/components/ui/button.vue';
+import MkSelect from '@client/components/ui/select.vue';
+import MkInput from '@client/components/ui/input.vue';
+import MkContainer from '@client/components/ui/container.vue';
+import MkFolder from '@client/components/ui/folder.vue';
+import number from '../../filters/number';
+import { selectFile } from '@/scripts/select-file';
+import { userPage, acct as getAcct } from '../../filters/user';
+import * as os from '@client/os';
+
+
+export default defineComponent({
+  components: {
+		MkButton,
+		MkSelect,
+		MkInput,
+		MkContainer,
+		MkFolder,
+  },
+
+  props: {
+		acct: {
+			type: String,
+			required: true
+		},
+  },
+
+  data() {
+    return {
+			user: null,
+			error: null,
+      wallet: null,
+			faBtc, faTachometerAlt, faInfoCircle, faBoxOpen, faDatabase
+    };
+  },
+
+	watch: {
+		acct: 'fetch'
+	},
+
+  created() {
+    this.fetch();
+  },
+
+  methods: {
+    getAcct,
+
+    fetch() {
+      Progress.start();
+      os.api('wallet/show').then(wallet => {
+        console.log(wallet);
+        this.wallet = wallet;
+				thos.colorize();
+      }).catch(e => {
+        this.error = e;
+      }).finally(() => {
+        Progress.done();
+      });
+    },
+		colorize() {
+			if (this.wallet.server.status == "Online") {
+				this.statusColor = "green";
+			} else {
+				this.statusColor = "red";
+			}
+		}
+
+		number,
+  }
+
+});
+</script>
+
+<style lang="scss" scoped>
+
+.monospace {
+  font-family: Lucida Console, Courier, monospace;
+	font-size: 0.85em;
+}
+
+._keyValue {
+	margin-bottom: 4px;
+}
+
+.zbcjwnqg {
+	&.max-width_1000px {
+		> .stats {
+			grid-template-columns: 1fr 1fr;
+			grid-template-rows: 1fr;
+		}
+	}
+
+	&.max-width_550px {
+		> .stats {
+			grid-template-columns: 1fr;
+			grid-template-rows: 1fr 1fr;
+		}
+	}
+
+	> .stats {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	grid-template-rows: 1fr;
+	gap: var(--margin);
+	margin-bottom: var(--margin);
+	font-size: 90%;
+
+		> div {
+			display: flex;
+			box-sizing: border-box;
+			padding: 16px 20px;
+
+			> div {
+				width: 50%;
+				background-color: rgba(237, 239, 242, 0.22);
+				border-radius: 1px;
+				padding: 6px 10px;
+
+				&:first-child {
+					width: 40%;
+				}
+				&:last-child {
+					width: 60%;
+				}
+
+				&:first-child {
+					> b {
+						display: block;
+
+						> [data-icon] {
+							width: 16px;
+							margin-right: 8px;
+						}
+
+						> img {
+							border-radius: 8px;
+							overflow: hidden;
+							transition: all 0.25s;
+						}
+
+						> :hover {
+							transform: scale(1.07, 1.02);
+    					transition: transform 0.25s;
+						}
+					}
+
+					> small {
+						margin-left: 1px;
+						opacity: 0.8;
+					}
+				}
+
+				&:last-child {
+					> dl {
+						display: flex;
+						margin: 0;
+						line-height: 1.5em;
+
+						> dt,
+						> dd {
+							width: 50%;
+							margin: 0;
+						}
+
+						> dd {
+							text-overflow: ellipsis;
+							overflow: hidden;
+							white-space: nowrap;
+						}
+
+						&.total {
+							> dt,
+							> dd {
+								font-weight: bold;
+							}
+						}
+
+						&.diff.inc {
+							> dd {
+								color: #82c11c;
+
+								&:before {
+									content: "+";
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+</style>

@@ -19,7 +19,7 @@ import { query as urlQuery } from '../../../prelude/url';
 import MkButton from '@/components/ui/button.vue';
 import MkSelect from '@/components/ui/select.vue';
 import { selectFile } from '@/scripts/select-file';
-import { userPage, acct as getAcct } from '../../filters/user';
+import { acct as getAcct } from '../../filters/user';
 import * as os from '@client/os';
 //import { ColdDeviceStorage } from '@/store';
 
@@ -30,23 +30,17 @@ export default defineComponent({
   },
 
   props: {
-		acct: {
-			type: String,
-			required: true
-		},
+    acct: {
+      type: String,
+      required: true
+    },
   },
 
   data() {
     return {
-			user: null,
-			error: null,
       wallet: null
     };
   },
-
-	watch: {
-		acct: 'fetch'
-	},
 
   created() {
     this.fetch();

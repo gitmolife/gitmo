@@ -1,11 +1,10 @@
 import $ from 'cafy';
 import define from '../../define';
 import { ApiError } from '../../error';
-import { Users, UserWalletAddresses, UserWalletBalances } from '../../../../models';
+import { Users, UserWalletAddresses } from '../../../../models';
 import { UserWalletAddress } from '../../../../models/entities/user-wallet-address';
-import { UserWalletBalance } from '../../../../models/entities/user-wallet-balance';
 import { ID } from '@/misc/cafy-id';
-//import { toPunyNullable } from '../../../../misc/convert-host';
+import { toPunyNullable } from '../../../../misc/convert-host';
 //import IntercomBroker from '../../../../services/intercom/intercom-broker';
 //import { getIntercom } from '../../../../boot/master';
 //import { getBroker } from '../../../../boot/xbroker';
@@ -13,7 +12,7 @@ import { ID } from '@/misc/cafy-id';
 export const meta = {
 	tags: ['wallet'],
 
-	requireCredential: true as const,
+	requireCredential: false as const,
 
 	params: {
 		userId: {
@@ -58,13 +57,7 @@ export default define(meta, async (ps, me) => {
 		throw new ApiError(meta.errors.noSuchUser);
 	}
 
-	ps.userId = user.id;
-	ps.username = user.username!.toLowerCase();
-	let ct = 0;
-
-	let wallet = (await UserWalletAddresses.findOne({ userId: user.id, coinType: ct } ) as UserWalletAddress);
-	let balance = (await UserWalletBalances.findOne({ userId: user.id, coinType: ct} ) as UserWalletBalance);
-	//let hitstory = (await UserWalletAddresses.findOne({ userId: user.id} ) as UserWalletAddress);
+	let wallet = (await UserWalletAddresses.findOne({ userId: user.id} ) as UserWalletAddress);
 
 	var cb: (error: Error | null) => void = (error: Error | null) => {
 		if (error) {
@@ -109,41 +102,5 @@ export default define(meta, async (ps, me) => {
 		}
 	});
 
-	process.on('message', msg => {
-		if (isJson(msg)) {
-			const res = JSON.parse(JSON.stringify(msg));
-			if (res.cmd === 'gotNewWallet') {
-				console.log(msg);
-				// TODO: cleanup..
-			}
-		}
-	});
-
-	var accountHistory: any[] = [];
-	var entry6: any[] = ["X WITHDRAW", "SEND_EXT", "2021-04-15 05:40:01", 5];
-	var entry5: any[] = ["RAIN CLOUD", "SEND_INT", "2021-04-15 04:20:01", 3];
-	var entry4: any[] = ["RAIN DROPS", "RECEIVE", "2021-04-15 03:40:01", 0.1];
-	var entry3: any[] = ["TIP INMATE", "RECEIVE", "2021-04-15 02:40:01", 0.5];
-	var entry2: any[] = ["TIP INMATE", "SEND_INT", "2021-04-15 01:40:01", 1];
-	var entry1: any[] = ["DEPOSIT IN", "RECEIVE", "2021-04-14 02:40:01", 10];
-	accountHistory.push(entry1);
-	accountHistory.push(entry2);
-	accountHistory.push(entry3);
-	accountHistory.push(entry4);
-	accountHistory.push(entry5);
-	accountHistory.push(entry6);
-
-	var data = {
-		account: wallet,
-		balance: balance.balance,
-		pending: 0.0,
-		server: {
-			status: "Online",
-			synced: true,
-			latency: 0,
-		},
-		walletHist: accountHistory,
-	};
-
-	return data;
+	return wallet;
 });

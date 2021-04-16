@@ -90,6 +90,15 @@ process.on('message', (msg) => {
 						 ])
 						.execute();
 					process.send!({cmd: 'gotNewAddress', address: data});
+					getConnection()
+						.createQueryBuilder()
+						.insert()
+						.into('user_wallet_balance')
+						.values([
+								{ userId: res.userId }
+						 ])
+						.execute();
+					process.send!({cmd: 'gotNewWallet', address: data});
 				}
 			};
 			intercomBroker!.getNewAddress(res.userId, cb);
