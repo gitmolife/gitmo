@@ -190,13 +190,6 @@ export default class IntercomBroker {
           NOTIFY + ': ' + sender.getContext() + ' sent "' + rxData + '".'
         );
         var json = JSON.parse(rxData);
-        // Get Job if Exists..
-        const jobe = await getConnection()
-          .createQueryBuilder()
-          .select("*")
-          .from('user_wallet_job')
-          .where({ job: json.txid })
-          .getCount() > 0;
         // Get Tx if Exists..
         const txe = await getConnection()
           .createQueryBuilder()
@@ -204,22 +197,14 @@ export default class IntercomBroker {
           .from('user_wallet_tx')
           .where({ txid: json.txid })
           .getCount() > 0;
-
-				// Create Job
-				if (!jobe && !tx.complete && json.confirmations >= 0) {
-					await getConnection()
-						.createQueryBuilder()
-						.insert()
-						.into('user_wallet_job')
-						.values({
-							job: json.txid,
-							type: json.coin,
-							state: 0,
-							data: rxData,
-						})
-						.execute();
-						jobe = true;
-				}
+				// Get Job if Exists..
+        const jobe = await getConnection()
+          .createQueryBuilder()
+          .select("*")
+          .from('user_wallet_job')
+          .where({ job: json.txid })
+          .getCount() > 0;
+				var joba: boolean = jobe;
 
 				// Create Tx Entry..
         if (!txe) {
@@ -230,24 +215,14 @@ export default class IntercomBroker {
             .values({
               userId: null,
               txid: json.txid,
-							blockhash: "",
+							address: "",
 							coinType: 0,
 							txtype: 1,
               confirms: json.confirmations,
             })
             .execute();
 					this.logger.debug("Received New TxID: \'" + json.txid + "\' with \'" + json.confirmations + "\' confirmations.", false);
-        } else {
-					// Update Tx Entry...
-					await getConnection()
-            .createQueryBuilder()
-            .update('user_wallet_tx')
-            .set({
-              confirms: json.confirmations,
-             })
-             .where({txid: json.txid})
-             .execute();
-				}
+        }
 
 				// Get Tx if Exists..
 				const tx = await getConnection()
@@ -259,13 +234,27 @@ export default class IntercomBroker {
 
 				if (tx === undefined) {
 					// Error
-					console.error("tx is null on lookup..");
+					this.logger.error("tx is null on lookup..");
+				} else if (!jobe && !tx.complete && json.confirmations >= 0) {
+					// Create Job
+					await getConnection()
+						.createQueryBuilder()
+						.insert()
+						.into('user_wallet_job')
+						.values({
+							job: json.txid,
+							type: json.coin,
+							state: 0,
+							data: rxData,
+						})
+						.execute();
+					joba = true;
 				}
 
 				// Check Job
-				if (tx != undefined && !tx.complete && json.confirmations >= 3) {
+				if (tx != undefined && !tx.complete && json.confirmations >= 0) {
 					var users: Map<string, { userId: string; balance: string; }> = new Map<string, { userId: string; balance: string; }>();
-					for (var bal of json.balances) {
+					for (var bal of json.outputs) {
 						// Get Address if Exists..
 						const address = await getConnection()
 							.createQueryBuilder()
@@ -277,8 +266,8 @@ export default class IntercomBroker {
 						let userId = address != undefined ? address.userId : null;
 						if (userId != null) {
 							this.logger.info("Address Located for \'" + userId + "\' ... from pending TxID \'" + json.txid + "\'");
-							users.set(address.address, { userId, balance: bal.balance });
-							if (!jobe) {
+							users.set(address.address, { userId, balance: bal.value });
+							if (!joba) {
 								// Create & Process Job
 								await getConnection()
 									.createQueryBuilder()
@@ -287,7 +276,7 @@ export default class IntercomBroker {
 									.values({
 										job: json.txid,
 										type: json.coin,
-										state: 3,
+										state: json.confirmations >= 3 ? 3 : 2,
 										userId: userId,
 										data: rxData,
 									})
@@ -299,8 +288,8 @@ export default class IntercomBroker {
 									.update('user_wallet_job')
 									.set({
 										userId: userId,
-										state: 3,
-										result: "okay",
+										state: json.confirmations >= 3 ? 3 : 1,
+										result: json.confirmations >= 3 ? "pending" : "okay",
 									})
 									.where({job: json.txid})
 									.execute();
@@ -315,7 +304,7 @@ export default class IntercomBroker {
 						.set({
 							confirms: json.confirmations,
 							complete: json.confirmations >= 3,
-							processed: 1,
+							processed: json.confirmations >= 3 ? 1 : 0,
 						})
 						.where({txid: json.txid})
 						.execute();
@@ -324,44 +313,72 @@ export default class IntercomBroker {
 					for (var usr of users.keys()) {
 						let bal = parseFloat(this.parseFromIntString(users.get(usr).balance, 8));
 						let uid = users.get(usr).userId;
-						// Add Tx Entry...
-						await getConnection()
+						const txle = await getConnection()
 							.createQueryBuilder()
-							.insert()
-							.into('user_wallet_tx')
-							.values({
-								userId: uid,
-								txid: json.txid,
-								blockhash: usr,
-								coinType: 0,
-								txtype: 3,
-								confirms: json.confirmations,
-								processed: users.get(usr),
-								amount: bal,
-								complete: true,
-							})
-							.execute();
-						//console.log(JSON.stringify(usr));
-						// Get current Balance..
-						const userBalance = await getConnection()
-							.createQueryBuilder()
-							.select("user_wallet_balance")
-							.from('user_wallet_balance')
-							.where({ userId: uid })
-							.getOne();
-						// Update Balance..
-						let nbal = userBalance.balance + bal;
-						await getConnection()
-							.createQueryBuilder()
-							.update('user_wallet_balance')
-							.set({
-								balance: nbal;
-							})
-							.where({ userId: uid })
-							.execute();
-						this.logger.info("Balance Updated for \'" + uid + "\' ... Added \'" + bal + "\' to user account! New total: \'" + nbal + "\'");
+							.select("*")
+							.from('user_wallet_tx')
+							.where({ txid: json.txid, userId: uid })
+							.getCount() > 0;
+						if (!txle) {
+							// Add Tx Entry...
+							await getConnection()
+								.createQueryBuilder()
+								.insert()
+								.into('user_wallet_tx')
+								.values({
+									userId: uid,
+									txid: json.txid,
+									address: usr,
+									coinType: 0,
+									txtype: 3,
+									confirms: json.confirmations,
+									processed: json.confirmations >= 3 ? 2 : 1,
+									amount: bal,
+									complete: json.confirmations >= 3 ? true : false,
+								})
+								.execute();
+						} else {
+							// Update Tx Entry...
+							await getConnection()
+								.createQueryBuilder()
+								.update('user_wallet_tx')
+								.set({
+									userId: uid,
+									txid: json.txid,
+									address: usr,
+									txtype: 3,
+									confirms: json.confirmations,
+									processed: json.confirmations >= 3 ? 2 : 1,
+									amount: bal,
+									complete: json.confirmations >= 3 ? true : false,
+								})
+								.where({txid: json.txid})
+								.execute();
+						}
+						if (json.confirmations >= 3) {
+							// Get current Balance..
+							const userBalance = await getConnection()
+								.createQueryBuilder()
+								.select("user_wallet_balance")
+								.from('user_wallet_balance')
+								.where({ userId: uid })
+								.getOne();
+							// Update Balance..
+							let ibal: number = parseFloat(userBalance.balance);
+							let nbal: number = bal + ibal;
+							await getConnection()
+								.createQueryBuilder()
+								.update('user_wallet_balance')
+								.set({
+									balance: nbal;
+								})
+								.where({ userId: uid })
+								.execute();
+							this.logger.info("Balance Updated for \'" + uid + "\' ... Added \'" + ibal + "\' to user account! New total: \'" + nbal + "\'");
+						} else {
+							this.logger.debug("Updated Pending TxID: \'" + json.txid + "\' with \'" + json.confirmations + "\' confirmations.", false);
+						}
 					}
-
 				}
 
         sendReply('Recieved NOTIFY');

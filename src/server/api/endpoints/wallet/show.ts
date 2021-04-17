@@ -1,14 +1,13 @@
 import $ from 'cafy';
 import define from '../../define';
 import { ApiError } from '../../error';
-import { Users, UserWalletAddresses, UserWalletBalances } from '../../../../models';
+import { Users, UserWalletAddresses, UserWalletBalances, UserWalletStatuses, UserWalletTxs } from '../../../../models';
 import { UserWalletAddress } from '../../../../models/entities/user-wallet-address';
 import { UserWalletBalance } from '../../../../models/entities/user-wallet-balance';
+import { UserWalletStatus } from '../../../../models/entities/user-wallet-status';
+import { UserWalletTx } from '../../../../models/entities/user-wallet-tx';
 import { ID } from '@/misc/cafy-id';
-//import { toPunyNullable } from '../../../../misc/convert-host';
-//import IntercomBroker from '../../../../services/intercom/intercom-broker';
-//import { getIntercom } from '../../../../boot/master';
-//import { getBroker } from '../../../../boot/xbroker';
+import { getConnection } from 'typeorm';
 
 export const meta = {
 	tags: ['wallet'],
@@ -119,29 +118,41 @@ export default define(meta, async (ps, me) => {
 		}
 	});
 
+	let status: UserWalletStatus = (await UserWalletStatuses.findOne({ type: "ohmcoin" } ) as UserWalletStatus);
+	//let history = await UserWalletTxs.findMany({ userId: user.id } );
+	let history = await getConnection()
+						.createQueryBuilder()
+						.select("user_wallet_tx")
+						.from('user_wallet_tx')
+						.where({ userId: user.id })
+						.getMany();
+
 	var accountHistory: any[] = [];
-	// TODO: setup history..
-	var entry6: any[] = ["X WITHDRAW", "SEND_EXT", "2021-04-15 05:40:01", 5];
-	var entry5: any[] = ["RAIN CLOUD", "SEND_INT", "2021-04-15 04:20:01", 3];
-	var entry4: any[] = ["RAIN DROPS", "RECEIVE", "2021-04-15 03:40:01", 0.1];
-	var entry3: any[] = ["TIP INMATE", "RECEIVE", "2021-04-15 02:40:01", 0.5];
-	var entry2: any[] = ["TIP INMATE", "SEND_INT", "2021-04-15 01:40:01", 1];
-	var entry1: any[] = ["DEPOSIT IN", "RECEIVE", "2021-04-14 02:40:01", 10];
-	accountHistory.push(entry1);
-	accountHistory.push(entry2);
-	accountHistory.push(entry3);
-	accountHistory.push(entry4);
-	accountHistory.push(entry5);
-	accountHistory.push(entry6);
+	var pending: number = 0;
+	for (var h of history {
+		var t = "RECEIVE";
+		var a = "DEPOSIT IN";
+		if (h.txtype === 2 || h.txtype === 4) {
+			t = "SEND_EXT";
+			a = "X WITHDRAW";
+		}
+		if (!h.complete) {
+			pending = pending + parseFloat(h.amount);
+		}
+		var entry: any[] = [ a, t, h.createdAt, h.amount ];
+		accountHistory.push(entry);
+	}
 
 	var data = {
 		account: wallet,
 		balance: balance.balance,
-		pending: 0.0,
+		pending: pending,
 		server: {
-			status: "Online",
-			synced: true,
-			latency: 0,
+			status: status.online ? "Online" : "Offline",
+			synced: status.synced,
+			crawling: status.crawling,
+			height: status.blockheight,
+			time: status.blocktime
 		},
 		walletHist: accountHistory,
 	};

@@ -11,14 +11,14 @@
 					<div class="zbcjwnqg" v-size="{ max: [550, 1000] }">
 						<div class="stats">
 							<div class="_panel">
-								<div>
+								<div style="width: 30%;">
 									<small>Account</small>
 									<b><img src="/static-assets/client/coin/ohmie128.png" style="height: 42px;" /></b>
 								</div>
-								<div>
+								<div style="width: 70%;">
 									<dl class="total">
 										<dt>Balance</dt>
-										<dd>{{ number(wallet.balance + wallet.pending) }}</dd>
+										<dd>{{ number(parseFloat(wallet.balance) + parseFloat(wallet.pending)) }}</dd>
 									</dl>
 									<dl class="diff">
 										<dt>Pending</dt>
@@ -31,11 +31,11 @@
 								</div>
 							</div>
 							<div class="_panel">
-								<div>
+								<div style="width: 30%;">
 									<small>System</small>
 									<b><img src="/static-assets/client/coin/ohm100.png" style="height: 42px;" /></b>
 								</div>
-								<div>
+								<div style="width: 70%;">
 									<dl class="total">
 										<dt>Status</dt>
 										<dd v-bind:style="{ color: statusColor}">{{ wallet.server.status }}</dd>
@@ -45,8 +45,8 @@
 										<dd>{{ wallet.server.synced ? "Yes" : "No" }}</dd>
 									</dl>
 									<dl class="diff">
-										<dt>Latency</dt>
-										<dd>{{ number(wallet.server.latency) }} ms.</dd>
+										<dt>Height</dt>
+										<dd class="monospace">{{ number(wallet.server.height) }}</dd>
 									</dl>
 								</div>
 							</div>
@@ -225,17 +225,10 @@ export default defineComponent({
 			padding: 16px 20px;
 
 			> div {
-				width: 50%;
+				width: 60%;
 				background-color: rgba(237, 239, 242, 0.22);
 				border-radius: 1px;
-				padding: 6px 10px;
-
-				&:first-child {
-					width: 40%;
-				}
-				&:last-child {
-					width: 60%;
-				}
+				padding: 4px 10px;
 
 				&:first-child {
 					> b {
