@@ -29,11 +29,12 @@ export class registry1615602467317 implements MigrationInterface {
 				"userId" VARCHAR(32) DEFAULT NULL,
 				"txid" VARCHAR(64) NOT NULL,
 				"vout" INTEGER NOT NULL DEFAULT 0,
-				"blockhash" VARCHAR(64) NOT NULL,
+				"address" VARCHAR(64) NOT NULL,
 				"coinType" INTEGER NOT NULL DEFAULT 0,
 				"txtype" INTEGER NOT NULL DEFAULT 0,
 				"confirms" INTEGER NOT NULL DEFAULT 0,
 				"processed" INTEGER NOT NULL DEFAULT 0,
+				"amount" DECIMAL(16,8) NOT NULL DEFAULT 0,
 				"complete" BOOLEAN NOT NULL DEFAULT FALSE,
 				"createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 				"updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP

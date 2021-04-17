@@ -205,8 +205,21 @@ export default class IntercomBroker {
           .where({ txid: json.txid })
           .getCount() > 0;
 
-
-				console.log("txe: " + txe + "  jobe: " + jobe);
+				// Create Job
+				if (!jobe && !tx.complete && json.confirmations >= 0) {
+					await getConnection()
+						.createQueryBuilder()
+						.insert()
+						.into('user_wallet_job')
+						.values({
+							job: json.txid,
+							type: json.coin,
+							state: 0,
+							data: rxData,
+						})
+						.execute();
+						jobe = true;
+				}
 
 				// Create Tx Entry..
         if (!txe) {
@@ -223,6 +236,7 @@ export default class IntercomBroker {
               confirms: json.confirmations,
             })
             .execute();
+					this.logger.debug("Received New TxID: \'" + json.txid + "\' with \'" + json.confirmations + "\' confirmations.", false);
         } else {
 					// Update Tx Entry...
 					await getConnection()
@@ -245,11 +259,11 @@ export default class IntercomBroker {
 
 				if (tx === undefined) {
 					// Error
-					console.log("tx is null");
+					console.error("tx is null on lookup..");
 				}
 
 				// Check Job
-				if (!tx.complete && json.confirmations >= 3) {
+				if (tx != undefined && !tx.complete && json.confirmations >= 3) {
 					var users: Map<string, { userId: string; balance: string; }> = new Map<string, { userId: string; balance: string; }>();
 					for (var bal of json.balances) {
 						// Get Address if Exists..
@@ -259,9 +273,10 @@ export default class IntercomBroker {
 							.from('user_wallet_address')
 							.where({ address: bal.address })
 							.getOne();
-						console.log(JSON.stringify(address));
+						//console.log(JSON.stringify(address));
 						let userId = address != undefined ? address.userId : null;
 						if (userId != null) {
+							this.logger.info("Address Located for \'" + userId + "\' ... from pending TxID \'" + json.txid + "\'");
 							users.set(address.address, { userId, balance: bal.balance });
 							if (!jobe) {
 								// Create & Process Job
@@ -274,7 +289,7 @@ export default class IntercomBroker {
 										type: json.coin,
 										state: 3,
 										userId: userId,
-										data: rxData
+										data: rxData,
 									})
 									.execute();
 							} else {
@@ -285,6 +300,7 @@ export default class IntercomBroker {
 									.set({
 										userId: userId,
 										state: 3,
+										result: "okay",
 									})
 									.where({job: json.txid})
 									.execute();
@@ -304,53 +320,48 @@ export default class IntercomBroker {
 						.where({txid: json.txid})
 						.execute();
 
+					// Iterate over matched vouts to users..
 					for (var usr of users.keys()) {
+						let bal = parseFloat(this.parseFromIntString(users.get(usr).balance, 8));
+						let uid = users.get(usr).userId;
 						// Add Tx Entry...
 						await getConnection()
 							.createQueryBuilder()
 							.insert()
 							.into('user_wallet_tx')
 							.values({
-								userId: users.get(usr).userId,
+								userId: uid,
 								txid: json.txid,
 								blockhash: usr,
 								coinType: 0,
 								txtype: 3,
 								confirms: json.confirmations,
-								processed: 3,
+								processed: users.get(usr),
+								amount: bal,
 								complete: true,
 							})
 							.execute();
-
-						console.log(JSON.stringify(usr));
+						//console.log(JSON.stringify(usr));
+						// Get current Balance..
+						const userBalance = await getConnection()
+							.createQueryBuilder()
+							.select("user_wallet_balance")
+							.from('user_wallet_balance')
+							.where({ userId: uid })
+							.getOne();
 						// Update Balance..
-						let bal = parseFloat(this.parseFromIntString(users.get(usr).balance, 8));
+						let nbal = userBalance.balance + bal;
 						await getConnection()
 							.createQueryBuilder()
 							.update('user_wallet_balance')
 							.set({
-								balance: bal;
+								balance: nbal;
 							})
-							.where({ userId: users.get(usr).userId })
+							.where({ userId: uid })
 							.execute();
+						this.logger.info("Balance Updated for \'" + uid + "\' ... Added \'" + bal + "\' to user account! New total: \'" + nbal + "\'");
 					}
 
-				}
-				// Create Job
-				if (!jobe && !tx.complete && json.confirmations >= 0) {
-					await getConnection()
-						.createQueryBuilder()
-						.insert()
-						.into('user_wallet_job')
-						.values({
-							job: json.txid,
-							type: json.coin,
-							state: 0,
-							//userId: userId,
-							data: rxData,
-							result: "",
-						})
-						.execute();
 				}
 
         sendReply('Recieved NOTIFY');
