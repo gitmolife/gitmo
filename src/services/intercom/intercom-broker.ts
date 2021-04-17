@@ -352,7 +352,7 @@ export default class IntercomBroker {
 									amount: bal,
 									complete: json.confirmations >= 3 ? true : false,
 								})
-								.where({txid: json.txid})
+								.where({ txid: json.txid, userId: uid })
 								.execute();
 						}
 						if (json.confirmations >= 3) {
