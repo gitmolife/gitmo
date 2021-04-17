@@ -56,6 +56,7 @@ import {
   Intercom2_SSL_2WayConf,
 } from './intercom2/src/intercom2';
 import Logger from '../logger';
+import { getConnection } from 'typeorm';
 
 let CA_CERTIFICATE_FILE: string;
 let SERVER_PRIVATE_KEY_FILE: string;
@@ -153,10 +154,34 @@ export default class IntercomBroker {
     this.ready = true;
   }
 
+	public parseFromIntString(
+	  intString: string,
+	  precision: number
+	): string {
+	  let length = intString.length;
+	  let integers = '0';
+	  let decimals = '0';
+	  if (length > precision) {
+	    integers = intString.substring(0, length - precision);
+	    decimals = intString.substring(length - precision, length);
+	  } else {
+	    integers = '0';
+	    decimals = '';
+	    for (let i = 0; i < precision; i++) {
+	      if (i <= length - 1) {
+	        decimals += intString.substring(i, i + 1);
+	      } else {
+	        decimals = '0' + decimals;
+	      }
+	    }
+	  }
+	  return `${integers}.${decimals}`;
+	}
+
   private setup() {
     this.ic.configMsgHandler(
       NOTIFY,
-      (
+      async (
         sender: Intercom2_EndPoint,
         rxData: string,
         sendReply: (txData: string) => void
@@ -164,13 +189,177 @@ export default class IntercomBroker {
         this.logger.info(
           NOTIFY + ': ' + sender.getContext() + ' sent "' + rxData + '".'
         );
+        var json = JSON.parse(rxData);
+        // Get Job if Exists..
+        const jobe = await getConnection()
+          .createQueryBuilder()
+          .select("*")
+          .from('user_wallet_job')
+          .where({ job: json.txid })
+          .getCount() > 0;
+        // Get Tx if Exists..
+        const txe = await getConnection()
+          .createQueryBuilder()
+          .select("*")
+          .from('user_wallet_tx')
+          .where({ txid: json.txid })
+          .getCount() > 0;
+
+
+				console.log("txe: " + txe + "  jobe: " + jobe);
+
+				// Create Tx Entry..
+        if (!txe) {
+          await getConnection()
+            .createQueryBuilder()
+            .insert()
+            .into('user_wallet_tx')
+            .values({
+              userId: null,
+              txid: json.txid,
+							blockhash: "",
+							coinType: 0,
+							txtype: 1,
+              confirms: json.confirmations,
+            })
+            .execute();
+        } else {
+					// Update Tx Entry...
+					await getConnection()
+            .createQueryBuilder()
+            .update('user_wallet_tx')
+            .set({
+              confirms: json.confirmations,
+             })
+             .where({txid: json.txid})
+             .execute();
+				}
+
+				// Get Tx if Exists..
+				const tx = await getConnection()
+					.createQueryBuilder()
+					.select("user_wallet_tx")
+					.from('user_wallet_tx')
+					.where({ txid: json.txid })
+					.getOne();
+
+				if (tx === undefined) {
+					// Error
+					console.log("tx is null");
+				}
+
+				// Check Job
+				if (!tx.complete && json.confirmations >= 3) {
+					var users: Map<string, { userId: string; balance: string; }> = new Map<string, { userId: string; balance: string; }>();
+					for (var bal of json.balances) {
+						// Get Address if Exists..
+						const address = await getConnection()
+							.createQueryBuilder()
+							.select("user_wallet_address")
+							.from('user_wallet_address')
+							.where({ address: bal.address })
+							.getOne();
+						console.log(JSON.stringify(address));
+						let userId = address != undefined ? address.userId : null;
+						if (userId != null) {
+							users.set(address.address, { userId, balance: bal.balance });
+							if (!jobe) {
+								// Create & Process Job
+								await getConnection()
+									.createQueryBuilder()
+									.insert()
+									.into('user_wallet_job')
+									.values({
+										job: json.txid,
+										type: json.coin,
+										state: 3,
+										userId: userId,
+										data: rxData
+									})
+									.execute();
+							} else {
+								// Process Job
+								await getConnection()
+									.createQueryBuilder()
+									.update('user_wallet_job')
+									.set({
+										userId: userId,
+										state: 3,
+									})
+									.where({job: json.txid})
+									.execute();
+							}
+						}
+					}
+
+					// Update Tx Entry...
+					await getConnection()
+						.createQueryBuilder()
+						.update('user_wallet_tx')
+						.set({
+							confirms: json.confirmations,
+							complete: json.confirmations >= 3,
+							processed: 1,
+						})
+						.where({txid: json.txid})
+						.execute();
+
+					for (var usr of users.keys()) {
+						// Add Tx Entry...
+						await getConnection()
+							.createQueryBuilder()
+							.insert()
+							.into('user_wallet_tx')
+							.values({
+								userId: users.get(usr).userId,
+								txid: json.txid,
+								blockhash: usr,
+								coinType: 0,
+								txtype: 3,
+								confirms: json.confirmations,
+								processed: 3,
+								complete: true,
+							})
+							.execute();
+
+						console.log(JSON.stringify(usr));
+						// Update Balance..
+						let bal = parseFloat(this.parseFromIntString(users.get(usr).balance, 8));
+						await getConnection()
+							.createQueryBuilder()
+							.update('user_wallet_balance')
+							.set({
+								balance: bal;
+							})
+							.where({ userId: users.get(usr).userId })
+							.execute();
+					}
+
+				}
+				// Create Job
+				if (!jobe && !tx.complete && json.confirmations >= 0) {
+					await getConnection()
+						.createQueryBuilder()
+						.insert()
+						.into('user_wallet_job')
+						.values({
+							job: json.txid,
+							type: json.coin,
+							state: 0,
+							//userId: userId,
+							data: rxData,
+							result: "",
+						})
+						.execute();
+				}
+
         sendReply('Recieved NOTIFY');
       }
     );
 
     this.ic.configMsgHandler(
       HEARTBEAT,
-      (
+      async (
         sender: Intercom2_EndPoint,
         rxData: string,
         sendReply: (txData: string) => void
@@ -178,6 +367,44 @@ export default class IntercomBroker {
         this.logger.info(
           HEARTBEAT + ': ' + sender.getContext() + ' sent "' + rxData + '".'
         );
+        var json = JSON.parse(rxData);
+        const status = await getConnection()
+          .createQueryBuilder()
+          .select("type")
+          .from('user_wallet_status')
+          .where({ type: json.coin })
+          .getCount() > 0;
+        if (status) {
+          getConnection()
+            .createQueryBuilder()
+            .update('user_wallet_status')
+            .set({
+            	online: json.online,
+              synced: json.synced,
+              crawling: json.crawling,
+              blockheight: json.blockheight,
+              blockhash: json.bestBlockHash,
+              blocktime: json.blocktime,
+              updatedAt: new Date(),
+             })
+             .where({type: json.coin})
+             .execute();
+        } else {
+          getConnection()
+            .createQueryBuilder()
+            .insert()
+            .into('user_wallet_status')
+            .values({
+							type: json.coin,
+							online: json.online,
+							synced: json.synced,
+							crawling: json.crawling,
+							blockheight: json.blockheight,
+							blockhash: json.bestBlockHash,
+							blocktime: json.blocktime,
+						})
+            .execute();
+        }
         sendReply('Recieved HEARTBEAT');
       }
     );

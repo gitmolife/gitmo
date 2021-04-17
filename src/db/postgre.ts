@@ -52,6 +52,7 @@ import { UserWalletAddress } from '../models/entities/user-wallet-address';
 import { UserWalletBalance } from '../models/entities/user-wallet-balance';
 import { UserWalletJob } from '../models/entities/user-wallet-job';
 import { UserWalletTx } from '../models/entities/user-wallet-tx';
+import { UserWalletStatus } from '../models/entities/user-wallet-status';
 import { AttestationChallenge } from '../models/entities/attestation-challenge';
 import { Page } from '../models/entities/page';
 import { PageLike } from '../models/entities/page-like';
@@ -132,6 +133,7 @@ export const entities = [
 	UserWalletBalance,
 	UserWalletJob,
 	UserWalletTx,
+	UserWalletStatus,
 	UsedUsername,
 	AttestationChallenge,
 	Following,
