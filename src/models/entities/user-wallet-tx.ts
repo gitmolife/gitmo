@@ -31,7 +31,7 @@ export class UserWalletTx {
 		length: 64,
 		comment: 'The blochash which the transaction was included within.'
 	})
-	public blockhash: string;
+	public address: string;
 
 	@Column('integer', {
 		default: 0,
@@ -62,6 +62,12 @@ export class UserWalletTx {
 		comment: 'Whether the tx is complete.'
 	})
 	public complete: boolean;
+
+	@Column('decimal', {
+		default: 0,
+		comment: 'The amount of this tx.'
+	})
+	public amount: number;
 
 	@ManyToOne(type => User, {
 		onDelete: 'CASCADE'
