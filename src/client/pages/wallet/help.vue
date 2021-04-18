@@ -15,6 +15,7 @@ import Progress from '@client/scripts/loading';
 import { query as urlQuery } from '../../../prelude/url';
 import * as os from '@client/os';
 
+export default defineComponent({
   components: {
   },
 
