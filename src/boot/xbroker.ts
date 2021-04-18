@@ -102,6 +102,67 @@ process.on('message', (msg) => {
 				}
 			};
 			intercomBroker!.getNewAddress(res.userId, cb);
+		} else if (res.cmd === 'doWithdraw') {
+				brokerLogger.info('doWithdraw() ' + res.data.address);
+				let uid: string = res.data.userId;
+				let outAddress: string = res.data.address;
+				let amount: number = parseFloat(res.data.amount);
+				var cb = async (error: Error | null, data: any) => {
+					if (error) {
+						brokerLogger.error(error);
+					} else {
+						let json = JSON.parse(data);
+						brokerLogger.debug('doneWithdraw() ' + data);
+
+						// Get current Balance..
+						const userBalance = await getConnection()
+							.createQueryBuilder()
+							.select("user_wallet_balance")
+							.from('user_wallet_balance')
+							.where({ userId: uid })
+							.getOne();
+						// Update Balance..
+						let ibal: number = parseFloat(userBalance.balance);
+						let nbal: number = ibal - amount;
+						await getConnection()
+							.createQueryBuilder()
+							.update('user_wallet_balance')
+							.set({
+								balance: nbal,
+							})
+							.where({ userId: uid })
+							.execute();
+						// Add Tx Entry...
+						await getConnection()
+							.createQueryBuilder()
+							.insert()
+							.into('user_wallet_tx')
+							.values({
+								userId: uid,
+								txid: json.txid,
+								address: outAddress,
+								coinType: 0,
+								txtype: 4,
+								processed: 3,
+								amount: amount,
+								complete: false,
+							})
+							.execute();
+						process.send!({cmd: 'doneWithdraw', address: data});
+					}
+				};
+
+				let inAddress: string = "ZMo5naJ4wUKqX9gKeFUSzyheobgFkbXE6G";
+				let changeAddress: string = "ZK9k3RkP6GzUNTMdMuk11q7zCoDFbXBbqy";
+				let trq: TransactionRequest = {
+	        senders: [inAddress],
+	        recipients: [
+	          { address: outAddress, amount: (amount * 100000000) },
+	        ],
+	        changeAddress: changeAddress,
+	      };
+				console.log(trq);
+				intercomBroker!.sendFunds(trq, cb);
 		}
 	}
 });

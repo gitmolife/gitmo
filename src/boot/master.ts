@@ -108,13 +108,19 @@ export async function masterMain() {
 		if (isJson(msg)) {
 			const res = JSON.parse(JSON.stringify(msg));
 			if (res.cmd === 'getNewAddress') {
-				console.log(msg);
+				//console.log(msg);
 				if (icWorker !== undefined) {
 					icWorker.send(msg);
 				}
 			}
 			if (res.cmd === 'gotNewAddress') {
-				console.log(msg);
+				//console.log(msg);
+				if (icWorker !== undefined) {
+					icWorker.send(msg);
+				}
+			}
+			if (res.cmd === 'doWithdraw') {
+				//console.log(msg);
 				if (icWorker !== undefined) {
 					icWorker.send(msg);
 				}

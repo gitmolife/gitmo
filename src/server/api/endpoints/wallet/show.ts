@@ -129,17 +129,21 @@ export default define(meta, async (ps, me) => {
 
 	var accountHistory: any[] = [];
 	var pending: number = 0;
-	for (var h of history {
-		var t = "RECEIVE";
+	for (var h of history) {
 		var a = "DEPOSIT IN";
+		var t = "RECEIVE";
+		var date = h.createdAt;
+		var amt = h.amount;
 		if (h.txtype === 2 || h.txtype === 4) {
 			t = "SEND_EXT";
 			a = "X WITHDRAW";
+			amt = '-' + h.amount;
+		} else {
+			if (!h.complete) {
+				pending = pending + parseFloat(h.amount);
+			}
 		}
-		if (!h.complete) {
-			pending = pending + parseFloat(h.amount);
-		}
-		var entry: any[] = [ a, t, h.createdAt, h.amount ];
+		var entry: any[] = [ a, t, date, amt ];
 		accountHistory.push(entry);
 	}
 

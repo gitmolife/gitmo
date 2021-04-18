@@ -12,7 +12,10 @@
 							<div class="_keyValue"><b>Current Balance</b><span class="monospace" style="font-size: 1.07em;">{{ wallet.balance }} OHM</span></div>
 						</div>
 						<div class="_content">
-							<div class="_keyValue"><b>Withdraw Location</b><MkInput v-model:value="name"><span class="monospace">External Public Address</span></MkInput></div>
+							<div class="_keyValue">
+								<b><MkInput v-model:value="address"><span class="monospace">External Public Address</span></MkInput></b>
+								<MkInput v-model:value="amount"><span class="monospace">Withdraw Amount</span></MkInput>
+							</div>
 						</div>
 						<div style="width: 67%; margin: auto;">
 							<MkButton full primary @click="doWithdraw()"><Fa :icon="faExternalLinkSquareAlt"/> Confirm Withdraw</MkButton>
@@ -46,14 +49,13 @@ export default defineComponent({
   },
 
   props: {
-		acct: {
-			type: String,
-			required: true
-		},
+
   },
 
   data() {
     return {
+			address: "",
+			amount: "",
 			user: null,
 			error: null,
       wallet: ""
@@ -84,7 +86,21 @@ export default defineComponent({
     },
 
 		doWithdraw() {
-			// TODO: withdraw things
+			let address = this.address;
+			let amount = this.amount;
+
+			console.log(address);
+			console.log(amount);
+
+			Progress.start();
+			os.api('wallet/withdraw', { address, amount }).then(response => {
+				console.log(response);
+			}).catch(e => {
+				this.error = e;
+				console.log(e);
+			}).finally(() => {
+				Progress.done();
+			});
 		},
 
   }

@@ -370,7 +370,7 @@ export default class IntercomBroker {
 								.createQueryBuilder()
 								.update('user_wallet_balance')
 								.set({
-									balance: nbal;
+									balance: nbal,
 								})
 								.where({ userId: uid })
 								.execute();
@@ -635,6 +635,7 @@ export default class IntercomBroker {
       (e: Error | null, rxData: string) => {
         if (e) {
           this.logger.error(e);
+					cb(e, null);
         } else {
           let json;
           try {
@@ -806,7 +807,7 @@ export default class IntercomBroker {
   }
 
   // parameter is a TransactionRequest object @see interface/TransactionRequest
-  public sendFunds(request: TransactionRequest) {
+  public sendFunds(request: TransactionRequest, cb: (error: Error | null, data: any) => void) {
     this.ic.sendMsg(
       this.wallet,
       SEND_FUNDS,
@@ -820,14 +821,18 @@ export default class IntercomBroker {
             json = JSON.parse(rxData);
             if (json != undefined && json.isError === true) {
               this.logger.error(new Error(json.message));
+              throw new Error(json.message);
             } else {
-              this.logger.info(rxData);
+              //this.logger.info(rxData);
+              cb(null, rxData);
             }
           } catch (e) {
             if (e instanceof SyntaxError) {
-              this.logger.error(rxData);
+              //this.logger.error(rxData);
+              cb(null, rxData);
             } else {
               this.logger.error(e);
+              cb(e, null);
             }
           }
         }

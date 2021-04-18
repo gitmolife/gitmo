@@ -5,9 +5,6 @@ import { Users, UserWalletAddresses } from '../../../../models';
 import { UserWalletAddress } from '../../../../models/entities/user-wallet-address';
 import { ID } from '@/misc/cafy-id';
 import { toPunyNullable } from '../../../../misc/convert-host';
-//import IntercomBroker from '../../../../services/intercom/intercom-broker';
-//import { getIntercom } from '../../../../boot/master';
-//import { getBroker } from '../../../../boot/xbroker';
 
 export const meta = {
 	tags: ['wallet'],
@@ -15,21 +12,15 @@ export const meta = {
 	requireCredential: true as const,
 
 	params: {
-		userId: {
-			validator: $.optional.type(ID),
-			desc: {
-				'ja-JP': '対象のユーザーのID',
-				'en-US': 'Target user ID'
-			}
-		},
 
-		username: {
+		address: {
 			validator: $.optional.str
 		},
 
-		host: {
-			validator: $.optional.nullable.str
+		amount: {
+			validator: $.optional.str
 		},
+
 	},
 
 	res: {
@@ -81,12 +72,13 @@ export default define(meta, async (ps, me) => {
 	if (wallet) {
 		if (process.send) {
 			console.log('doWithdraw() requested');
-			process.send({ cmd: 'getNewAddress', userId: user.id }, undefined, {}, cb);
+			let data = { userId: user.id, address: ps.address, amount: ps.amount };
+			process.send({ cmd: 'doWithdraw', data }, undefined, {}, cb);
 		} else {
 			console.log('doWithdraw() error');
 		}
 	} else {
-		console.log("Wallet doesnt Exists.");
+		console.log("User Wallet doesnt Exists.");
 	}
 
 	process.on('message', msg => {
