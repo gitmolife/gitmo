@@ -23,6 +23,6 @@
 
 export default interface TransactionRequest {
   senders: string[]; //array of addresses to gather inputs from
-  recipients: { address: string; amount: number }[];
+  recipients: { address: string; amount: string }[];
   changeAddress?: string;
 }

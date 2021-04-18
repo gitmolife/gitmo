@@ -24,9 +24,11 @@
 export default interface TransactionPayload {
   txid: string;
   confirmations: number;
+  blockhash?: string;
   coin: string;
   inputs: { address: string; value: string; vout: number }[];
   outputs: { address: string; value: string; vout: number }[];
+  amount: string;
   fee: string;
   balances: { address: string; balance: string }[];
   isStake?: boolean;
