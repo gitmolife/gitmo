@@ -15,14 +15,6 @@ export const meta = {
 	requireCredential: true as const,
 
 	params: {
-		userId: {
-			validator: $.optional.type(ID),
-			desc: {
-				'ja-JP': '対象のユーザーのID',
-				'en-US': 'Target user ID'
-			}
-		},
-
 		username: {
 			validator: $.optional.str
 		},
@@ -42,16 +34,13 @@ export const meta = {
 		noSuchUser: {
 			message: 'No such user.',
 			code: 'NO_SUCH_USER',
-			id: '7ad3fa3e-5e12-42f0-b23a-f3d13f10ee4b'
+			id: '88b36214-5918-4cec-be59-df48a42c53d7'
 		}
 	},
 };
 
 export default define(meta, async (ps, me) => {
 	const user = await Users.findOne(me != null ? me.id : null);
-	/*const user = await Users.findOne(ps.userId != null
-		? { id: ps.userId }
-		: { usernameLower: ps.username!.toLowerCase(), host: toPunyNullable(ps.host) });*/
 
 	if (user == null) {
 		throw new ApiError(meta.errors.noSuchUser);
@@ -63,7 +52,6 @@ export default define(meta, async (ps, me) => {
 
 	let wallet = (await UserWalletAddresses.findOne({ userId: user.id, coinType: ct } ) as UserWalletAddress);
 	let balance = (await UserWalletBalances.findOne({ userId: user.id, coinType: ct} ) as UserWalletBalance);
-	//let hitstory = (await UserWalletAddresses.findOne({ userId: user.id} ) as UserWalletAddress);
 
 	var cb: (error: Error | null) => void = (error: Error | null) => {
 		if (error) {

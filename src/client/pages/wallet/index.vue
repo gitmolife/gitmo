@@ -99,7 +99,6 @@
 
 <script lang="ts">
 import { computed, defineComponent } from 'vue';
-import parseAcct from '@/misc/acct/parse';
 import Progress from '@client/scripts/loading';
 import { faBoxOpen, faDatabase, faInfoCircle, faTachometerAlt, faTicketAlt } from '@fortawesome/free-solid-svg-icons';
 import { faBtc } from '@fortawesome/free-brands-svg-icons';
@@ -110,7 +109,6 @@ import MkInput from '@client/components/ui/input.vue';
 import MkContainer from '@client/components/ui/container.vue';
 import MkFolder from '@client/components/ui/folder.vue';
 import number from '../../filters/number';
-import { userPage, acct as getAcct } from '../../filters/user';
 import * as os from '@client/os';
 
 export default defineComponent({
@@ -124,10 +122,7 @@ export default defineComponent({
   },
 
   props: {
-		acct: {
-			type: String,
-			required: true
-		},
+
   },
 
   data() {
@@ -138,10 +133,6 @@ export default defineComponent({
 			faBtc, faTachometerAlt, faInfoCircle, faBoxOpen, faDatabase
     };
   },
-
-	watch: {
-		acct: 'fetch'
-	},
 
   created() {
     this.fetch();

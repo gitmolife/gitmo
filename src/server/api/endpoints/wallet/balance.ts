@@ -4,7 +4,6 @@ import { ApiError } from '../../error';
 import { Users, UserWalletBalances } from '../../../../models';
 import { UserWalletBalance } from '../../../../models/entities/user-wallet-balance';
 import { ID } from '@/misc/cafy-id';
-import { toPunyNullable } from '../../../../misc/convert-host';
 
 export const meta = {
 	tags: ['wallet'],
@@ -12,14 +11,6 @@ export const meta = {
 	requireCredential: true as const,
 
 	params: {
-		userId: {
-			validator: $.optional.type(ID),
-			desc: {
-				'ja-JP': '対象のユーザーのID',
-				'en-US': 'Target user ID'
-			}
-		},
-
 		username: {
 			validator: $.optional.str
 		},
@@ -39,7 +30,7 @@ export const meta = {
 		noSuchUser: {
 			message: 'No such user.',
 			code: 'NO_SUCH_USER',
-			id: '7ad3fa3e-5e12-42f0-b23a-f3d13f10ee4b'
+			id: '88b36214-5918-4cec-be59-df48a42c53d7'
 		}
 	},
 };

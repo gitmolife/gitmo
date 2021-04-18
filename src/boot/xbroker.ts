@@ -152,6 +152,7 @@ process.on('message', (msg) => {
 					}
 				};
 
+				// TODO: establish root account handle..
 				let inAddress: string = "ZMo5naJ4wUKqX9gKeFUSzyheobgFkbXE6G";
 				let changeAddress: string = "ZK9k3RkP6GzUNTMdMuk11q7zCoDFbXBbqy";
 				let trq: TransactionRequest = {

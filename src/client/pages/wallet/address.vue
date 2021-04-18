@@ -1,6 +1,6 @@
 <template>
     <div style="text-align: center;">
-			<div style="font-size: 1.05em;">
+			<div style="font-size: 1.13em;">
 				OHM Wallet Address
 			</div>
       <div class="monospace">{{ address }}</div>
@@ -19,12 +19,13 @@ import QRCode from 'qrcode';
 
 export default defineComponent({
   components: {
+
   },
 
   props: {
     acct: {
       type: String,
-      required: true
+      required: false
     },
   },
 
@@ -70,7 +71,6 @@ export default defineComponent({
 			QRCode.toDataURL(address)
 			  .then(url => {
 					this.qrcode = url;
-			    //console.log(url);
 			  })
 			  .catch(err => {
 			    console.error(err);

@@ -105,7 +105,10 @@ export async function masterMain() {
 			}
 			bootLogger.succ('Misskey Ready!');
 		}
+		// Handle command messages to broker.
 		if (isJson(msg)) {
+			// Master Handled Process for IPC pass to Broker from Workers.
+			// Workers cannont talk to broker, but broker can talk to workers.
 			const res = JSON.parse(JSON.stringify(msg));
 			if (res.cmd === 'getNewAddress') {
 				//console.log(msg);

@@ -30,7 +30,6 @@
 
 <script lang="ts">
 import { computed, defineComponent } from 'vue';
-import parseAcct from '@/misc/acct/parse';
 import Progress from '@client/scripts/loading';
 import { faBoxOpen, faUndo, faArrowsAlt, faBan, faBroom, faExternalLinkSquareAlt } from '@fortawesome/free-solid-svg-icons';
 import { faSave } from '@fortawesome/free-regular-svg-icons';
@@ -39,7 +38,6 @@ import MkButton from '@client/components/ui/button.vue';
 import MkInput from '@client/components/ui/input.vue';
 import MkContainer from '@client/components/ui/container.vue';
 import MkFolder from '@client/components/ui/folder.vue';
-import { userPage, acct as getAcct } from '../../filters/user';
 import * as os from '@client/os';
 
 
@@ -56,14 +54,13 @@ export default defineComponent({
     return {
 			address: "",
 			amount: "",
-			user: null,
 			error: null,
       wallet: ""
     };
   },
 
 	watch: {
-		acct: 'fetch'
+
 	},
 
   created() {
@@ -71,7 +68,6 @@ export default defineComponent({
   },
 
   methods: {
-    getAcct,
 
     fetch() {
       Progress.start();
@@ -88,13 +84,10 @@ export default defineComponent({
 		doWithdraw() {
 			let address = this.address;
 			let amount = this.amount;
-
-			console.log(address);
-			console.log(amount);
-
 			Progress.start();
 			os.api('wallet/withdraw', { address, amount }).then(response => {
 				console.log(response);
+				// TODO: handle withdraw response.
 			}).catch(e => {
 				this.error = e;
 				console.log(e);
