@@ -29,6 +29,7 @@ const _INTERCOM_PASSPHRASE_ = process.env.INTERCOM_PASSPHRASE;
 const _SITE_INTERCOM_ID_ = process.env.SITE_INTERCOM_ID;
 const _SITE_INTERCOM_PORT_ = process.env.SITE_INTERCOM_PORT;
 const _SITE_INTERCOM_HOST_ = process.env.SITE_INTERCOM_HOST;
+const _SITE_VERBOSE_DEBUG_ = process.env.SITE_VERBOSE_DEBUG;
 
 import {
   ADDRESSES,
@@ -116,7 +117,7 @@ export default class IntercomBroker {
   private ready: boolean;
 	private verbose: boolean;
   constructor(logger: Logger) {
-		this.verbose = true;
+		this.verbose = _SITE_VERBOSE_DEBUG_ as boolean;
     this.ready = false;
     this.logger = logger;
     this.logger.debug(`Starting site '${_SITE_INTERCOM_ID_}' ...`);
@@ -340,7 +341,7 @@ export default class IntercomBroker {
 							//this.logger.debug("Internal Transfer to site: " + json.txid);
 							continue;
 						}
-						if (json.confirmations >= 3 && !txl.complete) {
+						if (json.confirmations >= 5 && !txl.complete) {
 							// Get current Balance..
 							const userBalance = await getConnection()
 								.createQueryBuilder()
@@ -401,7 +402,7 @@ export default class IntercomBroker {
 							.from('user_wallet_tx')
 							.where({ txid: json.txid, userId: uid })
 							.getOne();
-						if (json.confirmations >= 3) {
+						if (json.confirmations >= 6 && txl.complete) {
 							// Get current Balance..
 							const userBalance = await getConnection()
 								.createQueryBuilder()

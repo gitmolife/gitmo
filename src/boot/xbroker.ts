@@ -112,7 +112,7 @@ process.on('message', async (msg) => {
 					process.send!({cmd: 'gotNewAddress', address: data});
 				}
 			};
-			brokerLogger.warning('> Site Wallet Missing!  Attempting to create..');
+			brokerLogger.warn('> Site Wallet Missing!  Attempting to create..');
 			/* GET ADDRESS */
 			intercomBroker!.getNewAddress(sid, cb);
 		}
