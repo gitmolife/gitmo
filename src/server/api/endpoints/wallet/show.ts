@@ -83,7 +83,7 @@ export default define(meta, async (ps, me) => {
 			console.error('getNewAddress() error');
 		}
 	} else {
-		if (wallet.address.length() > 36 || wallet.address.length() <= 31) {
+		if (wallet.address.length > 36 || wallet.address.length <= 31) {
 			await getConnection()
 		    .createQueryBuilder()
 		    .delete("user_wallet_address")

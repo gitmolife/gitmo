@@ -92,7 +92,7 @@ process.on('message', async (msg) => {
 					brokerLogger.error(error);
 				} else {
 					let address = JSON.stringify(data);
-					brokerLogger.info('>> Created System Root Address: ' + address);
+					brokerLogger.succ('>> Created System Root Address: ' + address);
 					getConnection()
 						.createQueryBuilder()
 						.insert()

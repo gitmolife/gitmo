@@ -453,6 +453,10 @@ export default class IntercomBroker {
 	        this.logger.info(
 	          HEARTBEAT + ': ' + sender.getContext() + ' sent "' + rxData + '".'
 	        );
+				} else {
+					this.logger.info(
+	          HEARTBEAT + ': ' + sender.getContext() + ' ACK.'
+	        );
 				}
         var json = JSON.parse(rxData);
         const status = await getConnection()
