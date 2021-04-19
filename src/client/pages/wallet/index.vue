@@ -115,8 +115,8 @@ import MkSelect from '@client/components/ui/select.vue';
 import MkInput from '@client/components/ui/input.vue';
 import MkContainer from '@client/components/ui/container.vue';
 import MkFolder from '@client/components/ui/folder.vue';
-import number from '../../filters/number';
 import { acct as getAcct } from '../../filters/user';
+import number from '../../filters/number';
 import * as os from '@client/os';
 
 export default defineComponent({

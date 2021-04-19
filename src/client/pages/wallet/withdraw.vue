@@ -46,6 +46,7 @@ import MkButton from '@client/components/ui/button.vue';
 import MkInput from '@client/components/ui/input.vue';
 import MkContainer from '@client/components/ui/container.vue';
 import MkFolder from '@client/components/ui/folder.vue';
+import number from '../../filters/number';
 import * as os from '@client/os';
 
 
@@ -121,14 +122,14 @@ export default defineComponent({
 				this.response.error = null;
 				if (resp.error) {
 					//console.log(resp.error);
-					this.timeoutUpdateAck('', amount);
 					this.response.pend = "Error!"
 					this.response.ok = resp.error;
+					this.timeoutUpdateAck('', amount);
 				} else {
 					//console.log(resp.data);
-					this.timeoutUpdateAck(resp.data, amount);
 					this.response.pend = "Processing.. Please Wait."
 					this.wallet.network = number(parseFloat(this.wallet.network) - parseFloat(amount));
+					this.timeoutUpdateAck(resp.data, amount);
 				}
 			}).catch(e => {
 				this.error = e;
@@ -148,14 +149,15 @@ export default defineComponent({
 				vm.response.error = null;
 				os.api('wallet/job', { jobId, jobData }).then(resp => {
 					let json = JSON.parse(resp);
-					console.log(json);
+					//console.log(json);
 					if (!json.error) {
 						let data = JSON.parse(json.data);
 						console.log(data.txid);
-						this.wallet.network = number(parseFloat(this.wallet.network) + parseFloat(amount));
+						vm.wallet.network = number(parseFloat(vm.wallet.network) + parseFloat(amount));
 						vm.response.ok = "Action Confirmed with Success. " + data.txid.substring(0, 22) + "..";
 					} else {
-						vm.response.error = "Internal Error! " + JSON.parse(json.error.split(': ')[1]).message;
+						console.log(json.error);
+						vm.response.error = "Internal Error!";
 						vm.wallet.network = number(parseFloat(vm.wallet.network) + parseFloat(amount));
 					}
 				}).catch(e => {
@@ -165,9 +167,17 @@ export default defineComponent({
 					Progress.done();
 					vm.activated = false;
 				});
-			}, 4400);
+			}, 5600);
 		},
 
+		updatePoll() {
+			let vm = this;
+			setInterval(function () {
+				vm.fetch();
+			}, 93000);
+		},
+
+		number,
   }
 
 });

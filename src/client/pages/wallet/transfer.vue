@@ -169,7 +169,6 @@ export default defineComponent({
 				this.response_om_ok = null;
 				if (resp.error) {
 					//console.log(resp.error);
-					this.timeoutUpdateAck(type, '', amount);
 					if (type === 'ohm') {
 						this.response_ohm_pend = "Error."
 						this.response_ohm_error = resp.error;
@@ -177,20 +176,19 @@ export default defineComponent({
 						this.response_om_pend = "Error."
 						this.response_om_error = resp.error;
 					}
+					this.timeoutUpdateAck(type, '', amount);
 				} else {
 					//console.log(resp.data);
-					this.timeoutUpdateAck(type, resp.data, amount);
 					if (type === 'ohm') {
 						this.response_ohm_ok = "Action Attempt...";
 						this.response_ohm_pend = "Processing.. Please Wait."
 						this.bal_tip = number(parseFloat(this.bal_tip) - parseFloat(amount));
-						//this.bal_net += amount;
 					} else {
 						this.response_om_ok = "Action Attempt...";
 						this.response_om_pend = "Processing.. Please Wait."
-						//this.bal_tip += amount;
 						this.bal_net = number(parseFloat(this.bal_net) - parseFloat(amount));
 					}
+					this.timeoutUpdateAck(type, resp.data, amount);
 				}
 			}).catch(e => {
 				this.error = e;
@@ -209,7 +207,6 @@ export default defineComponent({
 			setTimeout(function () {
 				Progress.start();
 				let jobId: string = 'TRANSFER_FINAL';
-				//let amount = type === 'ohm' ? vm.amountN : vm.amountT;
 				vm.response_ohm_error = null;
 				vm.response_ohm_pend = null;
 				vm.response_ohm_ok = null;
@@ -222,14 +219,12 @@ export default defineComponent({
 						let data = JSON.parse(json.data);
 						console.log(data.txid);
 						if (type === 'ohm') {
-							//this.bal_tip -= amount;
 							let bn = parseFloat(vm.bal_net);
 							vm.bal_net = number(bn + parseFloat(amount));
 							vm.response_ohm_ok = "Action Confirmed Process Success. " + data.txid.substring(0, 22) + "..";
 						} else {
 							let bt = parseFloat(vm.bal_tip);
 							vm.bal_tip = number(bt + parseFloat(amount));
-							//this.bal_net -= amount;
 							vm.response_om_ok = "Action Confirmed Process Success. " + data.txid.substring(0, 22) + "..";
 						}
 						setTimeout(function () {

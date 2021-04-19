@@ -43,22 +43,27 @@ export default define(meta, async (ps, me) => {
 	}
 
 	//let job: UserWalletJob = (await UserWalletJobs.findOne({ userId: user.id, job: ps.jobId }) as UserWalletJob);
-	const job = await getConnection()
+	const jobs = await getConnection()
 		.createQueryBuilder()
 		.select("user_wallet_job")
 		.from('user_wallet_job')
 		.where({ userId: user.id, job: ps.jobId })
-		.getOne();
+		.getCount();
 
 	let response = JSON.stringify({ error: "Invalid" });
-	if (job) {
+	if (jobs > 0) {
+		response = await getConnection()
+				.createQueryBuilder()
+				.select("user_wallet_job")
+				.from('user_wallet_job')
+				.where({ userId: user.id, job: ps.jobId })
+				.getOne();
 		await getConnection()
 	    .createQueryBuilder()
 	    .delete("user_wallet_job")
 	    .from('user_wallet_job')
 	    .where({ userId: user.id, job: ps.jobId })
 	    .execute();
-		response = job.result;
 	}
 
 	return response;
