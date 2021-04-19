@@ -56,9 +56,9 @@ export default define(meta, async (ps, me) => {
 	var cb: (error: Error | null) => void = (error: Error | null) => {
 		if (error) {
 			// errored
-			console.log('getNewAddress().callback.Error');
+			console.error('getNewAddress().callback.Error: ' + error.toString());
 		} else {
-			console.log('getNewAddress().callback.Complete');
+			//console.log('getNewAddress().callback.Complete');
 		}
 	}
 
@@ -77,16 +77,16 @@ export default define(meta, async (ps, me) => {
 
 	if (!wallet) {
 		if (process.send) {
-			console.log('getNewAddress() requested');
-			process.send({ cmd: 'getNewAddress', userId: user.id }, undefined, {}, cb);
+			//console.log('getNewAddress() requested');
+			process.send({ prc: 'relay', cmd: 'getNewAddress', userId: user.id }, undefined, {}, cb);
 		} else {
-			console.log('getNewAddress() error');
+			console.error('getNewAddress() error');
 		}
 	} else {
-		console.log("Wallet Exists.");
+		//console.log("Wallet Exists.");
 	}
 
-	process.on('message', msg => {
+	/*process.on('message', msg => {
 		if (isJson(msg)) {
 			const res = JSON.parse(JSON.stringify(msg));
 			if (res.cmd === 'gotNewAddress') {
@@ -94,9 +94,9 @@ export default define(meta, async (ps, me) => {
 				// TODO: cleanup..
 			}
 		}
-	});
+	});*/
 
-	process.on('message', msg => {
+	/*process.on('message', msg => {
 		if (isJson(msg)) {
 			const res = JSON.parse(JSON.stringify(msg));
 			if (res.cmd === 'gotNewWallet') {
@@ -104,7 +104,7 @@ export default define(meta, async (ps, me) => {
 				// TODO: cleanup..
 			}
 		}
-	});
+	});*/
 
 	let status: UserWalletStatus = (await UserWalletStatuses.findOne({ type: "ohmcoin" } ) as UserWalletStatus);
 	//let history = await UserWalletTxs.findMany({ userId: user.id } );
@@ -117,37 +117,89 @@ export default define(meta, async (ps, me) => {
 
 	var accountHistory: any[] = [];
 	var pending: number = 0;
+	var i: number = 0;
 	for (var h of history) {
-		var a = "DEPOSIT IN";
-		var t = "RECEIVE";
-		var date = h.createdAt;
+		var a = "N/A";
+		var t = "UNKNOWN";
+		var date = new Date(h.createdAt).toLocaleString();
 		var amt = h.amount;
-		if (h.txtype === 2 || h.txtype === 4) {
-			t = "SEND_EXT";
-			a = "X WITHDRAW";
-			amt = '-' + h.amount;
-		} else {
+		if (h.txtype === 1 || h.txtype === 3) {
+			a = "IN";
+			t = "DEPOSIT";
 			if (!h.complete) {
 				pending = pending + parseFloat(h.amount);
 			}
+		} else if (h.txtype === 2 || h.txtype === 4) {
+			t = "WITHDRAW";
+			a = "OUT";
+			amt = '-' + h.amount;
+		} else if (h.txtype === 10) {
+			t = "LOCAL-Tx";
+			a = "IN+";
+			if (!h.complete) {
+				pending = pending + parseFloat(h.amount);
+			}
+		} else if (h.txtype === 11) {
+			t = "CACHE-TIP";
+			a = "SITE";
+		} else if (h.txtype === 13) {
+			t = "LOCAL";
+			a = "SYNC";
+			amt = '~' + h.amount;
+		} else if (h.txtype === 20) {
+				continue;
+		} else if (h.txtype === 21) {
+				continue;
 		}
-		var entry: any[] = [ a, t, date, amt ];
+		var entry: any[] = [ i++, a, t, date, amt, h.txid ];
 		accountHistory.push(entry);
 	}
 
-	var data = {
-		account: wallet,
-		balance: balance.balance,
-		pending: pending,
-		server: {
-			status: status.online ? "Online" : "Offline",
-			synced: status.synced,
-			crawling: status.crawling,
-			height: status.blockheight,
-			time: status.blocktime
-		},
-		walletHist: accountHistory,
-	};
+	if (wallet) {
+		accountHistory.sort(function(a, b) {
+		  var keyA = new Date(a[3]);
+	    var keyB = new Date(b[3]);
+		  if (keyA < keyB) return -1;
+		  if (keyA > keyB) return 1;
+		  return 0;
+		});
+		var data = {
+			account: wallet.address,
+			balance: {
+				total: (parseFloat(wallet.balance) + parseFloat(balance.balance)).toFixed(8),
+				pending: (pending).toFixed(8),
+				network: wallet.balance,
+				tipping: balance.balance,
+			},
+			server: {
+				status: status.online ? "Online" : "Offline",
+				synced: status.synced,
+				crawling: status.crawling,
+				height: status.blockheight,
+				time: status.blocktime
+			},
+			walletHist: accountHistory.reverse(),
+		};
+		return data;
+	} else {
+		var data = {
+			account: 'Please Reload Page',
+			balance: {
+				total: 0,
+				pending: 0,
+				network: 0,
+				tipping: 0,
+			},
+			server: {
+				status: status.online ? "Online" : "Offline",
+				synced: status.synced,
+				crawling: status.crawling,
+				height: status.blockheight,
+				time: status.blocktime
+			},
+			walletHist: accountHistory,
+		};
+		return data;
+	}
 
-	return data;
 });

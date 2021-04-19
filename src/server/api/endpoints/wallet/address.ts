@@ -52,7 +52,7 @@ export default define(meta, async (ps, me) => {
 		throw new ApiError(meta.errors.noSuchUser);
 	}
 
-	let wallet = (await UserWalletAddresses.findOne({ userId: user.id} ) as UserWalletAddress);
+	let wallet: UserWalletAddress = (await UserWalletAddresses.findOne({ userId: user.id} ) as UserWalletAddress);
 
 	return wallet.address;
 });

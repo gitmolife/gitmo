@@ -1,7 +1,8 @@
 import $ from 'cafy';
 import define from '../../define';
 import { ApiError } from '../../error';
-import { Users, UserWalletBalances } from '../../../../models';
+import { Users, UserWalletBalances, UserWalletAddresses } from '../../../../models';
+import { UserWalletAddress } from '../../../../models/entities/user-wallet-address';
 import { UserWalletBalance } from '../../../../models/entities/user-wallet-balance';
 import { ID } from '@/misc/cafy-id';
 
@@ -44,7 +45,17 @@ export default define(meta, async (ps, me) => {
 		throw new ApiError(meta.errors.noSuchUser);
 	}
 
-	let wallet = (await UserWalletBalances.findOne({ userId: user.id} ) as UserWalletBalance);
+	let wallet: UserWalletBalance = (await UserWalletBalances.findOne({ userId: user.id} ) as UserWalletBalance);
+	let address: UserWalletAddress = (await UserWalletAddresses.findOne({ userId: user.id} ) as UserWalletAddress);
 
-	return wallet;
+	if (wallet == null || address == null) {
+		throw new ApiError(meta.errors.noSuchUser);
+	}
+
+	let data = {
+		network: address.balance,
+		tipping: wallet.balance
+	};
+
+	return data;
 });

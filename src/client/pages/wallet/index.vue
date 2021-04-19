@@ -18,15 +18,15 @@
 								<div style="width: 70%;">
 									<dl class="total">
 										<dt>Balance</dt>
-										<dd>{{ number(parseFloat(wallet.balance) + parseFloat(wallet.pending)) }}</dd>
+										<dd>{{ number(parseFloat(wallet.balance.total) + parseFloat(wallet.balance.pending)) }}</dd>
 									</dl>
 									<dl class="diff">
 										<dt>Pending</dt>
-										<dd>{{ number(wallet.pending) }}</dd>
+										<dd>{{ number(wallet.balance.pending) }}</dd>
 									</dl>
 									<dl class="diff">
 										<dt>Available</dt>
-										<dd>{{ number(wallet.balance) }}</dd>
+										<dd>{{ number(wallet.balance.total) }}</dd>
 									</dl>
 								</div>
 							</div>
@@ -58,13 +58,17 @@
 
 					<MkContainer :body-togglable="true" class="_gap">
 						<template #header><Fa :icon="faTachometerAlt"/> Wallet Control - OHM</template>
-
 						<div class="_content">
-							<div class="_keyValue"><b>Balance</b><span class="monospace" style="font-size: 1.07em;">{{ wallet.balance }} OHM</span></div>
+							<div class="_keyValue"><b>Balance</b><span class="monospace" style="font-size: 1.07em;">{{ wallet.balance.total }} OHM</span></div>
 						</div>
 						<div class="_content">
-							<div class="_keyValue"><b>Deposit</b><span class="monospace"><a @click="showAddress()">{{ wallet.account.address }}</a></span></div>
-							<div class="_keyValue"><b>Transfer</b><span><a @click="showWithdraw()"><Fa :icon="faBoxOpen"/> Withdraw Offsite</a></span></div>
+							<div class="_keyValue"><b>Tipping Balance</b><span class="monospace" style="font-size: 1.07em;">{{ wallet.balance.tipping }} <Fa :icon="faOm"/></span></div>
+							<div class="_keyValue"><b>Network Balance</b><span class="monospace" style="font-size: 1.07em;">{{ wallet.balance.network }} OHM</span></div>
+						</div>
+						<div class="_content">
+							<div class="_keyValue"><b>Network Deposit</b><span class="monospace"><a @click="showAddress()">{{ wallet.account }}</a></span></div>
+							<div class="_keyValue"><b>Site Tipping</b><span><a @click="showTransfer()"><Fa :icon="faExchangeAlt"/> Internal Transfer</a></span></div>
+							<div class="_keyValue"><b>Transfer External</b><span><a @click="showWithdraw()"><Fa :icon="faBoxOpen"/> Withdraw Offsite</a></span></div>
 							<div class="_keyValue"><b>Help</b><span><a @click="showHelp()"><Fa :icon="faInfoCircle"/> Usage FAQ</a></span></div>
 						</div>
 					</MkContainer>
@@ -73,18 +77,20 @@
 						<template #header><Fa :icon="faDatabase"/> Action History</template>
 
 						<div class="_content" v-if="wallet.walletHist">
-							<table style="border-collapse: collapse; width: 100%;">
-								<tr style="opacity: 0.7;">
-									<th style="text-align: left; padding: 0 8px 8px 0;">Action</th>
-									<th style="text-align: left; padding: 0 8px 8px 0;">Type</th>
-									<th style="text-align: left; padding: 0 8px 8px 0;">DateTime</th>
-									<th style="text-align: left; padding: 0 0 8px 0;">Amount</th>
+							<table class="hist-table" style="border-collapse: collapse; width: 100%;">
+								<tr style="opacity: 0.76;">
+									<th style="text-align: left; padding: 0px 0px 8px 0;">DateTime</th>
+									<th style="text-align: left; padding: 1px 2px 8px 0; font-size: 0.94em;">Type</th>
+									<th style="text-align: right; padding: 1px 2px 8px 0;">Amount</th>
+									<th style="text-align: left; padding: 1px 6px 8px 22px;">Action</th>
+									<th style="text-align: left; padding: 1px 0 8px 0;">TxID</th>
 								</tr>
 								<tr v-for="table in wallet.walletHist" :key="table[0]">
-									<th style="text-align: left; padding: 0 8px 0 0; word-break: break-all;" class="monospace">{{ table[0] }}</th>
-									<td style="padding: 0 8px 0 0; opacity: 0.8;" class="monospace">{{ table[1] }}</td>
-									<td style="padding: 0 8px 0 0;" class="monospace">{{ table[2] }}</td>
-									<td style="padding: 0;" class="monospace">{{ table[3] }}</td>
+									<th style="text-align: left; padding: 1px 2px 2px 0; word-break: break-all; font-size: 13px;" class="monospace">{{ table[3].replace(',', '') }}</th>
+									<td style="padding: 1px 2px 2px 0;" class="monospace">{{ table[1] }}</td>
+									<td style="text-align: right; padding: 1px 2px 2px 0;" class="monospace">{{ table[4] }}</td>
+									<td style="padding: 1px 6px 2px 22px; opacity: 0.8;" class="monospace">{{ table[2] }}</td>
+									<td style="padding: 1px 0px 2px 0; font-size: 11px;" class="monospace">{{ table[5].substr(0, 16) + '..' }}</td>
 								</tr>
 							</table>
 						</div>
@@ -101,7 +107,7 @@
 import { computed, defineComponent } from 'vue';
 import parseAcct from '@/misc/acct/parse';
 import Progress from '@client/scripts/loading';
-import { faBoxOpen, faDatabase, faInfoCircle, faTachometerAlt, faTicketAlt } from '@fortawesome/free-solid-svg-icons';
+import { faBoxOpen, faDatabase, faInfoCircle, faTachometerAlt, faTicketAlt, faExchangeAlt, faOm } from '@fortawesome/free-solid-svg-icons';
 import { faBtc } from '@fortawesome/free-brands-svg-icons';
 import { query as urlQuery } from '../../../prelude/url';
 import MkButton from '@client/components/ui/button.vue';
@@ -135,7 +141,7 @@ export default defineComponent({
 			user: null,
 			error: null,
       wallet: null,
-			faBtc, faTachometerAlt, faInfoCircle, faBoxOpen, faDatabase
+			faBtc, faOm, faTachometerAlt, faInfoCircle, faBoxOpen, faDatabase, faExchangeAlt
     };
   },
 
@@ -145,6 +151,7 @@ export default defineComponent({
 
   created() {
     this.fetch();
+		this.updatePoll();
   },
 
   methods: {
@@ -152,6 +159,9 @@ export default defineComponent({
 
 		async showAddress() {
 			os.modalPageWindow("/my/wallet/address");
+		},
+		async showTransfer() {
+			os.modalPageWindow("/my/wallet/transfer");
 		},
 		async showWithdraw() {
 			os.modalPageWindow("/my/wallet/withdraw");
@@ -177,7 +187,14 @@ export default defineComponent({
 			} else {
 				this.statusColor = "red";
 			}
-		}
+		},
+
+		updatePoll() {
+			let vm = this;
+			setInterval(function () {
+				vm.fetch();
+			}, 95500);
+		},
 
 		number,
   }
@@ -194,6 +211,13 @@ export default defineComponent({
 
 ._keyValue {
 	margin-bottom: 4px;
+}
+
+.hist-table tr {
+	border-bottom: 1px dotted lightgray;
+}
+.hist-table th {
+  border-bottom: 1px solid lightgray;
 }
 
 .zbcjwnqg {

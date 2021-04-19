@@ -110,20 +110,8 @@ export async function masterMain() {
 			// Master Handled Process for IPC pass to Broker from Workers.
 			// Workers cannont talk to broker, but broker can talk to workers.
 			const res = JSON.parse(JSON.stringify(msg));
-			if (res.cmd === 'getNewAddress') {
-				//console.log(msg);
-				if (icWorker !== undefined) {
-					icWorker.send(msg);
-				}
-			}
-			if (res.cmd === 'gotNewAddress') {
-				//console.log(msg);
-				if (icWorker !== undefined) {
-					icWorker.send(msg);
-				}
-			}
-			if (res.cmd === 'doWithdraw') {
-				//console.log(msg);
+			if (res.prc === 'relay') {
+				console.log(msg);
 				if (icWorker !== undefined) {
 					icWorker.send(msg);
 				}

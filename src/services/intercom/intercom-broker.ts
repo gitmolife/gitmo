@@ -114,7 +114,9 @@ export default class IntercomBroker {
   private wallet: Intercom2_EndPoint;
   private logger: Logger;
   private ready: boolean;
+	private verbose: boolean;
   constructor(logger: Logger) {
+		this.verbose = true;
     this.ready = false;
     this.logger = logger;
     this.logger.debug(`Starting site '${_SITE_INTERCOM_ID_}' ...`);
@@ -186,9 +188,11 @@ export default class IntercomBroker {
         rxData: string,
         sendReply: (txData: string) => void
       ) => {
-        this.logger.info(
-          NOTIFY + ': ' + sender.getContext() + ' sent "' + rxData + '".'
-        );
+				if (this.verbose) {
+	        this.logger.info(
+	          NOTIFY + ': ' + sender.getContext() + ' sent "' + rxData + '".'
+	        );
+				}
         var json = JSON.parse(rxData);
         // Get Tx if Exists..
         const txe = await getConnection()
@@ -197,14 +201,6 @@ export default class IntercomBroker {
           .from('user_wallet_tx')
           .where({ txid: json.txid })
           .getCount() > 0;
-				// Get Job if Exists..
-        const jobe = await getConnection()
-          .createQueryBuilder()
-          .select("*")
-          .from('user_wallet_job')
-          .where({ job: json.txid })
-          .getCount() > 0;
-				var joba: boolean = jobe;
 
 				// Create Tx Entry..
         if (!txe) {
@@ -221,7 +217,7 @@ export default class IntercomBroker {
               confirms: json.confirmations,
             })
             .execute();
-					this.logger.debug("Received New TxID: \'" + json.txid + "\' with \'" + json.confirmations + "\' confirmations.", false);
+					this.logger.debug("Received New TxID: \'" + json.txid + "\' with \'" + json.confirmations + "\' confirmations.");
         }
 
 				// Get Tx if Exists..
@@ -235,24 +231,24 @@ export default class IntercomBroker {
 				if (tx === undefined) {
 					// Error
 					this.logger.error("tx is null on lookup..");
-				} else if (!jobe && !tx.complete && json.confirmations >= 0) {
-					// Create Job
-					await getConnection()
-						.createQueryBuilder()
-						.insert()
-						.into('user_wallet_job')
-						.values({
-							job: json.txid,
-							type: json.coin,
-							state: 0,
-							data: rxData,
-						})
-						.execute();
-					joba = true;
 				}
 
 				// Check Job
-				if (tx != undefined && !tx.complete && json.confirmations >= 0) {
+				if (tx != undefined && json.confirmations > 0) {
+					var inputs: Map<string, { userId: string; balance: string; }> = new Map<string, { userId: string; balance: string; }>();
+					for (var bal of json.inputs) {
+						// Get Address if Exists..
+						const address = await getConnection()
+							.createQueryBuilder()
+							.select("user_wallet_address")
+							.from('user_wallet_address')
+							.where({ address: bal.address })
+							.getOne();
+						let userId = address != undefined ? address.userId : null;
+						if (userId != null) {
+							inputs.set(address.address, { userId, balance: bal.value });
+						}
+					}
 					var users: Map<string, { userId: string; balance: string; }> = new Map<string, { userId: string; balance: string; }>();
 					for (var bal of json.outputs) {
 						// Get Address if Exists..
@@ -265,46 +261,17 @@ export default class IntercomBroker {
 						//console.log(JSON.stringify(address));
 						let userId = address != undefined ? address.userId : null;
 						if (userId != null) {
-							this.logger.info("Address Located for \'" + userId + "\' ... from pending TxID \'" + json.txid + "\'");
+							this.logger.info("Address Located for \'" + userId + "\' ... from TxID \'" + json.txid + "\'");
 							users.set(address.address, { userId, balance: bal.value });
-							if (!joba) {
-								// Create & Process Job
-								await getConnection()
-									.createQueryBuilder()
-									.insert()
-									.into('user_wallet_job')
-									.values({
-										job: json.txid,
-										type: json.coin,
-										state: json.confirmations >= 3 ? 3 : 2,
-										userId: userId,
-										data: rxData,
-									})
-									.execute();
-							} else {
-								// Process Job
-								await getConnection()
-									.createQueryBuilder()
-									.update('user_wallet_job')
-									.set({
-										userId: userId,
-										state: json.confirmations >= 3 ? 3 : 1,
-										result: json.confirmations >= 3 ? "pending" : "okay",
-									})
-									.where({job: json.txid})
-									.execute();
-							}
 						}
 					}
 
-					// Update Tx Entry...
+					// Update Tx Entry Status...
 					await getConnection()
 						.createQueryBuilder()
 						.update('user_wallet_tx')
 						.set({
 							confirms: json.confirmations,
-							complete: json.confirmations >= 3,
-							processed: json.confirmations >= 3 ? 1 : 0,
 						})
 						.where({txid: json.txid})
 						.execute();
@@ -313,13 +280,17 @@ export default class IntercomBroker {
 					for (var usr of users.keys()) {
 						let bal = parseFloat(this.parseFromIntString(users.get(usr).balance, 8));
 						let uid = users.get(usr).userId;
-						const txle = await getConnection()
+						var t = 3;
+						if (usr in inputs.keys()) {
+							t = 13;
+						}
+						const txl = await getConnection()
 							.createQueryBuilder()
-							.select("*")
+							.select("user_wallet_tx")
 							.from('user_wallet_tx')
 							.where({ txid: json.txid, userId: uid })
-							.getCount() > 0;
-						if (!txle) {
+							.getOne();
+						if (!txl) {
 							// Add Tx Entry...
 							await getConnection()
 								.createQueryBuilder()
@@ -330,37 +301,51 @@ export default class IntercomBroker {
 									txid: json.txid,
 									address: usr,
 									coinType: 0,
-									txtype: 3,
+									txtype: t,
 									confirms: json.confirmations,
-									processed: json.confirmations >= 3 ? 2 : 1,
+									processed: json.confirmations >= 5 ? 2 : 1,
 									amount: bal,
-									complete: json.confirmations >= 3 ? true : false,
+									//complete: json.confirmations >= 3 ? true : false,
 								})
 								.execute();
-						} else {
-							// Update Tx Entry...
-							await getConnection()
-								.createQueryBuilder()
-								.update('user_wallet_tx')
-								.set({
-									userId: uid,
-									txid: json.txid,
-									address: usr,
-									txtype: 3,
-									confirms: json.confirmations,
-									processed: json.confirmations >= 3 ? 2 : 1,
-									amount: bal,
-									complete: json.confirmations >= 3 ? true : false,
-								})
-								.where({ txid: json.txid, userId: uid })
-								.execute();
+						} else if (txl.confirmations != json.confirmations) {
+							if (txl.txtype < 10) {
+								// Update Tx Entry...
+								await getConnection()
+									.createQueryBuilder()
+									.update('user_wallet_tx')
+									.set({
+										processed: json.confirmations >= 5 ? 3 : 2,
+										amount: bal,
+									})
+									.where({ txid: json.txid, userId: uid })
+									.execute();
+							} else {
+								// Update Tx Entry...
+								await getConnection()
+									.createQueryBuilder()
+									.update('user_wallet_tx')
+									.set({
+										processed: json.confirmations >= 5 ? 3 : 2,
+									})
+									.where({ txid: json.txid, userId: uid })
+									.execute();
+							}
 						}
-						if (json.confirmations >= 3) {
+						if (txl && (txl.txtype === 10 || txl.txtype === 20)) {
+							//this.logger.debug("Internal Transfer from site: " + json.txid);
+							continue;
+						}
+						if (txl && (txl.txtype === 11 || txl.txtype == 13 || txl.txtype === 21)) {
+							//this.logger.debug("Internal Transfer to site: " + json.txid);
+							continue;
+						}
+						if (json.confirmations >= 3 && !txl.complete) {
 							// Get current Balance..
 							const userBalance = await getConnection()
 								.createQueryBuilder()
-								.select("user_wallet_balance")
-								.from('user_wallet_balance')
+								.select("user_wallet_address")
+								.from('user_wallet_address')
 								.where({ userId: uid })
 								.getOne();
 							// Update Balance..
@@ -368,17 +353,84 @@ export default class IntercomBroker {
 							let nbal: number = bal + ibal;
 							await getConnection()
 								.createQueryBuilder()
-								.update('user_wallet_balance')
+								.update('user_wallet_address')
 								.set({
 									balance: nbal,
 								})
 								.where({ userId: uid })
 								.execute();
+							// Update Tx Entry Status...
+							await getConnection()
+								.createQueryBuilder()
+								.update('user_wallet_tx')
+								.set({
+									complete: true,
+								})
+								.where({txid: json.txid})
+								.execute();
 							this.logger.info("Balance Updated for \'" + uid + "\' ... Added \'" + ibal + "\' to user account! New total: \'" + nbal + "\'");
 						} else {
-							this.logger.debug("Updated Pending TxID: \'" + json.txid + "\' with \'" + json.confirmations + "\' confirmations.", false);
+							this.logger.debug("Updated Pending TxID: \'" + json.txid + "\' with \'" + json.confirmations + "\' confirmations.");
 						}
 					}
+				}
+
+				if (json.confirmations >= 6) {
+					var syncs: Map<string, { userId: string; balance: string; }> = new Map<string, { userId: string; balance: string; }>();
+					for (var bal of json.balances) {
+						// Get Address if Exists..
+						const address = await getConnection()
+							.createQueryBuilder()
+							.select("user_wallet_address")
+							.from('user_wallet_address')
+							.where({ address: bal.address })
+							.getOne();
+						//console.log(JSON.stringify(address));
+						let userId = address != undefined ? address.userId : null;
+						if (userId != null) {
+							this.logger.info("Address Located for \'" + userId + "\' ... from validated TxID \'" + json.txid + "\'");
+							syncs.set(address.address, { userId, balance: bal.balance });
+						}
+					}
+					for (var usr of syncs.keys()) {
+						let bal = parseFloat(this.parseFromIntString(syncs.get(usr).balance, 8));
+						let uid = syncs.get(usr).userId;
+						const txl = await getConnection()
+							.createQueryBuilder()
+							.select("user_wallet_tx")
+							.from('user_wallet_tx')
+							.where({ txid: json.txid, userId: uid })
+							.getOne();
+						if (json.confirmations >= 3) {
+							// Get current Balance..
+							const userBalance = await getConnection()
+								.createQueryBuilder()
+								.select("user_wallet_address")
+								.from('user_wallet_address')
+								.where({ userId: uid })
+								.getOne();
+							// Audit Balance..
+							let ibal: number = parseFloat(userBalance.balance);
+							let dbal: number = bal - ibal;
+							if (dbal !== 0) {
+								await getConnection()
+									.createQueryBuilder()
+									.update('user_wallet_address')
+									.set({
+										balance: bal,
+									})
+									.where({ userId: uid })
+									.execute();
+								this.logger.warn("Balance Updated for \'" + uid + "\' ... Audited amount \'" + bal + "\' for user account. Delta total: \'" + dbal.toFixed(8) + "\'");
+							}
+						}
+					}
+					await getConnection()
+						.createQueryBuilder()
+						.delete("user_wallet_tx")
+						.from('user_wallet_tx')
+						.where({ txid: json.txid, txtype: 1 })
+						.execute();
 				}
 
         sendReply('Recieved NOTIFY');
@@ -392,9 +444,11 @@ export default class IntercomBroker {
         rxData: string,
         sendReply: (txData: string) => void
       ) => {
-        this.logger.info(
-          HEARTBEAT + ': ' + sender.getContext() + ' sent "' + rxData + '".'
-        );
+				if (this.verbose) {
+	        this.logger.info(
+	          HEARTBEAT + ': ' + sender.getContext() + ' sent "' + rxData + '".'
+	        );
+				}
         var json = JSON.parse(rxData);
         const status = await getConnection()
           .createQueryBuilder()
@@ -815,12 +869,13 @@ export default class IntercomBroker {
       (e: Error | null, rxData: string) => {
         if (e) {
           this.logger.error(e);
+					cb(e, null);
         } else {
           let json;
           try {
             json = JSON.parse(rxData);
             if (json != undefined && json.isError === true) {
-              this.logger.error(new Error(json.message));
+              //this.logger.error(new Error(json.message));
               throw new Error(json.message);
             } else {
               //this.logger.info(rxData);
@@ -831,7 +886,7 @@ export default class IntercomBroker {
               //this.logger.error(rxData);
               cb(null, rxData);
             } else {
-              this.logger.error(e);
+              //this.logger.error(e);
               cb(e, null);
             }
           }

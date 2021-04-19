@@ -6,18 +6,23 @@
 				<div class="contents">
 
 					<MkContainer :body-togglable="true" class="_gap">
-						<template #header><Fa :icon="faTachometerAlt"/> Wallet Withdraw - OHM</template>
+						<template #header><Fa :icon="faBoxOpen"/> Wallet Withdraw - OHM</template>
 
 						<div class="_content">
-							<div class="_keyValue"><b>Current Balance</b><span class="monospace" style="font-size: 1.07em;">{{ wallet.balance }} OHM</span></div>
+							<div class="_keyValue"><b>Current Balance</b><span class="monospace" style="font-size: 1.07em;">{{ wallet.network }} OHM</span></div>
 						</div>
 						<div class="_content">
 							<div class="_keyValue">
-								<b><MkInput v-model:value="address"><span class="monospace">External Public Address</span></MkInput></b>
-								<MkInput v-model:value="amount"><span class="monospace">Withdraw Amount</span></MkInput>
+								<b><MkInput v-model:value="address" style="margin: 0; flex: 1;"><span class="monospace">External Public Address</span></MkInput></b>
+								<MkInput v-model:value="amount" style="margin: 0; flex: 1;"><span class="monospace">Withdraw Amount</span></MkInput>
 							</div>
 						</div>
-						<div style="width: 67%; margin: auto;">
+						<div class="resp-div">
+							<span class="resp-text-ack">{{ response.ok }}</span>
+							<span class="resp-text-pend">{{ response.pend }}</span>
+							<span class="resp-text-nack">{{ response.error }}</span>
+						</div>
+						<div style="width: 67%; margin: auto; padding-bottom: 20px; margin-bottom: 30px;">
 							<MkButton full primary @click="doWithdraw()"><Fa :icon="faExternalLinkSquareAlt"/> Confirm Withdraw</MkButton>
 						</div>
 					</MkContainer>
@@ -31,8 +36,8 @@
 <script lang="ts">
 import { computed, defineComponent } from 'vue';
 import Progress from '@client/scripts/loading';
-import { faBoxOpen, faUndo, faArrowsAlt, faBan, faBroom, faExternalLinkSquareAlt } from '@fortawesome/free-solid-svg-icons';
-import { faSave } from '@fortawesome/free-regular-svg-icons';
+import { faBoxOpen, faExternalLinkSquareAlt, faOm } from '@fortawesome/free-solid-svg-icons';
+import { faBtc } from '@fortawesome/free-brands-svg-icons';
 import { query as urlQuery } from '../../../prelude/url';
 import MkButton from '@client/components/ui/button.vue';
 import MkInput from '@client/components/ui/input.vue';
@@ -43,7 +48,7 @@ import * as os from '@client/os';
 
 export default defineComponent({
   components: {
-			MkButton, faSave, MkInput, MkContainer, MkFolder, Progress,
+			MkButton, MkInput, MkContainer, MkFolder, Progress,
   },
 
   props: {
@@ -55,7 +60,13 @@ export default defineComponent({
 			address: "",
 			amount: "",
 			error: null,
-      wallet: ""
+      wallet: "",
+			response: {
+				error: null,
+				pend: null,
+				ok: null,
+			},
+			faBtc, faOm, faExternalLinkSquareAlt,
     };
   },
 
@@ -69,7 +80,7 @@ export default defineComponent({
 
   methods: {
 
-    fetch() {
+    fetch(): void {
       Progress.start();
       os.api('wallet/balance').then(wallet => {
         //console.log(wallet);
@@ -81,19 +92,77 @@ export default defineComponent({
       });
     },
 
-		doWithdraw() {
+		doWithdraw(): void {
+			if (this.activated) {
+				this.response.error = 'Already Busy.. ' + (this.error ? 'Error' : '');
+				return;
+			}
 			let address = this.address;
 			let amount = this.amount;
+			if (parseFloat(amount) <= 0) {
+				this.response.error = 'Invalid Number Entered for Action..';
+				return;
+			}
 			Progress.start();
-			os.api('wallet/withdraw', { address, amount }).then(response => {
-				console.log(response);
-				// TODO: handle withdraw response.
+			this.activated = true;
+			this.error = null;
+			this.amount = null;
+			this.response.ok = null;
+			this.response.pend = null;
+			this.response.error = null;
+			this.response.ok = "Action Attempt...";
+			os.api('wallet/withdraw', { address, amount }).then(resp => {
+				this.address = null;
+				this.response.ok = null;
+				this.response.pend = null;
+				this.response.error = null;
+				if (resp.error) {
+					//console.log(resp.error);
+					this.timeoutUpdateAck('');
+					this.response.pend = "Error!"
+					this.response.ok = resp.error;
+				} else {
+					//console.log(resp.data);
+					this.timeoutUpdateAck(resp.data);
+					this.response.pend = "Processing.. Please Wait."
+					this.wallet.network = number(parseFloat(this.wallet.network) - parseFloat(amount));
+				}
 			}).catch(e => {
 				this.error = e;
 				console.log(e);
 			}).finally(() => {
 				Progress.done();
 			});
+		},
+
+		timeoutUpdateAck(jobData: string, amount: string): void {
+			let vm = this;
+			setTimeout(function () {
+				Progress.start();
+				let jobId: string = 'TRANSFER_FINAL';
+				vm.response.ok = null;
+				vm.response.pend = null;
+				vm.response.error = null;
+				os.api('wallet/job', { jobId, jobData }).then(resp => {
+					let json = JSON.parse(resp);
+					console.log(json);
+					if (!json.error) {
+						let data = JSON.parse(json.data);
+						console.log(data.txid);
+						this.wallet.network = number(parseFloat(this.wallet.network) + parseFloat(amount));
+						vm.response.ok = "Action Confirmed with Success. " + data.txid.substring(0, 22) + "..";
+					} else {
+						vm.response.error = "Internal Error! " + JSON.parse(json.error.split(': ')[1]).message;
+						vm.wallet.network = number(parseFloat(vm.wallet.network) + parseFloat(amount));
+					}
+				}).catch(e => {
+					vm.error = e;
+					console.log(e);
+				}).finally(() => {
+					Progress.done();
+					vm.activated = false;
+				});
+			}, 4400);
 		},
 
   }
@@ -105,6 +174,19 @@ export default defineComponent({
 
 .monospace {
   font-family: Lucida Console, Courier, monospace;
+}
+.resp-div {
+	width: 72%;
+	margin: auto;
+	text-align: center;
+}
+.resp-text-ack {
+	font-size: 13px;
+	color: green;
+}
+.resp-text-nack {
+	font-size: 13px;
+	color: red;
 }
 
 </style>
