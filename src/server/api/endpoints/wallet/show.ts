@@ -83,7 +83,9 @@ export default define(meta, async (ps, me) => {
 			console.error('getNewAddress() error');
 		}
 	} else {
-		if (wallet.address.length > 36 || wallet.address.length <= 31) {
+		if (wallet.address.length > 36 || wallet.address.length <= 31 || (wallet.address.indexOf('\'') >= 0 && wallet.address.indexOf('"') >= 0)) {
+			console.warn('getNewAddress(): Regenerating user address..');
+			// TODO: don't delete? mark as invalid..
 			await getConnection()
 		    .createQueryBuilder()
 		    .delete("user_wallet_address")
