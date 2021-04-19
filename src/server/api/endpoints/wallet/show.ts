@@ -83,6 +83,24 @@ export default define(meta, async (ps, me) => {
 			console.error('getNewAddress() error');
 		}
 	} else {
+		if (wallet.address.length() > 36 || wallet.address.length() <= 31) {
+			await getConnection()
+		    .createQueryBuilder()
+		    .delete("user_wallet_address")
+		    .from('user_wallet_address')
+		    .where({ userId: user.id })
+		    .execute();
+			await getConnection()
+		    .createQueryBuilder()
+		    .delete("user_wallet_balance")
+		    .from('user_wallet_balance')
+		    .where({ userId: user.id })
+		    .execute();
+			if (process.send) {
+				//console.log('getNewAddress() requested');
+				process.send({ prc: 'relay', cmd: 'getNewAddress', userId: user.id }, undefined, {}, cb);
+			}
+		}
 		//console.log("Wallet Exists.");
 	}
 
