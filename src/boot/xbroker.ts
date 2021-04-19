@@ -134,7 +134,7 @@ process.on('message', async (msg) => {
 						.insert()
 						.into('user_wallet_address')
 						.values([
-								{ userId: res.userId, address: address }
+								{ userId: res.userId, address: data }
 						 ])
 						.execute();
 					await getConnection()

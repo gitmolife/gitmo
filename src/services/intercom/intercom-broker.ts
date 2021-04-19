@@ -193,6 +193,10 @@ export default class IntercomBroker {
 	        this.logger.info(
 	          NOTIFY + ': ' + sender.getContext() + ' sent "' + rxData + '".'
 	        );
+				} else {
+					this.logger.info(
+	          NOTIFY + ': ' + sender.getContext() + ' ACK.'
+	        );
 				}
         var json = JSON.parse(rxData);
         // Get Tx if Exists..
