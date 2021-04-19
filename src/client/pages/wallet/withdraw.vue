@@ -22,6 +22,9 @@
 							<span class="resp-text-pend">{{ response.pend }}</span>
 							<span class="resp-text-nack">{{ response.error }}</span>
 						</div>
+						<div class="info-div">
+							<span class="info-text">This will move OHM off site.  Your Network balance will decrease.</span>
+						</div>
 						<div style="width: 67%; margin: auto; padding-bottom: 20px; margin-bottom: 30px;">
 							<MkButton full primary @click="doWithdraw()"><Fa :icon="faExternalLinkSquareAlt"/> Confirm Withdraw</MkButton>
 						</div>
@@ -113,17 +116,17 @@ export default defineComponent({
 			this.response.ok = "Action Attempt...";
 			os.api('wallet/withdraw', { address, amount }).then(resp => {
 				this.address = null;
-				this.response.ok = null;
+				//this.response.ok = null;
 				this.response.pend = null;
 				this.response.error = null;
 				if (resp.error) {
 					//console.log(resp.error);
-					this.timeoutUpdateAck('');
+					this.timeoutUpdateAck('', amount);
 					this.response.pend = "Error!"
 					this.response.ok = resp.error;
 				} else {
 					//console.log(resp.data);
-					this.timeoutUpdateAck(resp.data);
+					this.timeoutUpdateAck(resp.data, amount);
 					this.response.pend = "Processing.. Please Wait."
 					this.wallet.network = number(parseFloat(this.wallet.network) - parseFloat(amount));
 				}
@@ -175,18 +178,33 @@ export default defineComponent({
 .monospace {
   font-family: Lucida Console, Courier, monospace;
 }
-.resp-div {
+.info-div {
 	width: 72%;
 	margin: auto;
 	text-align: center;
 }
+.info-text {
+	font-size: 11px;
+	font-style: italic;
+}
+.resp-div {
+	width: 72%;
+	margin: auto;
+	text-align: center;
+	margin-bottom: 7px;
+	font-size: 15px;
+}
 .resp-text-ack {
-	font-size: 13px;
 	color: green;
+	padding: 3px;
 }
 .resp-text-nack {
-	font-size: 13px;
 	color: red;
+	padding: 3px;
+}
+.resp-text-pend {
+	color: orange;
+	padding: 3px;
 }
 
 </style>
