@@ -25,6 +25,9 @@
 					</component>
 				</template>
 				<div class="divider"></div>
+				<MkA class="item" active-class="active" to="/my/wallet">
+					<Fa :icon="faCoins" fixed-width/><span class="text">Wallet</span>
+				</MkA>
 				<button class="item _button" :class="{ active: $route.path === '/instance' || $route.path.startsWith('/instance/') }" v-if="$i.isAdmin || $i.isModerator" @click="oepnInstanceMenu">
 					<Fa :icon="faServer" fixed-width/><span class="text">{{ $ts.instance }}</span>
 				</button>
