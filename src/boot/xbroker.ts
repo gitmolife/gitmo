@@ -254,7 +254,7 @@ process.on('message', async (msg) => {
 				let trq: TransactionRequest = {
 	        senders: [inAddress],
 	        recipients: [
-	          { address: outAddress, amount: (amountFee * 100000000).toFixed(0) },
+	          { address: outAddress, amount: (amount * 100000000).toFixed(0) },
 	        ],
 	        changeAddress: changeAddress,
 	      };
@@ -266,7 +266,7 @@ process.on('message', async (msg) => {
 				let uid: string = res.dat.userId;
 				let outAddress: string = res.dat.address;
 				let amount = parseFloat(res.dat.amount);
-				const xfee = '0.00007700';
+				const xfee = '0.00071750';
 				let amountFee = amount + parseFloat(xfee);
 				const siteAddress = await getConnection()
 					.createQueryBuilder()
@@ -505,7 +505,7 @@ process.on('message', async (msg) => {
 					// convert om to ohm
 					let inAddress: string = siteAddress.address;
 					let changeAddress: string = siteAddress.address;
-					let amountSend: string = (parseFloat(amountFee) * 100000000).toFixed(0);
+					let amountSend: string = (parseFloat(amount) * 100000000).toFixed(0);
 					let trq: TransactionRequest = {
 						senders: [inAddress],
 						recipients: [
@@ -519,7 +519,7 @@ process.on('message', async (msg) => {
 					// convert ohm to om
 					let inAddress: string = siteAddress.address;
 					let changeAddress: string = outAddress;
-					let amountSend: string = (parseFloat(amountFee) * 100000000).toFixed(0);
+					let amountSend: string = (parseFloat(amount) * 100000000).toFixed(0);
 					let trq: TransactionRequest = {
 						senders: [outAddress],
 						recipients: [

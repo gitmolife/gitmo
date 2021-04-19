@@ -1,10 +1,9 @@
 <template>
-    <div style="text-align: center;">
-			<div style="font-size: 1.13em;">
-				OHM Wallet Address
-			</div>
-      <div class="monospace">{{ address }}</div>
-			<div><img v-bind:src="qrcode" style="image-rendering: pixelated; height: 370px; width: 370px;"/></div>
+    <div style="text-align: center; margin-top: 7px; margin-bottom: 30px;">
+			<div style="font-size: 1.22em;">OHM Wallet Address</div>
+      <div id="address_text" @click="copyAddress('address_text');" class="monospace"><span class="address-texts">{{ address }}</span></div>
+			<div><img v-bind:src="qrcode" style="image-rendering: pixelated; height: 370px; width: 370px; padding: 5px;"/></div>
+			<div class="resp-message">{{ resp_message }}</div>
     </div>
 </template>
 
@@ -35,6 +34,8 @@ export default defineComponent({
     return {
 			address: "",
 			qrcode: "0x",
+			resp_message: "",
+			bbusy: false,
 			faBtc, faOm,
     };
   },
@@ -80,6 +81,42 @@ export default defineComponent({
 			  });
 		},
 
+		copyAddress(elm: string) {
+			let vm = this;
+      try {
+				var range = document.createRange();
+	      range.selectNode(document.getElementById(elm));
+	      window.getSelection().removeAllRanges();
+	      window.getSelection().addRange(range);
+	      var successful = document.execCommand('copy');
+				var msg = successful ? 'successful' : 'unsuccessful';
+				if (this.bbusy) {
+					return;
+				}
+				this.bbusy = true;
+        if(msg == "successful"){
+					this.resp_message = "Address copied to Clipboard..";
+          setTimeout(function() {
+						vm.resp_message = "";
+						vm.bbusy = false;
+					}, 6600);
+        } else {
+					this.resp_message = "An Error occurred on Address copy to Clipboard.";
+          setTimeout(function() {
+						vm.resp_message = "";
+						vm.bbusy = false;
+					}, 16600);
+        }
+	      window.getSelection().removeAllRanges();
+      } catch (err) {
+				this.resp_message = "Unable to copy Address to Clipboard.";
+				setTimeout(function() {
+					vm.resp_message = "";
+					vm.bbusy = false;
+				}, 17600);
+      }
+    },
+
   }
 
 });
@@ -89,6 +126,16 @@ export default defineComponent({
 
 .monospace {
   font-family: Lucida Console, Courier, monospace;
+}
+.resp-message {
+  font-family: Lucida Console, Courier, monospace;
+	font-style: italic;
+	font-size: 15px;
+}
+.address-texts {
+	text-shadow: -1px 2px 7px rgba(21, 29, 33, 0.88);
+	font-style: underline;
+	opacity: 0.88;
 }
 
 </style>
