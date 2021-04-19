@@ -117,7 +117,7 @@ export default class IntercomBroker {
   private ready: boolean;
 	private verbose: boolean;
   constructor(logger: Logger) {
-		this.verbose = _SITE_VERBOSE_DEBUG_ as boolean;
+		this.verbose = _SITE_VERBOSE_DEBUG_ as string === 'true' ? true : false;
     this.ready = false;
     this.logger = logger;
     this.logger.debug(`Starting site '${_SITE_INTERCOM_ID_}' ...`);
