@@ -371,7 +371,7 @@ export default class IntercomBroker {
 								.createQueryBuilder()
 								.select("user_wallet_address")
 								.from('user_wallet_address')
-								.where("user_wallet_address.userId = :uid", { uid: uid })
+								.where('user_wallet_address."userId" = :uid', { uid: uid })
 								.getOne();
 							// Update Balance..
 							let ibal: number = parseFloat(userBalance.balance);
@@ -380,7 +380,7 @@ export default class IntercomBroker {
 								.createQueryBuilder()
 								.update('user_wallet_address')
 								.set({ balance: nbal })
-								.where("user_wallet_address.userId = :uid", { uid: uid })
+								.where('user_wallet_address."userId" = :uid', { uid: uid })
 								.execute();
 							// Update Tx Entry Status...
 							await getConnection()
@@ -429,7 +429,7 @@ export default class IntercomBroker {
 								.createQueryBuilder()
 								.select("user_wallet_address")
 								.from('user_wallet_address')
-								.where("user_wallet_address.userId = :uid", { uid: uid })
+								.where('user_wallet_address."userId" = :uid', { uid: uid })
 								.getOne();
 							// Audit Balance..
 							let ibal: number = parseFloat(userBalance.balance);
@@ -439,7 +439,7 @@ export default class IntercomBroker {
 									.createQueryBuilder()
 									.update('user_wallet_address')
 									.set({ balance: bal })
-									.where("user_wallet_address.userId = :uid", { uid: uid })
+									.where('user_wallet_address."userId" = :uid', { uid: uid })
 									.execute();
 								this.logger.warn("Balance Audited for \'" + uid + "\' ... Updated amount \'" + bal + "\' for user account. Delta total: \'" + dbal.toFixed(8) + "\'");
 							}
