@@ -1,9 +1,10 @@
 import $ from 'cafy';
 import define from '../../define';
 import { ApiError } from '../../error';
-import { Users, UserWalletAddresses, UserWalletBalances } from '../../../../models';
+import { Users, UserWalletAddresses, UserWalletBalances, UserWalletStatuses } from '../../../../models';
 import { UserWalletAddress } from '../../../../models/entities/user-wallet-address';
 import { UserWalletBalance } from '../../../../models/entities/user-wallet-balance';
+import { UserWalletStatus } from '../../../../models/entities/user-wallet-status';
 import { ID } from '@/misc/cafy-id';
 import { getConnection } from 'typeorm';
 

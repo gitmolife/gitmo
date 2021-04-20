@@ -32,7 +32,7 @@ export default defineComponent({
 
   data() {
     return {
-			faBtc, faOm,
+			faBtc,
     };
   },
 
