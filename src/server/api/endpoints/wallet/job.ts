@@ -13,7 +13,7 @@ export const meta = {
 
 	params: {
 		jobId: {
-			validator: $.optional.str
+			validator: $.str
 		},
 		jobData: {
 			validator: $.optional.str
@@ -22,7 +22,7 @@ export const meta = {
 
 	res: {
 		type: 'object' as const,
-		optional: false as const, nullable: false as const,
+		optional: false as const, nullable: true as const,
 		ref: 'Wallet',
 	},
 

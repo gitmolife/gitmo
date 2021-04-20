@@ -12,6 +12,14 @@ export const meta = {
 	requireCredential: true as const,
 
 	params: {
+		userId: {
+			validator: $.optional.nullable.type(ID),
+			desc: {
+				'ja-JP': '対象のユーザーのID',
+				'en-US': 'Target user ID'
+			}
+		},
+
 		username: {
 			validator: $.optional.str
 		},

@@ -86,6 +86,9 @@
 				<button class="button _button" @click="menu()" ref="menuButton">
 					<Fa :icon="faEllipsisH"/>
 				</button>
+				<button class="button _button" @click="tip()">
+					<Fa :icon="faCommentDollar"/>
+				</button>
 			</footer>
 		</div>
 	</article>
@@ -103,8 +106,9 @@
 
 <script lang="ts">
 import { defineAsyncComponent, defineComponent, markRaw } from 'vue';
-import { faSatelliteDish, faBolt, faTimes, faBullhorn, faStar, faLink, faExternalLinkSquareAlt, faPlus, faMinus, faRetweet, faReply, faReplyAll, faEllipsisH, faHome, faUnlock, faEnvelope, faThumbtack, faBan, faQuoteRight, faInfoCircle, faBiohazard, faPlug, faExclamationCircle, faPaperclip, faShareAlt } from '@fortawesome/free-solid-svg-icons';
+import { faSatelliteDish, faBolt, faTimes, faBullhorn, faStar, faLink, faExternalLinkSquareAlt, faPlus, faMinus, faRetweet, faReply, faReplyAll, faEllipsisH, faHome, faUnlock, faEnvelope, faThumbtack, faBan, faQuoteRight, faInfoCircle, faBiohazard, faPlug, faExclamationCircle, faPaperclip, faShareAlt, faCommentDollar } from '@fortawesome/free-solid-svg-icons';
 import { faCopy, faTrashAlt, faEdit, faEye, faEyeSlash } from '@fortawesome/free-regular-svg-icons';
+import { faOm } from '@fortawesome/free-solid-svg-icons';
 import * as mfm from 'mfm-js';
 import { sum } from '../../prelude/array';
 import XSub from './note.sub.vue';
@@ -174,7 +178,7 @@ export default defineComponent({
 			collapsed: false,
 			isDeleted: false,
 			muted: false,
-			faEdit, faBolt, faTimes, faBullhorn, faPlus, faMinus, faRetweet, faReply, faReplyAll, faEllipsisH, faHome, faUnlock, faEnvelope, faThumbtack, faBan, faBiohazard, faPlug, faSatelliteDish
+			faEdit, faBolt, faTimes, faBullhorn, faPlus, faMinus, faRetweet, faReply, faReplyAll, faEllipsisH, faHome, faUnlock, faEnvelope, faThumbtack, faBan, faBiohazard, faPlug, faSatelliteDish, faCommentDollar, faOm
 		};
 	},
 
@@ -852,6 +856,56 @@ export default defineComponent({
 
 		focusAfter() {
 			focusNext(this.$el);
+		},
+
+		async tip() {
+			let oId = this.note.userId;
+			let oUsr = this.note.user;
+			let complete = false;
+			let bal: number;
+			await os.api('wallet/balance').then(balances => {
+				//console.log(balances);
+				bal = parseFloat(balances.tipping);
+			}).catch(e => {
+				os.dialog({
+					type: 'error',
+					title: 'An Error Occurred!',
+					text: e.message,
+				});
+			});
+			if (!bal) { return; }
+			await os.dialog({
+				icon: faOm,
+				type: 'question',
+				title: 'Send OHM to ' + oUsr.username + ' as Tip?',
+				text: 'You have ' + bal + ' OHM available.',
+				input: {
+					type: 'string'
+				}
+			}).then(({ canceled, result: amount }) => {
+				if (canceled) { return; }
+				complete = true;
+				os.apiWithDialog('wallet/tip', {
+					other: oId,
+					amount: amount,
+				}, undefined, (res: any) => {
+					os.dialog({
+						type: 'success',
+						text: 'Tip of ' + amount + ' OHM Sent to ' + oUsr.username + '!',
+						title: res.data.message
+					}).then( () => {
+						if (complete) {
+							os.success();
+						}
+					});
+				}, (e: Error) => {
+					os.dialog({
+						type: 'error',
+						title: 'An Error Occurred!',
+						text: e.message,
+					});
+				});
+			});
 		},
 
 		userPage

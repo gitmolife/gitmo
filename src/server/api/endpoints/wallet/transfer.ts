@@ -16,11 +16,11 @@ export const meta = {
 	params: {
 
 		type: {
-			validator: $.optional.str
+			validator: $.str
 		},
 
 		amount: {
-			validator: $.optional.str
+			validator: $.str,
 		},
 
 	},
@@ -81,12 +81,18 @@ export default define(meta, async (ps, me) => {
 
 	if (wallet && addrUser && bOnline && bSynced) {
 		console.log('transfer requested');
-		let amt = parseFloat(ps.amount);
-		const xfee = '0.000007000';
-		let amountFee = parseFloat(xfee) + amt;
-		if (!ps.amount) {
+		if (!ps.amount || isNaN(ps.amount)) {
 			error = 'Amount must be a number';
-		} else if (amt <= 0.1) {
+			let result = {
+				data,
+				error,
+			};
+			return result;
+		}
+		const xfee = '0.000007000';
+		let amt = parseFloat(ps.amount);
+		let amountFee = parseFloat(xfee) + amt;
+		if (amt <= 0.1) {
 			error = 'Amount must be more than 0.1';
 		} else if (ps.type === 'ohm' && (amountFee > wallet.balance || amountFee > addrSite.balance)) {
 			// Not enough OM..

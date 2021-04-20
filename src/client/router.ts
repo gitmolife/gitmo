@@ -46,6 +46,7 @@ export const router = createRouter({
 		{ path: '/my/notifications', component: page('notifications') },
 		{ path: '/my/wallet', component: page('wallet/index') },
 		{ path: '/my/wallet/help', component: page('wallet/help') },
+		{ path: '/my/wallet/tip/:oid/:name', component: page('wallet/tip'), props: route => ({ otherId: route.params.oid, otherName: route.params.name }) },
 		{ path: '/my/wallet/address', component: page('wallet/address') },
 		{ path: '/my/wallet/history', component: page('wallet/history') },
 		{ path: '/my/wallet/withdraw', component: page('wallet/withdraw') },

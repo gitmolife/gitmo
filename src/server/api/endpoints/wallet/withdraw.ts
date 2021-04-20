@@ -15,11 +15,11 @@ export const meta = {
 	params: {
 
 		address: {
-			validator: $.optional.str
+			validator: $.str
 		},
 
 		amount: {
-			validator: $.optional.str
+			validator: $.str
 		},
 
 	},
@@ -78,6 +78,14 @@ export default define(meta, async (ps, me) => {
 
 	if (addrUser && bOnline && bSynced) {
 		//console.log('doWithdraw() requested');
+		if (isNaN(ps.amount)) {
+			error = 'Amount must be number';
+			let result = {
+				data,
+				error,
+			};
+			return result;
+		}
 		let amt = parseFloat(ps.amount);
 		const xfee = '0.00001100';
 		let amountFee = parseFloat(xfee) + amt;

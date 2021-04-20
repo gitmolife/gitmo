@@ -12,7 +12,7 @@ export const meta = {
 
 	params: {
 		userId: {
-			validator: $.optional.type(ID),
+			validator: $.optional.nullable.type(ID),
 			desc: {
 				'ja-JP': '対象のユーザーのID',
 				'en-US': 'Target user ID'

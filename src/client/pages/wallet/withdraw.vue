@@ -17,9 +17,9 @@
 								<MkInput v-model:value="amount" style="margin: 0; flex: 1;"><span class="monospace">Withdraw Amount</span></MkInput>
 							</div>
 						</div>
-						<div class="resp-div">
-							<span class="resp-text-ack">{{ response.ok }}</span>
+						<div v-if="response.ok || response.pend || response.error" class="resp-div">
 							<span class="resp-text-pend">{{ response.pend }}</span>
+							<span class="resp-text-ack">{{ response.ok }}</span>
 							<span class="resp-text-nack">{{ response.error }}</span>
 						</div>
 						<div class="info-div">

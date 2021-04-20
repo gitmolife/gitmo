@@ -16,7 +16,7 @@ export const meta = {
 
 	params: {
 		username: {
-			validator: $.optional.str
+			validator: $.optional.nullable.str
 		},
 
 		host: {
