@@ -143,7 +143,7 @@ export default defineComponent({
 			let vm = this;
 			setTimeout(function () {
 				Progress.start();
-				let jobId: string = 'TRANSFER_FINAL';
+				let jobId: string = 'WITHDRAW_FINAL';
 				vm.response.ok = null;
 				vm.response.pend = null;
 				vm.response.error = null;
