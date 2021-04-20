@@ -176,7 +176,17 @@ export default defineComponent({
 						this.response_om_pend = "Error."
 						this.response_om_error = resp.error;
 					}
-					this.timeoutUpdateAck(type, '', amount);
+					//this.timeoutUpdateAck(type, '', amount);
+					let vm = this;
+					vm.activated = false;
+					setTimeout(function () {
+						vm.response_ohm_error = null;
+						vm.response_ohm_pend = null;
+						vm.response_ohm_ok = null;
+						vm.response_om_error = null;
+						vm.response_om_pend = null;
+						vm.response_om_ok = null;
+					}, 22000);
 				} else {
 					//console.log(resp.data);
 					if (type === 'ohm') {
@@ -217,15 +227,28 @@ export default defineComponent({
 					let json = JSON.parse(resp);
 					if (!json.error) {
 						let data = JSON.parse(json.data);
-						console.log(data.txid);
-						if (type === 'ohm') {
-							let bn = parseFloat(vm.bal_net);
-							vm.bal_net = number(bn + parseFloat(amount));
-							vm.response_ohm_ok = "Action Confirmed Process Success. " + data.txid.substring(0, 22) + "..";
+						//console.log(data);
+						if (!data.error) {
+							let res = JSON.parse(data.data);
+							console.log(res.txid);
+							if (type === 'ohm') {
+								let bn = parseFloat(vm.bal_net);
+								vm.bal_net = number(bn + parseFloat(amount));
+								vm.response_ohm_ok = "Action Confirmed Process Success. " + res.txid.substring(0, 22) + "..";
+							} else {
+								let bt = parseFloat(vm.bal_tip);
+								vm.bal_tip = number(bt + parseFloat(amount));
+								vm.response_om_ok = "Action Confirmed Process Success. " + res.txid.substring(0, 22) + "..";
+							}
 						} else {
-							let bt = parseFloat(vm.bal_tip);
-							vm.bal_tip = number(bt + parseFloat(amount));
-							vm.response_om_ok = "Action Confirmed Process Success. " + data.txid.substring(0, 22) + "..";
+							console.log(data.error);
+							if (type === 'ohm') {
+								vm.response_ohm_error = "Internal Error! " + data.error;
+								vm.bal_tip = number(parseFloat(vm.bal_tip) + parseFloat(amount)); // add back
+							} else {
+								vm.response_om_error = "Internal Error! " + data.error;
+								vm.bal_net = number(parseFloat(vm.bal_net) + parseFloat(amount)); // add back
+							}
 						}
 						setTimeout(function () {
 							vm.response_ohm_error = null;
@@ -252,7 +275,7 @@ export default defineComponent({
 	        Progress.done();
 					vm.activated = false;
 	      });
-      }, 6400);
+      }, 16400);
 		},
 
 		updatePoll() {

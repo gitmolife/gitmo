@@ -66,7 +66,7 @@ export default define(meta, async (ps, me) => {
 			.where('user_wallet_job."userId" = :uid', { uid: user.id })
 			.andWhere('user_wallet_job."job" = :job', { job: ps.jobId })
 	    .execute();
-		response = JSON.stringify({ error: null, data: data });
+		response = JSON.stringify({ error: null, data: data.result });
 	}
 
 	return response;

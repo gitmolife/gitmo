@@ -124,7 +124,17 @@ export default defineComponent({
 					//console.log(resp.error);
 					this.response.pend = "An Error Occurred!"
 					this.response.error = resp.error;
-					this.timeoutUpdateAck('', amount);
+					//this.timeoutUpdateAck('', amount);
+					let vm = this;
+					vm.activated = false;
+					setTimeout(function () {
+						vm.response_ohm_error = null;
+						vm.response_ohm_pend = null;
+						vm.response_ohm_ok = null;
+						vm.response_om_error = null;
+						vm.response_om_pend = null;
+						vm.response_om_ok = null;
+					}, 22000);
 				} else {
 					//console.log(resp.data);
 					this.response.pend = "Processing.. Please Wait."
@@ -152,14 +162,14 @@ export default defineComponent({
 						let json = JSON.parse(resp);
 						//console.log(json);
 						if (!json.error) {
-							let data = JSON.parse(json.data.result);
+							let data = JSON.parse(json.data);
 							if (!data.error) {
 								let res = JSON.parse(data.data);
 								console.log(res.txid);
-								let nbal = parseFloat(vm.wallet.network) + parseFloat(amount);
-								vm.wallet.network = number(nbal);
 								vm.response.ok = "Action Confirmed with Success. " + res.txid.substr(0, 22) + "..";
 							} else {
+								let nbal = parseFloat(vm.wallet.network) + parseFloat(amount);
+								vm.wallet.network = number(nbal);
 								vm.response.error = "Internal Error - " + data.error;
 							}
 						} else {
