@@ -150,15 +150,23 @@ export default defineComponent({
 				os.api('wallet/job', { jobId, jobData }).then(resp => {
 					try {
 						let json = JSON.parse(resp);
-						console.log(json);
+						//console.log(json);
 						if (!json.error) {
-							let data = JSON.parse(json.data);
-							console.log(data.txid);
-							vm.wallet.network = number(parseFloat(vm.wallet.network) + parseFloat(amount));
-							vm.response.ok = "Action Confirmed with Success. " + data.txid.substring(0, 22) + "..";
+							let data = JSON.parse(json.data.result);
+							if (!data.error) {
+								let res = JSON.parse(data.data);
+								console.log(res.txid);
+								let nbal = parseFloat(vm.wallet.network) + parseFloat(amount);
+								vm.wallet.network = number(nbal);
+								vm.response.ok = "Action Confirmed with Success. " + res.txid.substr(0, 22) + "..";
+							} else {
+								vm.response.error = "Internal Error - " + data.error;
+							}
 						} else {
-							console.log(json.error);
-							vm.wallet.network = number(parseFloat(vm.wallet.network) + parseFloat(amount));
+							//console.log("ERROR!");
+							console.error(json.error);
+							let nbal = parseFloat(vm.wallet.network) + parseFloat(amount);
+							vm.wallet.network = number(nbal);
 							if (json.error === 'Invalid') {
 								vm.response.error = "Internal Error - Job Not Found!";
 							} else {
@@ -166,11 +174,12 @@ export default defineComponent({
 							}
 						}
 					} catch (e) {
+						console.error(e);
 						vm.response.error = "Internal Error!";
 					}
 				}).catch(e => {
 					vm.error = e;
-					console.log(e);
+					console.error(e);
 				}).finally(() => {
 					Progress.done();
 					vm.activated = false;
