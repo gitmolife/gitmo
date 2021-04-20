@@ -138,7 +138,6 @@ export default define(meta, async (ps, me) => {
 		} else if (h.txtype === 2 || h.txtype === 4) {
 			t = "WITHDRAW";
 			a = "OUT";
-			amt = '-' + h.amount;
 		} else if (h.txtype === 10) {
 			t = "LOCAL-Tx";
 			a = "IN+";

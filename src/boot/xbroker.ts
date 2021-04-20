@@ -187,9 +187,9 @@ process.on('message', async (msg) => {
 						let json = JSON.parse(data);
 						brokerLogger.debug('doneWithdraw() ' + json.txid);
 						let rfee: number = (parseFloat(json.fee) * 0.000000001);
-						// Update Balance..
 						let ibal: number = parseFloat(userAddress.balance);
 						let nbal: number = ibal - (amount + rfee);
+						// Update Balance..
 						await getConnection()
 							.createQueryBuilder()
 							.update('user_wallet_address')
@@ -199,7 +199,6 @@ process.on('message', async (msg) => {
 							.where({ userId: uid })
 							.execute();
 						// Add Tx Entry... User
-						console.log(amount);
 						await getConnection()
 							.createQueryBuilder()
 							.insert()
@@ -210,8 +209,8 @@ process.on('message', async (msg) => {
 								address: outAddress,
 								coinType: 0,
 								txtype: 4,
-								processed: 3,
-								amount: amount,
+								processed: 1,
+								amount: -amount,
 								complete: true,
 							})
 							.execute();
@@ -221,17 +220,16 @@ process.on('message', async (msg) => {
 							.insert()
 							.into('user_wallet_tx')
 							.values({
-								//userId: uid,
+								userId: uid,
 								txid: json.txid,
 								address: userAddress.address,
 								coinType: 0,
-								txtype: 3,
-								processed: 3,
-								amount: amount,
+								txtype: 13,
+								processed: 1,
+								amount: 0,
 								complete: false,
 							})
 							.execute();
-						//process.send!({cmd: 'doneWithdraw', prc: 'relay', address: data});
 						// Create Job
 						let jobId =  Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 5);
 						await getConnection()
@@ -247,6 +245,7 @@ process.on('message', async (msg) => {
 								result: { error: null, data: data },
 							})
 							.execute();
+						//process.send!({cmd: 'doneWithdraw', prc: 'relay', address: data});
 					}
 				};
 				let inAddress: string = userAddress.address;
@@ -477,7 +476,6 @@ process.on('message', async (msg) => {
 							})
 							.where({ userId: uid })
 							.execute();
-						//process.send!({cmd: 'doneTransfer', prc: 'relay', response: data});
 						// Create Job
 						let jobId =  Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 5);
 						await getConnection()
@@ -493,6 +491,7 @@ process.on('message', async (msg) => {
 								result: { error: null, data: data },
 							})
 							.execute();
+						//process.send!({cmd: 'doneTransfer', prc: 'relay', response: data});
 					}
 				};
 

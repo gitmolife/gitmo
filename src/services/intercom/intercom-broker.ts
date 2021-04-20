@@ -202,9 +202,9 @@ export default class IntercomBroker {
         // Get Tx if Exists..
         const txe = await getConnection()
           .createQueryBuilder()
-          .select("*")
+          .select("user_wallet_tx")
           .from('user_wallet_tx')
-          .where({ txid: json.txid })
+          .where("user_wallet_tx.txid = :txid", { txid: json.txid })
           .getCount() > 0;
 
 				// Create Tx Entry..
@@ -223,23 +223,31 @@ export default class IntercomBroker {
             })
             .execute();
 					this.logger.debug("Received New TxID: \'" + json.txid + "\' with \'" + json.confirmations + "\' confirmations.");
-        }
+        } else {
+					// Update Tx Entry Status...
+					await getConnection()
+						.createQueryBuilder()
+						.update('user_wallet_tx')
+						.set({ confirms: json.confirmations })
+						.where("user_wallet_tx.txid = :txid", { txid: json.txid })
+						.execute();
+					this.logger.debug("Updated Seen TxID: \'" + json.txid + "\' with \'" + json.confirmations + "\' confirmations.");
+				}
 
 				// Get Tx if Exists..
 				const tx = await getConnection()
 					.createQueryBuilder()
 					.select("user_wallet_tx")
 					.from('user_wallet_tx')
-					.where({ txid: json.txid })
+					.where("user_wallet_tx.txid = :txid", { txid: json.txid })
 					.getOne();
-
 				if (tx === undefined) {
 					// Error
 					this.logger.error("tx is null on lookup..");
 				}
 
 				// Check Job
-				if (tx != undefined && json.confirmations > 0) {
+				if (tx !== undefined && json.confirmations >= 1) {
 					var inputs: Map<string, { userId: string; balance: string; }> = new Map<string, { userId: string; balance: string; }>();
 					for (var bal of json.inputs) {
 						// Get Address if Exists..
@@ -247,11 +255,12 @@ export default class IntercomBroker {
 							.createQueryBuilder()
 							.select("user_wallet_address")
 							.from('user_wallet_address')
-							.where({ address: bal.address })
+							.where("user_wallet_address.address = :addr", { addr: bal.address })
 							.getOne();
 						let userId = address != undefined ? address.userId : null;
 						if (userId != null) {
-							inputs.set(address.address, { userId, balance: bal.value });
+							let addr: string = address.address;
+							inputs.set(addr, { userId, balance: bal.value, vout: bal.vout });
 						}
 					}
 					var users: Map<string, { userId: string; balance: string; }> = new Map<string, { userId: string; balance: string; }>();
@@ -261,41 +270,34 @@ export default class IntercomBroker {
 							.createQueryBuilder()
 							.select("user_wallet_address")
 							.from('user_wallet_address')
-							.where({ address: bal.address })
+							.where("user_wallet_address.address = :addr", { addr: bal.address })
 							.getOne();
 						//console.log(JSON.stringify(address));
 						let userId = address != undefined ? address.userId : null;
 						if (userId != null) {
-							this.logger.info("Address Located for \'" + userId + "\' ... from TxID \'" + json.txid + "\'");
-							users.set(address.address, { userId, balance: bal.value });
+							//this.logger.info("Address Located for \'" + userId + "\' ... from TxID \'" + json.txid + "\' Vout \'" + bal.vout + "\'");
+							let addr: string = address.address;
+							users.set(addr, { userId, balance: bal.value, vout: bal.vout });
 						}
 					}
-
-					// Update Tx Entry Status...
-					await getConnection()
-						.createQueryBuilder()
-						.update('user_wallet_tx')
-						.set({
-							confirms: json.confirmations,
-						})
-						.where({txid: json.txid})
-						.execute();
 
 					// Iterate over matched vouts to users..
 					for (var usr of users.keys()) {
 						let bal = parseFloat(this.parseFromIntString(users.get(usr).balance, 8));
 						let uid = users.get(usr).userId;
+						let vout = users.get(usr).vout;
 						var t = 3;
 						if (usr in inputs.keys()) {
 							t = 13;
 						}
-						const txl = await getConnection()
+						var txl = await getConnection()
 							.createQueryBuilder()
 							.select("user_wallet_tx")
 							.from('user_wallet_tx')
-							.where({ txid: json.txid, userId: uid })
+							.where("user_wallet_tx.txid = :txid", { txid: json.txid })
+							.andWhere("user_wallet_tx.address = :addr", { addr: usr })
 							.getOne();
-						if (!txl) {
+						if (txl === undefined) {
 							// Add Tx Entry...
 							await getConnection()
 								.createQueryBuilder()
@@ -304,26 +306,42 @@ export default class IntercomBroker {
 								.values({
 									userId: uid,
 									txid: json.txid,
+									vout: vout,
 									address: usr,
 									coinType: 0,
 									txtype: t,
 									confirms: json.confirmations,
 									processed: json.confirmations >= 5 ? 2 : 1,
 									amount: bal,
-									//complete: json.confirmations >= 3 ? true : false,
 								})
 								.execute();
-						} else if (txl.confirmations != json.confirmations) {
-							if (txl.txtype < 10) {
+							txl = await getConnection()
+								.createQueryBuilder()
+								.select("user_wallet_tx")
+								.from('user_wallet_tx')
+								.where("user_wallet_tx.txid = :txid", { txid: json.txid })
+								.andWhere("user_wallet_tx.address = :addr", { addr: usr })
+								.getOne();
+							this.logger.debug("Added Record for TxID: \'" + json.txid + "::" + vout + "\' with \'" + json.confirmations + "\' confirmations and bal \'" + bal "\' to user \'" + uid + "\'");
+						}
+						if (txl === undefined) {
+							continue;
+						}
+						if (txl.confirms >= 1 && !txl.complete) {
+							//this.logger.debug("Updated Record for TxID: \'" + json.txid + "\' with \'" + json.confirmations + "\' confirmations and bal " + bal);
+							if (txl.txtype < 10 || txl.txtype === 13) {
 								// Update Tx Entry...
 								await getConnection()
 									.createQueryBuilder()
 									.update('user_wallet_tx')
 									.set({
+										//userId: uid,
+										vout: vout,
 										processed: json.confirmations >= 5 ? 3 : 2,
 										amount: bal,
 									})
-									.where({ txid: json.txid, userId: uid })
+									.where("user_wallet_tx.txid = :txid", { txid: json.txid })
+									.andWhere("user_wallet_tx.address = :addr", { addr: usr })
 									.execute();
 							} else {
 								// Update Tx Entry...
@@ -331,27 +349,29 @@ export default class IntercomBroker {
 									.createQueryBuilder()
 									.update('user_wallet_tx')
 									.set({
+										vout: vout,
 										processed: json.confirmations >= 5 ? 3 : 2,
 									})
-									.where({ txid: json.txid, userId: uid })
+									.where("user_wallet_tx.txid = :txid", { txid: json.txid })
+									.andWhere("user_wallet_tx.address = :addr", { addr: usr })
 									.execute();
 							}
 						}
-						if (txl && (txl.txtype === 10 || txl.txtype === 20)) {
+						if (txl.txtype === 10 || txl.txtype === 20) {
 							//this.logger.debug("Internal Transfer from site: " + json.txid);
 							continue;
 						}
-						if (txl && (txl.txtype === 11 || txl.txtype == 13 || txl.txtype === 21)) {
+						if (txl.txtype === 11 || txl.txtype === 13 || txl.txtype === 21) {
 							//this.logger.debug("Internal Transfer to site: " + json.txid);
 							continue;
 						}
-						if (json.confirmations >= 5 && !txl.complete) {
+						if (!txl.complete && json.confirmations >= 5) {
 							// Get current Balance..
 							const userBalance = await getConnection()
 								.createQueryBuilder()
 								.select("user_wallet_address")
 								.from('user_wallet_address')
-								.where({ userId: uid })
+								.where("user_wallet_address.userId = :uid", { uid: uid })
 								.getOne();
 							// Update Balance..
 							let ibal: number = parseFloat(userBalance.balance);
@@ -359,23 +379,19 @@ export default class IntercomBroker {
 							await getConnection()
 								.createQueryBuilder()
 								.update('user_wallet_address')
-								.set({
-									balance: nbal,
-								})
-								.where({ userId: uid })
+								.set({ balance: nbal })
+								.where("user_wallet_address.userId = :uid", { uid: uid })
 								.execute();
 							// Update Tx Entry Status...
 							await getConnection()
 								.createQueryBuilder()
 								.update('user_wallet_tx')
-								.set({
-									complete: true,
-								})
-								.where({txid: json.txid})
+								.set({ complete: true })
+								.where("user_wallet_tx.txid = :txid", { txid: json.txid })
 								.execute();
 							this.logger.info("Balance Updated for \'" + uid + "\' ... Added \'" + ibal + "\' to user account! New total: \'" + nbal + "\'");
 						} else {
-							this.logger.debug("Updated Pending TxID: \'" + json.txid + "\' with \'" + json.confirmations + "\' confirmations.");
+							this.logger.debug("Checked Pending TxID: \'" + json.txid + "::" + vout + "\' with \'" + json.confirmations + "\' confirmations.");
 						}
 					}
 				}
@@ -388,12 +404,12 @@ export default class IntercomBroker {
 							.createQueryBuilder()
 							.select("user_wallet_address")
 							.from('user_wallet_address')
-							.where({ address: bal.address })
+							.where("user_wallet_address.address = :addr", { addr: bal.address })
 							.getOne();
 						//console.log(JSON.stringify(address));
 						let userId = address != undefined ? address.userId : null;
 						if (userId != null) {
-							this.logger.info("Address Located for \'" + userId + "\' ... from validated TxID \'" + json.txid + "\'");
+							//this.logger.info("Address Located for \'" + userId + "\' ... from validated TxID \'" + json.txid + "\'");
 							syncs.set(address.address, { userId, balance: bal.balance });
 						}
 					}
@@ -404,7 +420,8 @@ export default class IntercomBroker {
 							.createQueryBuilder()
 							.select("user_wallet_tx")
 							.from('user_wallet_tx')
-							.where({ txid: json.txid, userId: uid })
+							.where("user_wallet_tx.txid = :txid", { txid: json.txid })
+							.andWhere("user_wallet_tx.address = :addr", { addr: usr })
 							.getOne();
 						if (json.confirmations >= 6 && txl.complete) {
 							// Get current Balance..
@@ -412,7 +429,7 @@ export default class IntercomBroker {
 								.createQueryBuilder()
 								.select("user_wallet_address")
 								.from('user_wallet_address')
-								.where({ userId: uid })
+								.where("user_wallet_address.userId = :uid", { uid: uid })
 								.getOne();
 							// Audit Balance..
 							let ibal: number = parseFloat(userBalance.balance);
@@ -421,12 +438,10 @@ export default class IntercomBroker {
 								await getConnection()
 									.createQueryBuilder()
 									.update('user_wallet_address')
-									.set({
-										balance: bal,
-									})
-									.where({ userId: uid })
+									.set({ balance: bal })
+									.where("user_wallet_address.userId = :uid", { uid: uid })
 									.execute();
-								this.logger.warn("Balance Updated for \'" + uid + "\' ... Audited amount \'" + bal + "\' for user account. Delta total: \'" + dbal.toFixed(8) + "\'");
+								this.logger.warn("Balance Audited for \'" + uid + "\' ... Updated amount \'" + bal + "\' for user account. Delta total: \'" + dbal.toFixed(8) + "\'");
 							}
 						}
 					}
@@ -434,11 +449,12 @@ export default class IntercomBroker {
 						.createQueryBuilder()
 						.delete("user_wallet_tx")
 						.from('user_wallet_tx')
-						.where({ txid: json.txid, txtype: 1 })
+						.where("user_wallet_tx.txid = :txid", { txid: json.txid })
+						.andWhere("user_wallet_tx.txtype = :type", { type: 1 })
 						.execute();
 				}
 
-        sendReply('Recieved NOTIFY');
+        sendReply('Received NOTIFY');
       }
     );
 
@@ -463,7 +479,7 @@ export default class IntercomBroker {
           .createQueryBuilder()
           .select("type")
           .from('user_wallet_status')
-          .where({ type: json.coin })
+          .where("user_wallet_status.type = :type", { type: json.coin })
           .getCount() > 0;
         if (status) {
           getConnection()
@@ -478,7 +494,7 @@ export default class IntercomBroker {
               blocktime: json.blocktime,
               updatedAt: new Date(),
              })
-             .where({type: json.coin})
+             .where("user_wallet_status.type = :type", {type: json.coin})
              .execute();
         } else {
           getConnection()
@@ -496,7 +512,7 @@ export default class IntercomBroker {
 						})
             .execute();
         }
-        sendReply('Recieved HEARTBEAT');
+        sendReply('Received HEARTBEAT');
       }
     );
     this.ic.startReceiving((e: Error | null) => {

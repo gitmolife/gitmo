@@ -114,16 +114,16 @@ export default defineComponent({
 			this.response.ok = null;
 			this.response.pend = null;
 			this.response.error = null;
-			this.response.ok = "Action Attempt...";
+			this.response.ok = "Attempting Action...";
 			os.api('wallet/withdraw', { address, amount }).then(resp => {
 				this.address = null;
-				//this.response.ok = null;
+				this.response.ok = null;
 				this.response.pend = null;
 				this.response.error = null;
 				if (resp.error) {
 					//console.log(resp.error);
-					this.response.pend = "Error!"
-					this.response.ok = resp.error;
+					this.response.pend = "An Error Occurred!"
+					this.response.error = resp.error;
 					this.timeoutUpdateAck('', amount);
 				} else {
 					//console.log(resp.data);
@@ -148,17 +148,25 @@ export default defineComponent({
 				vm.response.pend = null;
 				vm.response.error = null;
 				os.api('wallet/job', { jobId, jobData }).then(resp => {
-					let json = JSON.parse(resp);
-					//console.log(json);
-					if (!json.error) {
-						let data = JSON.parse(json.data);
-						console.log(data.txid);
-						vm.wallet.network = number(parseFloat(vm.wallet.network) + parseFloat(amount));
-						vm.response.ok = "Action Confirmed with Success. " + data.txid.substring(0, 22) + "..";
-					} else {
-						console.log(json.error);
+					try {
+						let json = JSON.parse(resp);
+						console.log(json);
+						if (!json.error) {
+							let data = JSON.parse(json.data);
+							console.log(data.txid);
+							vm.wallet.network = number(parseFloat(vm.wallet.network) + parseFloat(amount));
+							vm.response.ok = "Action Confirmed with Success. " + data.txid.substring(0, 22) + "..";
+						} else {
+							console.log(json.error);
+							vm.wallet.network = number(parseFloat(vm.wallet.network) + parseFloat(amount));
+							if (json.error === 'Invalid') {
+								vm.response.error = "Internal Error - Job Not Found!";
+							} else {
+								vm.response.error = "Internal Error!";
+							}
+						}
+					} catch (e) {
 						vm.response.error = "Internal Error!";
-						vm.wallet.network = number(parseFloat(vm.wallet.network) + parseFloat(amount));
 					}
 				}).catch(e => {
 					vm.error = e;

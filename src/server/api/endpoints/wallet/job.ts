@@ -42,28 +42,31 @@ export default define(meta, async (ps, me) => {
 		throw new ApiError(meta.errors.noSuchUser);
 	}
 
-	//let job: UserWalletJob = (await UserWalletJobs.findOne({ userId: user.id, job: ps.jobId }) as UserWalletJob);
 	const jobs = await getConnection()
 		.createQueryBuilder()
 		.select("user_wallet_job")
 		.from('user_wallet_job')
-		.where({ userId: user.id, job: ps.jobId })
+		.where('user_wallet_job."userId" = :uid', { uid: user.id })
+		.andWhere('user_wallet_job."job" = :job', { job: ps.jobId })
 		.getCount();
 
-	let response = JSON.stringify({ error: "Invalid" });
+	let response = JSON.stringify({ error: "Invalid", data: null });
 	if (jobs > 0) {
-		response = await getConnection()
+		let data = await getConnection()
 				.createQueryBuilder()
 				.select("user_wallet_job")
 				.from('user_wallet_job')
-				.where({ userId: user.id, job: ps.jobId })
+				.where('user_wallet_job."userId" = :uid', { uid: user.id })
+				.andWhere('user_wallet_job."job" = :job', { job: ps.jobId })
 				.getOne();
 		await getConnection()
 	    .createQueryBuilder()
 	    .delete("user_wallet_job")
 	    .from('user_wallet_job')
-	    .where({ userId: user.id, job: ps.jobId })
+			.where('user_wallet_job."userId" = :uid', { uid: user.id })
+			.andWhere('user_wallet_job."job" = :job', { job: ps.jobId })
 	    .execute();
+		response = JSON.stringify({ error: null, data: data });
 	}
 
 	return response;
