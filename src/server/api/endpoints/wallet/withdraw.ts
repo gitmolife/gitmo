@@ -45,7 +45,10 @@ export default define(meta, async (ps, me) => {
 		throw new ApiError(meta.errors.noSuchUser);
 	}
 
+	let status: UserWalletStatus = (await UserWalletStatuses.findOne({ type: "ohmcoin" } ) as UserWalletStatus);
 	let addrUser: UserWalletAddress = (await UserWalletAddresses.findOne({ userId: user.id} ) as UserWalletAddress);
+	let bOnline = status != null ? status.online : false;
+	let bSynced = status != null ? status.synced : false;
 
 	var cb: (error: Error | null) => void = (error: Error | null) => {
 		if (error) {
@@ -72,7 +75,7 @@ export default define(meta, async (ps, me) => {
 	let error: string = null;
 	let data: string = null;
 
-	if (addrUser) {
+	if (addrUser && bOnline && bSynced) {
 		//console.log('doWithdraw() requested');
 		let amt = parseFloat(ps.amount);
 		const xfee = '0.00001100';
@@ -88,32 +91,15 @@ export default define(meta, async (ps, me) => {
 			let dat = { userId: user.id, address: ps.address, amount: ps.amount };
 			process.send({ prc: 'relay', cmd: 'doWithdraw', dat }, undefined, {}, cb);
 			data = Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 5);
-
-			/*process.on('message', async msg => {
-				if (isJson(msg)) {
-					const res = JSON.parse(JSON.stringify(msg));
-					if (res.cmd === 'doneWithdraw') {
-						console.log('doneWithdraw!!!!');
-						// Create Job
-						await getConnection()
-							.createQueryBuilder()
-							.insert()
-							.into('user_wallet_job')
-							.values({
-								userId: user.id,
-								job: 'WITHDRAW_FINAL',
-								type: json.coin,
-								state: 0,
-								data: data,
-								result: res.response,
-							})
-							.execute();
-					}
-				}
-			});*/
 		} else {
 			console.log('doWithdraw() error');
 			error = 'Internal Withdraw Error!';
+		}
+	} else if (!bOnline || !bSynced) {
+		if (!bSynced) {
+			error = 'Wallet is Syncing..';
+		} else {
+			error = 'Wallet is Offline.';
 		}
 	} else {
 		console.error("User Wallet doesnt Exists!");

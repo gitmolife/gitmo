@@ -50,8 +50,14 @@ export default define(meta, async (ps, me) => {
 	ps.username = user.username!.toLowerCase();
 	let ct = 0;
 
+	// TODO: move to config
+	let explorer: string = 'http://explorer.ohm.sqdmc.net/';
+
+	let status: UserWalletStatus = (await UserWalletStatuses.findOne({ type: "ohmcoin" } ) as UserWalletStatus);
 	let wallet = (await UserWalletAddresses.findOne({ userId: user.id, coinType: ct } ) as UserWalletAddress);
 	let balance = (await UserWalletBalances.findOne({ userId: user.id, coinType: ct} ) as UserWalletBalance);
+	let bOnline = status != null ? status.online : false;
+	let bSynced = status != null ? status.synced : false;
 
 	var cb: (error: Error | null) => void = (error: Error | null) => {
 		if (error) {
@@ -75,14 +81,14 @@ export default define(meta, async (ps, me) => {
 		return false;
 	}
 
-	if (!wallet) {
+	if (!wallet && bOnline) {
 		if (process.send) {
 			//console.log('getNewAddress() requested');
 			process.send({ prc: 'relay', cmd: 'getNewAddress', userId: user.id }, undefined, {}, cb);
 		} else {
 			console.error('getNewAddress() error');
 		}
-	} else {
+	} else if (bOnline) {
 		if (wallet.address.length > 36 || wallet.address.length <= 31 || (wallet.address.indexOf('\'') >= 0 || wallet.address.indexOf('"') >= 0)) {
 			console.warn('getNewAddress(): Regenerating user address..');
 			// TODO: don't delete? mark as invalid..
@@ -108,8 +114,6 @@ export default define(meta, async (ps, me) => {
 		//console.log("Wallet Exists.");
 	}
 
-	let status: UserWalletStatus = (await UserWalletStatuses.findOne({ type: "ohmcoin" } ) as UserWalletStatus);
-	//let history = await UserWalletTxs.findMany({ userId: user.id } );
 	let history = await getConnection()
 						.createQueryBuilder()
 						.select("user_wallet_tx")
@@ -165,7 +169,9 @@ export default define(meta, async (ps, me) => {
 		  if (keyA > keyB) return 1;
 		  return 0;
 		});
+		let stat: string = status.online && status.synced ? "Online" : status.online ? "Synchronizing" : "Offline";
 		var data = {
+			explorer: explorer,
 			account: wallet.address,
 			balance: {
 				total: (parseFloat(wallet.balance) + parseFloat(balance.balance)).toFixed(8),
@@ -174,7 +180,8 @@ export default define(meta, async (ps, me) => {
 				tipping: balance.balance,
 			},
 			server: {
-				status: status.online ? "Online" : "Offline",
+				online: status.online,
+				status: stat,
 				synced: status.synced,
 				crawling: status.crawling,
 				height: status.blockheight,
@@ -184,8 +191,10 @@ export default define(meta, async (ps, me) => {
 		};
 		return data;
 	} else {
+		let stat: string = status.online && status.synced ? "Online" : status.online ? "Synchronizing" : "Offline";
 		var data = {
-			account: 'Please Reload Page',
+			explorer: explorer,
+			account: this.bOnline ? 'Please Reload Page' : 'Please Try Again Later..',
 			balance: {
 				total: 0,
 				pending: 0,
@@ -193,7 +202,8 @@ export default define(meta, async (ps, me) => {
 				tipping: 0,
 			},
 			server: {
-				status: status.online ? "Online" : "Offline",
+				online: status.online,
+				status: stat,
 				synced: status.synced,
 				crawling: status.crawling,
 				height: status.blockheight,

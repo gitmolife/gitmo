@@ -54,5 +54,9 @@ export default define(meta, async (ps, me) => {
 
 	let wallet: UserWalletAddress = (await UserWalletAddresses.findOne({ userId: user.id} ) as UserWalletAddress);
 
-	return wallet.address;
+	if (wallet) {
+		return wallet.address;
+	} else {
+		return '';
+	}
 });

@@ -46,7 +46,7 @@
 									</dl>
 									<dl class="diff">
 										<dt>Height</dt>
-										<dd class="monospace">{{ number(wallet.server.height) }}</dd>
+										<dd class="monospace">{{ wallet.server.synced ? number(wallet.server.height) : 'Pending..' }}</dd>
 									</dl>
 								</div>
 							</div>
@@ -90,7 +90,11 @@
 									<td style="padding: 1px 2px 2px 0;" class="monospace">{{ table[1] }}</td>
 									<td style="text-align: right; padding: 1px 2px 2px 0;" class="monospace">{{ table[4] }}</td>
 									<td style="padding: 1px 6px 2px 22px; opacity: 0.8;" class="monospace">{{ table[2] }}</td>
-									<td style="padding: 1px 0px 2px 0; font-size: 11px;" class="monospace">{{ table[5].substr(0, 16) + '..' }}</td>
+									<td style="padding: 1px 0px 2px 0; font-size: 11px;" class="monospace">
+										<a @click="showDetail(table[5])" target="_blank" title="View on Explorer">
+											{{ table[5].substr(0, 16) + '..' }}
+										</a>
+									</td>
 								</tr>
 							</table>
 						</div>
@@ -183,9 +187,11 @@ export default defineComponent({
     },
 		colorize() {
 			if (this.wallet.server.status == "Online") {
-				this.statusColor = "green";
+				this.statusColor = "#11c711";
+			} else if (this.wallet.server.status == "Offline") {
+				this.statusColor = "#e64747";
 			} else {
-				this.statusColor = "red";
+				this.statusColor = "orangered";
 			}
 		},
 
@@ -194,6 +200,12 @@ export default defineComponent({
 			setInterval(function () {
 				vm.fetch();
 			}, 95500);
+		},
+
+		showDetail(txid: string) {
+			let url = this.wallet.explorer + '/tx/' + txid;
+			window.open(url, '_blank');
+			//os.modalPageWindow('/my/wallet/tx/' + txid);
 		},
 
 		number,

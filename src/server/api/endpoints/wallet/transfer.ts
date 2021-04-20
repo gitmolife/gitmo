@@ -46,9 +46,12 @@ export default define(meta, async (ps, me) => {
 		throw new ApiError(meta.errors.noSuchUser);
 	}
 
+	let status: UserWalletStatus = (await UserWalletStatuses.findOne({ type: "ohmcoin" } ) as UserWalletStatus);
 	let wallet: UserWalletBalance = (await UserWalletBalances.findOne({ userId: user.id} ) as UserWalletBalance);
 	let addrUser: UserWalletAddress = (await UserWalletAddresses.findOne({ userId: user.id} ) as UserWalletAddress);
 	let addrSite: UserWalletAddress = (await UserWalletAddresses.findOne({ userId: 'system-pool_root'} ) as UserWalletAddress);
+	let bOnline = status != null ? status.online : false;
+	let bSynced = status != null ? status.synced : false;
 
 	var cb: (error: Error | null) => void = (error: Error | null) => {
 		if (error) {
@@ -75,7 +78,7 @@ export default define(meta, async (ps, me) => {
 	let error: string = null;
 	let data: string = null;
 
-	if (wallet && addrUser) {
+	if (wallet && addrUser && bOnline && bSynced) {
 		console.log('transfer requested');
 		let amt = parseFloat(ps.amount);
 		const xfee = '0.000007000';
@@ -94,32 +97,15 @@ export default define(meta, async (ps, me) => {
 			let dat = { userId: user.id, type: ps.type, address: addrUser.address, amount: ps.amount };
 			process.send({ prc: 'relay', cmd: 'doTransfer', dat }, undefined, {}, cb);
 			data = 'Ok';
-		 	/*data = Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 5);
-			process.on('message', async msg => {
-				if (isJson(msg)) {
-					const res = JSON.parse(JSON.stringify(msg));
-					if (res.cmd === 'doneTransfer') {
-						console.log(msg);
-						// Create Job
-						await getConnection()
-							.createQueryBuilder()
-							.insert()
-							.into('user_wallet_job')
-							.values({
-								userId: user.id,
-								job: 'TRANSFER_FINAL',
-								type: json.coin,
-								state: 0,
-								data: data,
-								result: res.response,
-							})
-							.execute();
-					}
-				}
-			});*/
 		} else {
 			console.log('transfer() error');
 			error = 'Internal Transfer Error!';
+		}
+	} else if (!bOnline || !bSynced) {
+		if (!bSynced) {
+			error = 'Wallet is Syncing..';
+		} else {
+			error = 'Wallet is Offline.';
 		}
 	} else {
 		console.error("User Wallet doesnt Exists.");

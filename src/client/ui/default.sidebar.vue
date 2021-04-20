@@ -19,7 +19,7 @@
 			<i v-if="menuDef[item].indicated"><Fa :icon="faCircle"/></i>
 		</component>
 		<MkA v-if="item === 'drive'" class="item" active-class="active" to="/my/wallet">
-			<Fa :icon="faCoins" fixed-width/><span class="text">CryptoWallet</span>
+			<Fa :icon="faWallet" fixed-width/><span class="text">CryptoWallet</span>
 		</MkA>
 	</template>
 	<div class="divider"></div>
@@ -44,7 +44,7 @@
 <script lang="ts">
 import { defineComponent } from 'vue';
 import { faGripVertical, faChevronLeft, faHashtag, faBroadcastTower, faFireAlt, faEllipsisH, faPencilAlt, faBars, faTimes, faSearch, faUserCog, faCog, faUser, faHome, faStar, faCircle, faAt, faListUl, faPlus, faUserClock, faUsers, faTachometerAlt, faExchangeAlt, faGlobe, faChartBar, faCloud, faServer, faInfoCircle, faQuestionCircle, faProjectDiagram, faStream, faExclamationCircle } from '@fortawesome/free-solid-svg-icons';
-import { faCoins } from '@fortawesome/free-solid-svg-icons';
+import { faWallet } from '@fortawesome/free-solid-svg-icons';
 import { faBell, faEnvelope, faLaugh, faComments } from '@fortawesome/free-regular-svg-icons';
 import { host } from '@client/config';
 import { search } from '@client/scripts/search';
@@ -69,7 +69,7 @@ export default defineComponent({
 			menuDef: sidebarDef,
 			iconOnly: false,
 			settingsWindowed: false,
-			faGripVertical, faChevronLeft, faComments, faHashtag, faBroadcastTower, faFireAlt, faEllipsisH, faPencilAlt, faBars, faTimes, faBell, faSearch, faUserCog, faCog, faUser, faHome, faStar, faCircle, faAt, faEnvelope, faListUl, faPlus, faUserClock, faLaugh, faUsers, faTachometerAlt, faExchangeAlt, faGlobe, faChartBar, faCloud, faServer, faProjectDiagram, faCoins
+			faGripVertical, faChevronLeft, faComments, faHashtag, faBroadcastTower, faFireAlt, faEllipsisH, faPencilAlt, faBars, faTimes, faBell, faSearch, faUserCog, faCog, faUser, faHome, faStar, faCircle, faAt, faEnvelope, faListUl, faPlus, faUserClock, faLaugh, faUsers, faTachometerAlt, faExchangeAlt, faGlobe, faChartBar, faCloud, faServer, faProjectDiagram, faWallet
 		};
 	},
 
