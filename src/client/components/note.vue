@@ -862,7 +862,7 @@ export default defineComponent({
 			let oId = this.note.userId;
 			let oUsr = this.note.user;
 			let complete = false;
-			let bal: number;
+			let bal: number = null;
 			await os.api('wallet/balance').then(balances => {
 				//console.log(balances);
 				bal = parseFloat(balances.tipping);
@@ -873,7 +873,7 @@ export default defineComponent({
 					text: e.message,
 				});
 			});
-			if (!bal) { return; }
+			if (bal === null) { return; }
 			await os.dialog({
 				icon: faOm,
 				type: 'question',
