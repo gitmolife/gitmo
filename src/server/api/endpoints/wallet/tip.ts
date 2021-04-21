@@ -130,12 +130,28 @@ export default define(meta, async (ps, me) => {
 		error = 'Amount too high';
 		throw new ApiError(meta.errors.amountToHigh);
 	} else {
-		wallet.balance -= amount;
-		walletOther.balance += amount;
+		let nBalance = parseFloat(wallet.balance) - amount;
+		let nBalanceOther = parseFloat(walletOther.balance) + amount;
+		let uid = wallet.userId;
+		let uido = walletOther.userId;
+		// Update user network balance
+		await getConnection()
+			.createQueryBuilder()
+			.update('user_wallet_balance')
+			.set({ balance: nBalance })
+			.where('user_wallet_balance."userId" = :uid', { uid: uid })
+			.execute();
+		// Update user network balance
+		await getConnection()
+			.createQueryBuilder()
+			.update('user_wallet_balance')
+			.set({ balance: nBalanceOther })
+			.where('user_wallet_balance."userId" = :uid', { uid: uido })
+			.execute();
 		data = {
 			message: 'Processed',
-			ourUser: wallet.balance,
-			othUser: walletOther.balance,
+			ourUser: nBalance,
+			othUser: nBalanceOther,
 		};
 	}
 
