@@ -322,7 +322,7 @@ export default class IntercomBroker {
 								.where("user_wallet_tx.txid = :txid", { txid: json.txid })
 								.andWhere("user_wallet_tx.address = :addr", { addr: usr })
 								.getOne();
-							this.logger.debug("Added Record for TxID: \'" + json.txid + "::" + vout + "\' with \'" + json.confirmations + "\' confirmations and bal \'" + bal "\' to user \'" + uid + "\'");
+							this.logger.debug("Added Record for TxID: \'" + json.txid + "::" + vout + "\' with \'" + json.confirmations + "\' confirmations and bal \'" + bal + "\' to user \'" + uid + "\'");
 						}
 						if (txl === undefined) {
 							continue;
