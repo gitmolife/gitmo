@@ -863,6 +863,14 @@ export default defineComponent({
 			let oUsr = this.note.user;
 			let complete = false;
 			let bal: number = null;
+			if (this.$i.id === oId) {
+					await os.dialog({
+						type: 'error',
+						title: 'Unable to Tip!',
+						text: 'May not Tip Self..',
+					});
+					return;
+			}
 			await os.api('wallet/balance').then(balances => {
 				//console.log(balances);
 				bal = parseFloat(balances.tipping);
@@ -873,7 +881,14 @@ export default defineComponent({
 					text: e.message,
 				});
 			});
-			if (bal === null) { return; }
+			if (bal === null || !bal) {
+				await os.dialog({
+					type: 'error',
+					title: 'Unable to Tip!',
+					text: 'You require a balance to tip..',
+				});
+				return;
+			}
 			await os.dialog({
 				icon: faOm,
 				type: 'question',
