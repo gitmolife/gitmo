@@ -90,7 +90,8 @@
 									<td v-if="table[1] === 'SYNC'" style="width: 22%; text-align: right; padding: 1px 8px 2px 22px;" class="monospace"><span v-html="prefixAmt(table[4],table[1])"></span><span class="strikeout">{{ table[4].replace('-', '').replace('~', '') }}</span></td>
 									<td style="padding: 1px 6px 2px 8px; opacity: 0.8; text-align: center" class="monospace">{{ table[2] }}<span v-if="table[1] === 'SYNC'" title="Change from Transfer"><Fa :icon="faCheckCircle"/></span></td>
 									<td style="padding: 1px 0px 2px 0; font-size: 11px;" class="monospace">
-										<a @click="showDetail(table[5])" target="_blank" title="View on Explorer">{{ table[5].substr(0, 14) + '..' }}</a>
+										<a v-if="table[5].length === 64" @click="showDetail(table[5])" target="_blank" title="View on Explorer">{{ table[5].substr(0, 14) + '..' }}</a>
+										<span v-if="table[5].length !== 64">{{ table[5] }}</span>
 									</td>
 								</tr>
 							</table>
@@ -198,12 +199,16 @@ export default defineComponent({
 			if (amt < 0) {
 				if (type === 'SITE') {
 					return '<span style="color: #8832e3;">-</span>';
+				} else if (type === 'TIP') {
+					return '<span style="color: #e37332;">-</span>';
 				} else {
 					return '<span style="color: #e34c32;">-</span>';
 				}
 			} else if (amt > 0) {
 				if (type === 'IN+') {
 					return '<span style="color: #36d9d3;">+</span>';
+				} else if (type === 'TIP') {
+					return '<span style="color: #32e388;">+</span>';
 				} else {
 					return '<span style="color: #32e34f;">+</span>';
 				}

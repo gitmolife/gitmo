@@ -133,7 +133,7 @@ export default defineComponent({
 	font-size: 15px;
 }
 .address-texts {
-	text-shadow: -1px 2px 7px rgba(21, 29, 33, 0.88);
+	text-shadow: -1px 2px 3px rgba(21, 29, 33, 0.77);
 	font-style: underline;
 	opacity: 0.88;
 }

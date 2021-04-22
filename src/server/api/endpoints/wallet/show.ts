@@ -62,7 +62,7 @@ export default define(meta, async (ps, me) => {
 	var cb: (error: Error | null) => void = (error: Error | null) => {
 		if (error) {
 			// errored
-			console.error('getNewAddress().callback.Error: ' + error.toString());
+			console.error('newAddress().callback.Error: ' + error.toString());
 		} else {
 			//console.log('getNewAddress().callback.Complete');
 		}
@@ -73,11 +73,11 @@ export default define(meta, async (ps, me) => {
 			//console.log('getNewAddress() requested');
 			process.send({ prc: 'relay', cmd: 'getNewAddress', userId: user.id }, undefined, {}, cb);
 		} else {
-			console.error('getNewAddress() error');
+			console.error('newAddress() error');
 		}
 	} else if (bOnline) {
 		if (wallet.address.length > 36 || wallet.address.length <= 31 || (wallet.address.indexOf('\'') >= 0 || wallet.address.indexOf('"') >= 0)) {
-			console.warn('getNewAddress(): Regenerating user address..');
+			console.warn('newAddress(): Regenerating user address..');
 			// TODO: don't delete? mark as invalid..
 			await getConnection()
 		    .createQueryBuilder()
@@ -95,7 +95,7 @@ export default define(meta, async (ps, me) => {
 				//console.log('getNewAddress() requested');
 				process.send({ prc: 'relay', cmd: 'getNewAddress', userId: user.id }, undefined, {}, cb);
 			} else {
-				console.error('getNewAddress() regen error');
+				console.error('newAddress() regen error');
 			}
 		}
 		//console.log("Wallet Exists.");
@@ -132,21 +132,31 @@ export default define(meta, async (ps, me) => {
 				pending = pending + parseFloat(h.amount);
 			}
 		} else if (h.txtype === 11) {
-			t = "CACHE-TIP";
+			t = "Tx->TIPS";
 			a = "SITE";
 		} else if (h.txtype === 13) {
-			t = "LOCAL";
+			t = "TxCHANGE";
 			a = "SYNC";
 			amt = '~' + h.amount;
 		} else if (h.txtype === 20) {
-				continue;
+			continue;
 		} else if (h.txtype === 21) {
-				continue;
+			continue;
+		} else if (h.txtype === 50) {
+			t = "UNKNOWN";
+			a = "TIP";
+		} else if (h.txtype === 51) {
+			t = "RECEIVED";
+			a = "TIP";
+		} else if (h.txtype === 52) {
+			t = "SENT-TIP";
+			a = "TIP";
 		}
 		var entry: any[] = [ i++, a, t, date, amt, h.txid ];
 		accountHistory.push(entry);
 	}
 
+	let stat: string = bOnline && bSynced ? "Online" : bOnline ? "Synchronizing" : "Offline";
 	if (wallet) {
 		accountHistory.sort(function(a, b) {
 		  var keyA = new Date(a[3]);
@@ -155,8 +165,7 @@ export default define(meta, async (ps, me) => {
 		  if (keyA > keyB) return 1;
 		  return 0;
 		});
-		let stat: string = status.online && status.synced ? "Online" : status.online ? "Synchronizing" : "Offline";
-		var data = {
+		let data = {
 			explorer: explorer,
 			account: wallet.address,
 			balance: {
@@ -177,10 +186,9 @@ export default define(meta, async (ps, me) => {
 		};
 		return data;
 	} else {
-		let stat: string = status.online && status.synced ? "Online" : status.online ? "Synchronizing" : "Offline";
-		var data = {
+		let data = {
 			explorer: explorer,
-			account: this.bOnline ? 'Please Reload Page' : 'Please Try Again Later..',
+			account: bOnline ? 'Success: Please Reload Page..' : 'Error: Please Try Again Later..',
 			balance: {
 				total: 0,
 				pending: 0,
@@ -199,5 +207,4 @@ export default define(meta, async (ps, me) => {
 		};
 		return data;
 	}
-
 });

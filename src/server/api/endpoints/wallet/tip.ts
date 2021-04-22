@@ -104,7 +104,44 @@ export default define(meta, async (ps, me) => {
 	let error: string = null;
 	let data: string = null;
 
-	console.log(ps.amount);
+	async function logTip(uidFrom: string, uidTo: string, amount: number, type: string) {
+		let t: number = 50;
+		let amt: number;
+		let usrA: string;
+		let usrB: string;
+		if (type === 'to') {
+			// Received
+			amt = amount;
+			t = 51;
+			usrA = uidTo;
+			usrB = uidFrom;
+		} else if (type === 'from') {
+			// Sent
+			amt = -amount;
+			t = 52;
+			usrA = uidFrom;
+			usrB = uidTo;
+		} else {
+			return;
+		}
+		//let alog: string = usrB + ':' + usrA;
+		// Add Entry to Log..
+		await getConnection()
+			.createQueryBuilder()
+			.insert()
+			.into('user_wallet_tx')
+			.values({
+				userId: usrA,
+				txid: 'INTERNAL_TX_TIP',
+				address: usrB,
+				coinType: 0,
+				txtype: t,
+				processed: 3,
+				amount: amt,
+				complete: true,
+			})
+			.execute();
+	}
 
 	try {
 		if (ps.amount === null || isNaN(ps.amount)) {
@@ -148,6 +185,9 @@ export default define(meta, async (ps, me) => {
 			.set({ balance: nBalanceOther })
 			.where('user_wallet_balance."userId" = :uid', { uid: uido })
 			.execute();
+		// Add Log Entries
+		logTip(uid, uido, amount, 'from');
+		logTip(uid, uido, amount, 'to');
 		data = {
 			message: 'Processed',
 			ourUser: nBalance,

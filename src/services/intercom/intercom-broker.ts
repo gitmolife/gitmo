@@ -337,6 +337,7 @@ export default class IntercomBroker {
                     //userId: uid,
                     vout: vout,
                     processed: json.confirmations >= 5 ? 3 : 2,
+                    complete: json.confirmations >= 5,
                     amount: bal,
                   })
                   .where("user_wallet_tx.txid = :txid", { txid: json.txid })
