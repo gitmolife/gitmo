@@ -24,6 +24,14 @@ export const meta = {
 			validator: $.optional.str
 		},
 
+		noteId: {
+			validator: $.nullable.optional.str
+		},
+
+		anon: {
+			validator: $.optional.bool
+		},
+
 	},
 
 	res: {
@@ -105,7 +113,7 @@ export default define(meta, async (ps, me) => {
 	let error: string = null;
 	let data: string = null;
 
-	async function logTip(uidFrom: string, uidTo: string, amount: number, type: string) {
+	async function logTip(uidFrom: string, uidTo: string, amount: number, type: string, note: string) {
 		let t: number = 50;
 		let amt: number;
 		let usrA: string;
@@ -125,7 +133,7 @@ export default define(meta, async (ps, me) => {
 		} else {
 			return;
 		}
-		//let alog: string = usrB + ':' + usrA;
+		let alog: string = usrB + ':' + note;
 		// Add Entry to Log..
 		await getConnection()
 			.createQueryBuilder()
@@ -134,7 +142,7 @@ export default define(meta, async (ps, me) => {
 			.values({
 				userId: usrA,
 				txid: 'INTERNAL_TX_TIP',
-				address: usrB,
+				address: alog,
 				coinType: 0,
 				txtype: t,
 				processed: 3,
@@ -172,6 +180,7 @@ export default define(meta, async (ps, me) => {
 		let nBalanceOther = parseFloat(walletOther.balance) + amount;
 		let uid = wallet.userId;
 		let uido = walletOther.userId;
+		let note = ps.noteId;
 		// Update user network balance
 		await getConnection()
 			.createQueryBuilder()
@@ -187,22 +196,29 @@ export default define(meta, async (ps, me) => {
 			.where('user_wallet_balance."userId" = :uid', { uid: uido })
 			.execute();
 		// Add Log Entries
-		logTip(uid, uido, amount, 'from');
-		logTip(uid, uido, amount, 'to');
+		logTip(uid, uido, amount, 'from', note);
+		logTip(uid, uido, amount, 'to', note);
+		let _uid: string = null;
+		if (!ps.anon) {
+			_uid = uid;
+		}
 		// Notification to user receiving tip.
 		createNotification(uido, 'tipReceive', {
-			//notifierId: uid,
-			customBody: 'You Received Tip of ' + amount + " OHM.",
+			notifierId: _uid,
+			customBody: 'You Received Tip of ' + amount + " OHM for Note..",
 			customHeader: 'Tip Received',
 			customIcon: '/static-assets/client/coin/ohm100.png',
+			isRead: true,
+			noteId: note,
 		});
 		// Notification to user who created tip..
 		createNotification(uid, 'tipSent', {
 			notifierId: uido,
-			customBody: 'You Sent Tip of ' + amount + " OHM.",
+			customBody: 'You Sent Tip of ' + amount + " OHM for Note..",
 			customHeader: 'Tip Sent',
 			customIcon: '/static-assets/client/coin/ohm100.png',
 			isRead: true,
+			noteId: note,
 		});
 		data = {
 			message: 'Processed',

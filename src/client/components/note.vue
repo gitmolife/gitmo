@@ -256,6 +256,7 @@ export default defineComponent({
 		},
 
 		showTipper() {
+			if (!this.isRenote && this.isMyNote) return false;
 			if (this.appearNote.user.instance && this.appearNote.user.instance === this.$instance.name) return true;
 			if (this.$store.state.instanceTicker === 'remote' && this.appearNote.user.instance) return false;
 			if (this.appearNote.user.instance) return false;
@@ -868,14 +869,14 @@ export default defineComponent({
 		async tip() {
 			let oId = this.note.userId;
 			let oUsr = this.note.user;
+			let nId = this.appearNote.id;
+			let bal: number = null;
 			if (this.isRenote {
 				oId = this.note.renote.userId;
 				oUsr = this.note.renote.user;
 			}
-			let complete = false;
-			let bal: number = null;
 			if (this.$i.id === oId) {
-					await os.dialog({
+					os.dialog({
 						type: 'error',
 						title: 'Unable to Tip!',
 						text: 'May not Tip Self..',
@@ -883,9 +884,8 @@ export default defineComponent({
 					return;
 			}
 			await os.api('wallet/balance').then(balances => {
-				//console.log(balances);
 				bal = parseFloat(balances.tipping);
-			}).catch(e => {
+			}).catch((e: Error) => {
 				os.dialog({
 					type: 'error',
 					title: 'An Error Occurred!',
@@ -906,21 +906,45 @@ export default defineComponent({
 				title: 'Send OHM to ' + oUsr.username + ' as Tip?',
 				text: 'You have ' + bal + ' OHM available.',
 				input: {
-					type: 'string'
+					placeholder: 'Amount',
+					type: 'string',
+					required: true,
 				}
-			}).then(({ canceled, result: amount }) => {
+			}).then(async ({ canceled, result: amount }) => {
 				if (canceled) { return; }
-				complete = true;
+				let tipItems = new Map();
+				tipItems.set(0, { name: 'No' });
+				tipItems.set(1, { name: 'Yes' });
+				let cancelled: boolean = true;
+				let anon: boolean = true;
+				await os.dialog({
+					type: 'question',
+					title: "Tip as Anon?",
+					text: 'Do you with to remain anonymous for this Tip?'
+					select: {
+						items: [{
+							value: true, text: 'Yes'
+						}, {
+							value: false, text: 'No'
+						}]
+					},
+				}).then(({ canceled, result: bAnon }) => {
+					cancelled = canceled;
+					anon = bAnon;
+				});
+				if (cancelled) { return; }
 				os.apiWithDialog('wallet/tip', {
 					other: oId,
+					anon: anon,
 					amount: amount,
+					noteId: nId,
 				}, undefined, (res: any) => {
 					os.dialog({
 						type: 'success',
 						text: 'Tip of ' + amount + ' OHM Sent to ' + oUsr.username + '!',
 						title: res.data.message
 					}).then( () => {
-						if (complete) {
+						if (!canceled) {
 							os.success();
 						}
 					});

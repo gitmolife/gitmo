@@ -24,7 +24,8 @@
 
 		<header v-if="notification.type === 'tipReceive' || notification.type === 'tipSent'">
 			<span>{{ notification.header }}</span>
-			<span v-if="notification.user" style="opacity: 0.88;">&nbsp;to&nbsp;</span>
+			<span v-if="notification.user && notification.type === 'tipReceive'" style="opacity: 0.88;">&nbsp;from&nbsp;</span>
+			<span v-else-if="notification.user && notification.type === 'tipSent'" style="opacity: 0.88;">&nbsp;to&nbsp;</span>
 			<MkA v-if="notification.user" class="name" :to="userPage(notification.user)" v-user-preview="notification.user.id"><MkUserName :user="notification.user"/></MkA>
 			<MkTime :time="notification.createdAt" v-if="withTime" class="time"/>
 		</header>
@@ -66,9 +67,11 @@
 		</span>
 		<span v-if="notification.type === 'tipReceive'" class="text" style="opacity: 0.76;">
 			<Mfm :text="notification.body" :nowrap="!full"></Mfm>
+			<span v-if="notification.note" style="opacity: 0.92;">&nbsp;<MkA class="text" :to="notePage(notification.note)" :title="getNoteSummary(notification.note)">{{ notification.note.id }}</MkA></span>
 		</span>
 		<span v-if="notification.type === 'tipSent'" class="text" style="opacity: 0.76;">
 			<Mfm :text="notification.body" :nowrap="!full"></Mfm>
+			<span v-if="notification.note" style="opacity: 0.92;">&nbsp;<MkA class="text" :to="notePage(notification.note)" :title="getNoteSummary(notification.note)">{{ notification.note.id }}</MkA></span>
 		</span>
 	</div>
 </div>

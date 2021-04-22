@@ -80,11 +80,19 @@ export class NotificationRepository extends Repository<Notification> {
 				body: notification.customBody,
 				header: notification.customHeader || 'Tip Received',
 				icon: notification.customIcon || token?.iconUrl,
+				note: notification.noteId ? Notes.pack(notification.note || notification.noteId!, { id: notification.notifieeId }, {
+					detail: true,
+					_hint_: options._hintForEachNotes_
+				}) : null,
 			} : {}),
 			...(notification.type === 'tipSent' ? {
 				body: notification.customBody,
 				header: notification.customHeader || 'Tip Sent',
 				icon: notification.customIcon || token?.iconUrl,
+				note: notification.noteId ? Notes.pack(notification.note || notification.noteId!, { id: notification.notifieeId }, {
+					detail: true,
+					_hint_: options._hintForEachNotes_
+				}) : null,
 			} : {}),
 		});
 	}
