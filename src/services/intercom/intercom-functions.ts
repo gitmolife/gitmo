@@ -121,7 +121,7 @@ export async function withdraw(brokerLogger: Logger, intercomBroker: IntercomBro
 		return;
 	}
 	brokerLogger.debug('withdraw() ' + cmd.dat.address);
-	let jobId =  Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 5);
+	let jobId = Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 5);
 	let uid: string = cmd.dat.userId;
 	let outAddress: string = cmd.dat.address;
 	let amount = parseFloat(cmd.dat.amount);
@@ -134,7 +134,7 @@ export async function withdraw(brokerLogger: Logger, intercomBroker: IntercomBro
 		.from('user_wallet_address')
 		.where({ userId: uid })
 		.getOne();
- 	let cb = async (error: Error | null, data: any) => {
+	let cb = async (error: Error | null, data: any) => {
 		if (error) {
 			//brokerLogger.error(error);
 			// Create Job
@@ -233,7 +233,7 @@ export async function transfer(brokerLogger: Logger, intercomBroker: IntercomBro
 		return;
 	}
 	brokerLogger.debug('doTransfer() ' + cmd.dat.address);
-	let jobId =  Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 5);
+	let jobId = Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 5);
 	let type: string = cmd.dat.type;
 	let uid: string = cmd.dat.userId;
 	let outAddress: string = cmd.dat.address;

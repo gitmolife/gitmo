@@ -22,7 +22,7 @@
  */
 
  export default interface MessageIPC {
-	 prc: string;
-	 cmd: string;
-	 dat: { userId: string; type?: string; address?: string; amount?: any; };
+   prc: string;
+   cmd: string;
+   dat: { userId: string; type?: string; address?: string; amount?: any; };
  }
