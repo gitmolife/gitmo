@@ -71,7 +71,7 @@ export default define(meta, async (ps, me) => {
 	if (!wallet && bOnline) {
 		if (process.send) {
 			//console.log('getNewAddress() requested');
-			process.send({ prc: 'relay', cmd: 'getNewAddress', userId: user.id }, undefined, {}, cb);
+			process.send({ prc: 'relay', cmd: 'getNewAddress', dat: { userId: user.id } }, undefined, {}, cb);
 		} else {
 			console.error('newAddress() error');
 		}
@@ -93,7 +93,7 @@ export default define(meta, async (ps, me) => {
 		    .execute();
 			if (process.send) {
 				//console.log('getNewAddress() requested');
-				process.send({ prc: 'relay', cmd: 'getNewAddress', userId: user.id }, undefined, {}, cb);
+				process.send({ prc: 'relay', cmd: 'getNewAddress', dat: { userId: user.id } }, undefined, {}, cb);
 			} else {
 				console.error('newAddress() regen error');
 			}
