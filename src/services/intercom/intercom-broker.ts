@@ -114,11 +114,10 @@ export default class IntercomBroker {
   private ic: Intercom2;
   private wallet: Intercom2_EndPoint;
   private logger: Logger;
-  private ready: boolean;
 	private verbose: boolean;
+  private ready: boolean = false;
   constructor(logger: Logger) {
 		this.verbose = _SITE_VERBOSE_DEBUG_ as string === 'true' ? true : false;
-    this.ready = false;
     this.logger = logger;
     this.logger.debug(`Starting site '${_SITE_INTERCOM_ID_}' ...`);
     let SSL_CONF: Intercom2_SSL_2WayConf | null = null;

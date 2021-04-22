@@ -13,6 +13,8 @@ import { lessThan } from '../prelude/array';
 import { program } from '../argv';
 import { showMachineInfo } from '@/misc/show-machine-info';
 import { initDb } from '../db/postgre';
+import MessageIPC from '../services/intercom/message-ipc-cmd';
+import { isJson } from '../services/intercom/intercom-functions';
 const meta = require('../meta.json');
 
 const logger = new Logger('core', 'cyan');
@@ -100,21 +102,19 @@ export async function masterMain() {
 
 	process.on('message', msg => {
 		if (msg === 'ok') {
-			if (icWorker !== undefined) {
+			if (icWorker) {
+				// Let Intercom know Misskey is ready
 				icWorker.send('master-ready');
 			}
 			bootLogger.succ('Misskey Ready!');
 		}
 		// Handle command messages to broker.
-		if (isJson(msg)) {
+		if (icWorker && isJson(msg)) {
 			// Master Handled Process for IPC pass to Broker from Workers.
 			// Workers cannont talk to broker, but broker can talk to workers.
-			const res = JSON.parse(JSON.stringify(msg));
+			const res: MessageIPC = <MessageIPC> msg;
 			if (res.prc === 'relay') {
-				console.log(msg);
-				if (icWorker !== undefined) {
-					icWorker.send(msg);
-				}
+				icWorker.send(msg);
 			}
 		}
 	});
@@ -148,19 +148,6 @@ function showEnvironment(): void {
 function checkIsValidDomain(domain: string): boolean {
 	var re = new RegExp(/^((?:(?:(?:\w[\.\-\+]?)*)\w)+)((?:(?:(?:\w[\.\-\+]?){0,62})\w)+)\.(\w{2,6})$/);
 	return domain.match(re) != null;
-}
-
-function isJson(item: any) {
-	try {
-		item = typeof item !== "string" ? JSON.stringify(item) : item;
-		item = JSON.parse(item);
-	} catch (e) {
-		return false;
-	}
-	if (typeof item === "object" && item !== null) {
-		return true;
-	}
-	return false;
 }
 
 /**
@@ -260,20 +247,17 @@ async function spawnIntercom(): Promise<ChildProcess | undefined> {
 			process.exit(1);
 		}
 
-		return new Promise(res => {
-			const broker = fork('./built/boot/xbroker', ['normal'], {});
-
+		// Spawn Broker Process
+		const broker = fork('./built/boot/xbroker', ['normal'], {});
+		if (broker) {
 			broker.on('message', function(msg) {
 				if (isJson(msg)) {
 					const res = JSON.parse(JSON.stringify(msg));
 					if (res.boot === 'ready') {
-					  intercomLogger.succ('Ready!');
+						intercomLogger.succ('Ready!');
 					} else if (res.boot === 'error') {
 						intercomLogger.error('Did not start!');
-						process.exit(1);
-					}
-					if (res.cmd == "response") {
-						brokerLogger.debug(res.result);
+						process.exit(1); // EXIT APP!
 					}
 				}
 			});
@@ -285,13 +269,12 @@ async function spawnIntercom(): Promise<ChildProcess | undefined> {
 
 			broker.on('exit', function(code: number | undefined) {
 				brokerLogger.warn("Exit " + code);
-				process.exit(code);
+				process.exit(code); // EXIT APP!
 			});
 
-			brokerBootLogger.succ('Daemon worker started');
-			res(broker);
-		});
-	} else {
-		return undefined;
+			brokerBootLogger.succ('Daemon worker started..');
+			return broker;
+		}
 	}
+	return undefined;
 }

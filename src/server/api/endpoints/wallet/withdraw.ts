@@ -60,19 +60,6 @@ export default define(meta, async (ps, me) => {
 		}
 	}
 
-	function isJson(item: any) {
-		try {
-			item = typeof item !== "string" ? JSON.stringify(item) : item;
-			item = JSON.parse(item);
-		} catch (e) {
-			return false;
-		}
-		if (typeof item === "object" && item !== null) {
-			return true;
-		}
-		return false;
-	}
-
 	let error: string = null;
 	let data: string = null;
 
