@@ -314,7 +314,7 @@ export async function transfer(brokerLogger: Logger, intercomBroker: IntercomBro
 						txtype: 10,
 						processed: 1,
 						amount: amount,
-						complete: true,
+						complete: false,
 					})
 					.execute();
 				// Add Tx Entry... Site
@@ -359,14 +359,14 @@ export async function transfer(brokerLogger: Logger, intercomBroker: IntercomBro
 				.where({ userId: 'system-pool_root' })
 				.execute();
 				// Update user network balance
-				getConnection()
+				/*getConnection()
 				.createQueryBuilder()
 				.update('user_wallet_address')
 				.set({
 					balance: nbal_addr,
 				})
 				.where({ userId: uid })
-				.execute();
+				.execute();*/
 			} else if (type === 'om') {
 				// Update Balance..
 				nbal_user = ubal + (amount - rfee);

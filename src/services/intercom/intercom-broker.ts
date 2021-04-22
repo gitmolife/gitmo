@@ -221,7 +221,7 @@ export default class IntercomBroker {
               confirms: json.confirmations,
             })
             .execute();
-          this.logger.debug("Received New TxID: \'" + json.txid + "\' with \'" + json.confirmations + "\' confirmations.");
+          this.logger.info("Received New TxID: \'" + json.txid + "\' with \'" + json.confirmations + "\' confirmations.");
         } else {
           // Update Tx Entry Status...
           await getConnection()
@@ -230,7 +230,7 @@ export default class IntercomBroker {
             .set({ confirms: json.confirmations })
             .where("user_wallet_tx.txid = :txid", { txid: json.txid })
             .execute();
-          this.logger.debug("Updated Seen TxID: \'" + json.txid + "\' with \'" + json.confirmations + "\' confirmations.");
+          this.logger.info("Updated Seen TxID: \'" + json.txid + "\' with \'" + json.confirmations + "\' confirmations.");
         }
 
         // Get Tx if Exists..
@@ -327,7 +327,7 @@ export default class IntercomBroker {
               continue;
             }
             if (txl.confirms >= 1 && !txl.complete) {
-              //this.logger.debug("Updated Record for TxID: \'" + json.txid + "\' with \'" + json.confirmations + "\' confirmations and bal " + bal);
+              this.logger.debug("Updated Record for TxID: \'" + json.txid + "::" + vout + "\' with \'" + json.confirmations + "\' confirmations and bal " + bal);
               if (txl.txtype < 10 || txl.txtype === 13) {
                 // Update Tx Entry...
                 await getConnection()
@@ -357,7 +357,10 @@ export default class IntercomBroker {
                   .execute();
               }
             }
-            if (txl.txtype === 10 || txl.txtype === 20) {
+            if (txl.txtype === 10 && !txl.complete && json.confirmations >= 5) {
+              this.logger.debug("Internal Transfer from site: " + json.txid);
+            }
+            if (txl.txtype === 20) {
               //this.logger.debug("Internal Transfer from site: " + json.txid);
               continue;
             }
@@ -389,7 +392,7 @@ export default class IntercomBroker {
                 .set({ complete: true })
                 .where("user_wallet_tx.txid = :txid", { txid: json.txid })
                 .execute();
-              this.logger.info("Balance Updated for \'" + uid + "\' ... Added \'" + ibal + "\' to user account! New total: \'" + nbal + "\'");
+              this.logger.succ("Balance Updated for \'" + uid + "\' ... Added \'" + ibal + "\' to user account! New total: \'" + nbal + "\'");
             } else {
               this.logger.debug("Checked Pending TxID: \'" + json.txid + "::" + vout + "\' with \'" + json.confirmations + "\' confirmations.");
             }
@@ -433,7 +436,7 @@ export default class IntercomBroker {
                 .getOne();
               // Audit Balance..
               let ibal: number = parseFloat(userBalance.balance);
-              let dbal: number = bal - ibal;
+              let dbal: number = ibal - bal;
               if (dbal !== 0) {
                 await getConnection()
                   .createQueryBuilder()
