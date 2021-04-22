@@ -86,7 +86,7 @@
 				<button class="button _button" @click="menu()" ref="menuButton">
 					<Fa :icon="faEllipsisH"/>
 				</button>
-				<button class="button _button" @click="tip()">
+				<button v-if="showTipper" class="button _button" @click="tip()">
 					<Fa :icon="faCommentDollar"/>
 				</button>
 			</footer>
@@ -253,6 +253,13 @@ export default defineComponent({
 			if (this.$store.state.instanceTicker === 'always') return true;
 			if (this.$store.state.instanceTicker === 'remote' && this.appearNote.user.instance) return true;
 			return false;
+		},
+
+		showTipper() {
+			if (this.appearNote.user.instance && this.appearNote.user.instance === this.$instance.name) return true;
+			if (this.$store.state.instanceTicker === 'remote' && this.appearNote.user.instance) return false;
+			if (this.appearNote.user.instance) return false;
+			return true;
 		}
 	},
 
@@ -861,6 +868,10 @@ export default defineComponent({
 		async tip() {
 			let oId = this.note.userId;
 			let oUsr = this.note.user;
+			if (this.isRenote {
+				oId = this.note.renote.userId;
+				oUsr = this.note.renote.user;
+			}
 			let complete = false;
 			let bal: number = null;
 			if (this.$i.id === oId) {
