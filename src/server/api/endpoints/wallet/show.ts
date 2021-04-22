@@ -81,17 +81,17 @@ export default define(meta, async (ps, me) => {
 			console.warn('newAddress(): Regenerating user address..');
 			// TODO: don't delete? mark as invalid..
 			await getConnection()
-		    .createQueryBuilder()
-		    .delete("user_wallet_address")
-		    .from('user_wallet_address')
-		    .where({ userId: user.id })
-		    .execute();
+				.createQueryBuilder()
+				.delete("user_wallet_address")
+				.from('user_wallet_address')
+				.where({ userId: user.id })
+				.execute();
 			await getConnection()
-		    .createQueryBuilder()
-		    .delete("user_wallet_balance")
-		    .from('user_wallet_balance')
-		    .where({ userId: user.id })
-		    .execute();
+				.createQueryBuilder()
+				.delete("user_wallet_balance")
+				.from('user_wallet_balance')
+				.where({ userId: user.id })
+				.execute();
 			if (process.send) {
 				//console.log('getNewAddress() requested');
 				process.send({ prc: 'relay', cmd: 'getNewAddress', dat: { userId: user.id } }, undefined, {}, cb);
@@ -167,11 +167,11 @@ export default define(meta, async (ps, me) => {
 	let stat: string = bOnline && bSynced ? "Online" : bOnline ? "Synchronizing" : "Offline";
 	if (wallet) {
 		accountHistory.sort(function(a, b) {
-		  var keyA = new Date(a[3]);
-	    var keyB = new Date(b[3]);
-		  if (keyA < keyB) return -1;
-		  if (keyA > keyB) return 1;
-		  return 0;
+			var keyA = new Date(a[3] + ' ' + a[7]);
+			var keyB = new Date(b[3] + ' ' + a[7]);
+			if (keyA < keyB) return -1;
+			if (keyA > keyB) return 1;
+			return 0;
 		});
 		let data = {
 			explorer: explorer,
