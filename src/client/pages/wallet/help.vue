@@ -1,28 +1,31 @@
 <template>
-	<MkFolder>
-		<template #header><Fa :icon="faBtc"/> CryptoWallet Overview</template>
+	<div>
+		<MkFolder>
+			<template #header><Fa :icon="faBtc"/> CryptoWallet Overview</template>
 
-    <div class="_content">
-			<div style="font-size: 1.15em;">
-				OHM Wallet Help
-			</div>
-      <div class="_panel">
-				<ul>
-				  <li>Wallet</li>
-				  <li>Tipping</li>
-				  <li>Deposit</li>
-				  <li>Withdraw</li>
-				</ul>
-				<div class="help-info">
-					<dl class="diff">
-						<dt>OHMCoin</dt>
-						<dd><a href="https://ohmcoin.org/"></a></dd>
-					</dl>
+	    <div class="_content">
+				<div style="font-size: 1.15em;">
+					OHM Wallet Help
 				</div>
-      </div>
-    </div>
+	      <div class="_panel">
+					<ul>
+					  <li>Wallet</li>
+					  <li>Tipping</li>
+					  <li>Deposit</li>
+					  <li>Withdraw</li>
+					  <li>Soon...</li>
+					</ul>
+					<div class="help-info">
+						<dl class="diff">
+							<dt>OHMCoin</dt>
+							<dd><a href="https://ohmcoin.org/"></a></dd>
+						</dl>
+					</div>
+	      </div>
+	    </div>
 
-	</MkFolder>
+		</MkFolder>
+	</div>
 </template>
 
 <script lang="ts">
