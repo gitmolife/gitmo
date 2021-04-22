@@ -108,7 +108,7 @@
 import { computed, defineComponent } from 'vue';
 import parseAcct from '@/misc/acct/parse';
 import Progress from '@client/scripts/loading';
-import { faBoxOpen, faDatabase, faInfoCircle, faTachometerAlt, faTicketAlt, faExchangeAlt, faOm, faQuestionCircle, faCheckCircle } from '@fortawesome/free-solid-svg-icons';
+import { faBoxOpen, faDatabase, faInfoCircle, faTachometerAlt, faTicketAlt, faExchangeAlt, faOm, faQuestionCircle, faCheckCircle, faWallet } from '@fortawesome/free-solid-svg-icons';
 import { faBtc } from '@fortawesome/free-brands-svg-icons';
 import { query as urlQuery } from '../../../prelude/url';
 import MkButton from '@client/components/ui/button.vue';
@@ -118,6 +118,7 @@ import MkContainer from '@client/components/ui/container.vue';
 import MkFolder from '@client/components/ui/folder.vue';
 import { acct as getAcct } from '../../filters/user';
 import number from '../../filters/number';
+import * as symbols from '@client/symbols';
 import * as os from '@client/os';
 
 export default defineComponent({
@@ -139,6 +140,10 @@ export default defineComponent({
 
   data() {
     return {
+			[symbols.PAGE_INFO]: {
+				title: 'CryptoWallet',
+				icon: faWallet
+			},
 			user: null,
 			error: null,
       wallet: null,
