@@ -51,7 +51,8 @@ export default define(meta, async (ps, me) => {
 	let ct = 0;
 
 	// TODO: move to config
-	let explorer: string = 'http://explorer.ohm.sqdmc.net/';
+	const explorer: string = 'http://explorer.ohm.sqdmc.net/';
+	const confirmsRequired: number = 7;
 
 	let status: UserWalletStatus = (await UserWalletStatuses.findOne({ type: "ohmcoin" } ) as UserWalletStatus);
 	let wallet = (await UserWalletAddresses.findOne({ userId: user.id, coinType: ct } ) as UserWalletAddress);
@@ -106,6 +107,7 @@ export default define(meta, async (ps, me) => {
 						.select("user_wallet_tx")
 						.from('user_wallet_tx')
 						.where({ userId: user.id })
+						.limit(500)
 						.getMany();
 
 	var accountHistory: any[] = [];
@@ -114,8 +116,14 @@ export default define(meta, async (ps, me) => {
 	for (var h of history) {
 		var a = "N/A";
 		var t = "UNKNOWN";
-		var date = new Date(h.createdAt).toLocaleString();
+		var dt = new Date(h.createdAt).toLocaleString().split(',');
+		var date = dt[0];
+		var time = dt[1];
 		var amt = h.amount;
+		var conf: number = h.confirms;
+		if (conf > 999) {
+			conf = 999;
+		}
 		if (h.txtype === 1 || h.txtype === 3) {
 			a = "IN";
 			t = "DEPOSIT";
@@ -152,7 +160,7 @@ export default define(meta, async (ps, me) => {
 			t = "SENT-TIP";
 			a = "TIP";
 		}
-		var entry: any[] = [ i++, a, t, date, amt, h.txid ];
+		var entry: any[] = [ i++, a, t, date, amt, h.txid, conf, time ];
 		accountHistory.push(entry);
 	}
 
@@ -168,6 +176,7 @@ export default define(meta, async (ps, me) => {
 		let data = {
 			explorer: explorer,
 			account: wallet.address,
+			confRequire: confirmsRequired,
 			balance: {
 				total: (parseFloat(wallet.balance) + parseFloat(balance.balance)).toFixed(8),
 				pending: (pending).toFixed(8),
@@ -189,6 +198,7 @@ export default define(meta, async (ps, me) => {
 		let data = {
 			explorer: explorer,
 			account: bOnline ? 'Success: Please Reload Page..' : 'Error: Please Try Again Later..',
+			confRequire: confirmsRequired,
 			balance: {
 				total: 0,
 				pending: 0,
