@@ -22,7 +22,7 @@
  */
 
 import { getConnection } from 'typeorm';
-import Logger from '../services/logger';
+import Logger from '../logger';
 import MessageIPC from './message-ipc-cmd';
 import IntercomBroker from './intercom-broker';
 
