@@ -5,6 +5,7 @@ import { Users, UserWalletBalances, UserWalletStatuses, UserWalletAddresses } fr
 import { UserWalletBalance } from '../../../../models/entities/user-wallet-balance';
 import { UserWalletAddress } from '../../../../models/entities/user-wallet-address';
 import { UserWalletStatus } from '../../../../models/entities/user-wallet-status';
+import { createNotification } from '../../../../services/create-notification';
 import { ID } from '@/misc/cafy-id';
 import { getConnection } from 'typeorm';
 
@@ -188,6 +189,21 @@ export default define(meta, async (ps, me) => {
 		// Add Log Entries
 		logTip(uid, uido, amount, 'from');
 		logTip(uid, uido, amount, 'to');
+		// Notification to user receiving tip.
+		createNotification(uido, 'tipReceive', {
+			//notifierId: uid,
+			customBody: 'You Received Tip of ' + amount + " OHM.",
+			customHeader: 'Tip Received',
+			customIcon: '/static-assets/client/coin/ohm100.png',
+		});
+		// Notification to user who created tip..
+		createNotification(uid, 'tipSent', {
+			notifierId: uido,
+			customBody: 'You Sent Tip of ' + amount + " OHM.",
+			customHeader: 'Tip Sent',
+			customIcon: '/static-assets/client/coin/ohm100.png',
+			isRead: true,
+		});
 		data = {
 			message: 'Processed',
 			ourUser: nBalance,

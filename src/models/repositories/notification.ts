@@ -76,6 +76,16 @@ export class NotificationRepository extends Repository<Notification> {
 				header: notification.customHeader || token?.name,
 				icon: notification.customIcon || token?.iconUrl,
 			} : {}),
+			...(notification.type === 'tipReceive' ? {
+				body: notification.customBody,
+				header: notification.customHeader || 'Tip Received',
+				icon: notification.customIcon || token?.iconUrl,
+			} : {}),
+			...(notification.type === 'tipSent' ? {
+				body: notification.customBody,
+				header: notification.customHeader || 'Tip Sent',
+				icon: notification.customIcon || token?.iconUrl,
+			} : {}),
 		});
 	}
 

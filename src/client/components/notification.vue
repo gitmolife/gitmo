@@ -1,7 +1,9 @@
 <template>
 <div class="qglefbjs" :class="notification.type" v-size="{ max: [500, 600] }">
 	<div class="head">
-		<MkAvatar v-if="notification.user" class="icon" :user="notification.user"/>
+		<img v-if="notification.type === 'tipReceive'" class="icon" :src="notification.icon" alt=""/>
+		<img v-else-if="notification.type === 'tipSent'" class="icon" :src="notification.icon" alt=""/>
+		<MkAvatar v-else-if="notification.user" class="icon" :user="notification.user"/>
 		<img v-else-if="notification.icon" class="icon" :src="notification.icon" alt=""/>
 		<div class="sub-icon" :class="notification.type">
 			<Fa :icon="faPlus" v-if="notification.type === 'follow'"/>
@@ -13,11 +15,20 @@
 			<Fa :icon="faAt" v-else-if="notification.type === 'mention'"/>
 			<Fa :icon="faQuoteLeft" v-else-if="notification.type === 'quote'"/>
 			<Fa :icon="faPollH" v-else-if="notification.type === 'pollVote'"/>
+			<Fa :icon="faPlusCircle" v-else-if="notification.type === 'tipReceive'"/>
+			<Fa :icon="faMinusCircle" v-else-if="notification.type === 'tipSent'"/>
 			<XReactionIcon v-else-if="notification.type === 'reaction'" :reaction="notification.reaction" :custom-emojis="notification.note.emojis" :no-style="true"/>
 		</div>
 	</div>
 	<div class="tail">
-		<header>
+
+		<header v-if="notification.type === 'tipReceive' || notification.type === 'tipSent'">
+			<span>{{ notification.header }}</span>
+			<span v-if="notification.user" style="opacity: 0.88;">&nbsp;to&nbsp;</span>
+			<MkA v-if="notification.user" class="name" :to="userPage(notification.user)" v-user-preview="notification.user.id"><MkUserName :user="notification.user"/></MkA>
+			<MkTime :time="notification.createdAt" v-if="withTime" class="time"/>
+		</header>
+		<header v-else>
 			<MkA v-if="notification.user" class="name" :to="userPage(notification.user)" v-user-preview="notification.user.id"><MkUserName :user="notification.user"/></MkA>
 			<span v-else>{{ notification.header }}</span>
 			<MkTime :time="notification.createdAt" v-if="withTime" class="time"/>
@@ -53,13 +64,19 @@
 		<span v-if="notification.type === 'app'" class="text">
 			<Mfm :text="notification.body" :nowrap="!full"/>
 		</span>
+		<span v-if="notification.type === 'tipReceive'" class="text" style="opacity: 0.76;">
+			<Mfm :text="notification.body" :nowrap="!full"></Mfm>
+		</span>
+		<span v-if="notification.type === 'tipSent'" class="text" style="opacity: 0.76;">
+			<Mfm :text="notification.body" :nowrap="!full"></Mfm>
+		</span>
 	</div>
 </div>
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import { faIdCardAlt, faPlus, faQuoteLeft, faQuoteRight, faRetweet, faReply, faAt, faCheck, faPollH } from '@fortawesome/free-solid-svg-icons';
+import { faIdCardAlt, faPlus, faQuoteLeft, faQuoteRight, faRetweet, faReply, faAt, faCheck, faPollH, faPlusCircle, faMinusCircle } from '@fortawesome/free-solid-svg-icons';
 import { faClock } from '@fortawesome/free-regular-svg-icons';
 import { getNoteSummary } from '@/misc/get-note-summary';
 import XReactionIcon from './reaction-icon.vue';
@@ -96,7 +113,7 @@ export default defineComponent({
 			groupInviteDone: false,
 			connection: null,
 			readObserver: null,
-			faIdCardAlt, faPlus, faQuoteLeft, faQuoteRight, faRetweet, faReply, faAt, faClock, faCheck, faPollH
+			faIdCardAlt, faPlus, faQuoteLeft, faQuoteRight, faRetweet, faReply, faAt, faClock, faCheck, faPollH, faPlusCircle, faMinusCircle
 		};
 	},
 
@@ -240,6 +257,16 @@ export default defineComponent({
 			&.pollVote {
 				padding: 3px;
 				background: #88a6b7;
+			}
+
+			&.tipReceive {
+				padding: 2px;
+				background: #36d250;
+			}
+
+			&.tipSent {
+				padding: 2px;
+				background: #abb833;
 			}
 		}
 	}

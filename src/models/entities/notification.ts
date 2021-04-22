@@ -64,6 +64,8 @@ export class Notification {
 	 * followRequestAccepted - 自分の送ったフォローリクエストが承認された
 	 * groupInvited - グループに招待された
 	 * app - アプリ通知
+	 * tipReceive -
+	 * tipSent -
 	 */
 	@Index()
 	@Column('enum', {
