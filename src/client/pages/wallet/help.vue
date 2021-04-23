@@ -3,17 +3,17 @@
 		<MkFolder>
 			<template #header><Fa :icon="faBtc"/> CryptoWallet Overview</template>
 
-	    <div class="_content">
+			<div class="_content">
 				<div style="font-size: 1.15em;">
 					OHM Wallet Help
 				</div>
-	      <div class="_panel">
+				<div class="_panel">
 					<ul>
-					  <li>Wallet</li>
-					  <li>Tipping</li>
-					  <li>Deposit</li>
-					  <li>Withdraw</li>
-					  <li>Soon...</li>
+						<li>Wallet</li>
+						<li>Tipping</li>
+						<li>Deposit</li>
+						<li>Withdraw</li>
+						<li>Soon...</li>
 					</ul>
 					<div class="help-info">
 						<dl class="diff">
@@ -21,8 +21,8 @@
 							<dd><a href="https://ohmcoin.org/"></a></dd>
 						</dl>
 					</div>
-	      </div>
-	    </div>
+				</div>
+			</div>
 
 		</MkFolder>
 	</div>
@@ -38,30 +38,30 @@ import { query as urlQuery } from '../../../prelude/url';
 import * as os from '@client/os';
 
 export default defineComponent({
-  components: {
-  },
+	components: {
+	},
 
-  props: {
+	props: {
 
-  },
+	},
 
-  data() {
-    return {
+	data() {
+		return {
 			faBtc,
-    };
-  },
+		};
+	},
 
-  created() {
-    this.fetch();
-  },
+	created() {
+		this.fetch();
+	},
 
-  methods: {
+	methods: {
 
-    fetch() {
+		fetch() {
 
-    },
+		},
 
-  }
+	}
 
 });
 </script>
@@ -69,7 +69,7 @@ export default defineComponent({
 <style lang="scss" scoped>
 
 .monospace {
-  font-family: Lucida Console, Courier, monospace;
+	font-family: Lucida Console, Courier, monospace;
 }
 
 .help-info {

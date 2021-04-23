@@ -1,5 +1,5 @@
 <template>
-    <div>
+		<div>
 
 			<MkFolder>
 				<template #header><Fa :icon="faBtc"/> CryptoWallet Transfer</template>
@@ -23,17 +23,17 @@
 							<span class="resp-text-nack">{{ response.error }}</span>
 						</div>
 						<div class="info-div">
-							<span class="info-text">This will move OHM off site.  Your Network balance will decrease.</span>
+							<span class="info-text">This will move OHM off site. Your Network balance will decrease.</span>
 						</div>
 						<div style="width: 67%; margin: auto; padding-bottom: 20px; margin-bottom: 30px;">
 							<MkButton full primary @click="doWithdraw()"><Fa :icon="faExternalLinkSquareAlt"/> Confirm Withdraw</MkButton>
 						</div>
 					</MkContainer>
 
-		    </div>
+				</div>
 			</MkFolder>
 
-    </div>
+		</div>
 </template>
 
 <script lang="ts">
@@ -51,50 +51,50 @@ import * as os from '@client/os';
 
 
 export default defineComponent({
-  components: {
+	components: {
 			MkButton, MkInput, MkContainer, MkFolder, Progress,
-  },
+	},
 
-  props: {
+	props: {
 
-  },
+	},
 
-  data() {
-    return {
+	data() {
+		return {
 			address: "",
 			amount: "",
 			error: null,
-      wallet: "",
+			wallet: "",
 			response: {
 				error: null,
 				pend: null,
 				ok: null,
 			},
 			faBtc, faOm, faExternalLinkSquareAlt,
-    };
-  },
+		};
+	},
 
 	watch: {
 
 	},
 
-  created() {
-    this.fetch();
-  },
+	created() {
+		this.fetch();
+	},
 
-  methods: {
+	methods: {
 
-    fetch(): void {
-      Progress.start();
-      os.api('wallet/balance').then(wallet => {
-        //console.log(wallet);
-        this.wallet = wallet;
-      }).catch(e => {
-        this.error = e;
-      }).finally(() => {
-        Progress.done();
-      });
-    },
+		fetch(): void {
+			Progress.start();
+			os.api('wallet/balance').then(wallet => {
+				//console.log(wallet);
+				this.wallet = wallet;
+			}).catch(e => {
+				this.error = e;
+			}).finally(() => {
+				Progress.done();
+			});
+		},
 
 		doWithdraw(): void {
 			if (this.activated) {
@@ -205,7 +205,7 @@ export default defineComponent({
 		},
 
 		number,
-  }
+	}
 
 });
 </script>
@@ -213,7 +213,7 @@ export default defineComponent({
 <style lang="scss" scoped>
 
 .monospace {
-  font-family: Lucida Console, Courier, monospace;
+	font-family: Lucida Console, Courier, monospace;
 }
 .info-div {
 	width: 72%;

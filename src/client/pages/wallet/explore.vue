@@ -1,5 +1,5 @@
 <template>
-    <div style="text-align: center; margin-top: 7px; margin-bottom: 30px;">
+		<div style="text-align: center; margin-top: 7px; margin-bottom: 30px;">
 
 			<MkContainer :body-togglable="true" class="_gap">
 				<template #header><Fa :icon="faTachometerAlt"/> Wallet Explorer - OHM</template>
@@ -11,7 +11,7 @@
 				</div>
 			</MkContainer>
 
-    </div>
+		</div>
 </template>
 
 <script lang="ts">
@@ -26,41 +26,41 @@ import * as os from '@client/os';
 import QRCode from 'qrcode';
 
 export default defineComponent({
-  components: {
+	components: {
 
-  },
+	},
 
-  props: {
-    txid: {
-      type: String,
-      required: false
-    },
-  },
+	props: {
+		txid: {
+			type: String,
+			required: false
+		},
+	},
 
-  data() {
-    return {
+	data() {
+		return {
 			tx: {
 				txid: "",
 				blockhash: "",
 			},
-		  url: "",
+			url: "",
 			resp_message: "",
 			faBtc, faOm,
-    };
-  },
+		};
+	},
 
-  created() {
-    this.fetch();
-  },
+	created() {
+		this.fetch();
+	},
 
-  methods: {
-    getAcct,
+	methods: {
+		getAcct,
 
-    fetch() {
+		fetch() {
 			this.url = "http://explorer.ohm.sqdmc.net/tx/" + this.txid;
-    },
+		},
 
-  }
+	}
 
 });
 </script>
@@ -68,10 +68,10 @@ export default defineComponent({
 <style lang="scss" scoped>
 
 .monospace {
-  font-family: Lucida Console, Courier, monospace;
+	font-family: Lucida Console, Courier, monospace;
 }
 .resp-message {
-  font-family: Lucida Console, Courier, monospace;
+	font-family: Lucida Console, Courier, monospace;
 	font-style: italic;
 	font-size: 15px;
 }

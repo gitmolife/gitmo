@@ -1,37 +1,37 @@
 <template>
-    <div>
+		<div>
 			<MkFolder>
 				<template #header><Fa :icon="faBtc"/> CryptoWallet Transfer</template>
 				<div class="contents" styyle="margin-bottom: 20px;">
 
-          <MkContainer :body-togglable="true" class="_gap">
-            <template #header><Fa :icon="faOm"/> Tipping - <span class="monospace">OHM</span></template>
+					<MkContainer :body-togglable="true" class="_gap">
+						<template #header><Fa :icon="faOm"/> Tipping - <span class="monospace">OHM</span></template>
 
-            <div class="_content">
-              <div class="_keyValue"><b>Current Tipping Balance</b><span class="monospace" style="font-size: 1.07em;">{{ bal_tip }} OHM</span></div>
-            </div>
-            <div class="_content">
-              <div class="_keyValue">
+						<div class="_content">
+							<div class="_keyValue"><b>Current Tipping Balance</b><span class="monospace" style="font-size: 1.07em;">{{ bal_tip }} OHM</span></div>
+						</div>
+						<div class="_content">
+							<div class="_keyValue">
 								<b>Send Tip to: <span style="opacity=0.80; padding: 7px; font-size: 1.07em;">{{ otherName }}</span></b>
-                <MkInput v-model:value="amount" style="margin: 0; flex: 1;"><span class="monospace">Amount Tip</span></MkInput>
-              </div>
-            </div>
+								<MkInput v-model:value="amount" style="margin: 0; flex: 1;"><span class="monospace">Amount Tip</span></MkInput>
+							</div>
+						</div>
 						<div v-if="response_om_ok || response_om_pend || response_om_error" class="resp-div">
 							<span class="resp-text-pend">{{ response_om_pend }}</span>
 							<span class="resp-text-ack">{{ response_om_ok }}</span>
 							<span class="resp-text-nack">{{ response_om_error }}</span>
 						</div>
 						<div class="info-div">
-							<span class="info-text">This will 'tip' OHM to another user.  Your Tipping balance will decrease.</span>
+							<span class="info-text">This will 'tip' OHM to another user. Your Tipping balance will decrease.</span>
 						</div>
-            <div id="conf-btn" style="width: 67%; margin: auto; padding-bottom: 20px; margin-bottom: 4px; text-shadow: -1px 1px 4px #777777;">
-              <MkButton full primary @click="doTip()" style="color: black; background-color: #48f7c3; font-weight: 700;">Confirm and Process Tip <Fa :icon="faMoneyBillWaveAlt"/></MkButton>
-            </div>
-          </MkContainer>
+						<div id="conf-btn" style="width: 67%; margin: auto; padding-bottom: 20px; margin-bottom: 4px; text-shadow: -1px 1px 4px #777777;">
+							<MkButton full primary @click="doTip()" style="color: black; background-color: #48f7c3; font-weight: 700;">Confirm and Process Tip <Fa :icon="faMoneyBillWaveAlt"/></MkButton>
+						</div>
+					</MkContainer>
 
-		    </div>
+				</div>
 			</MkFolder>
-    </div>
+		</div>
 </template>
 
 <script lang="ts">
@@ -50,23 +50,23 @@ import * as os from '@client/os';
 
 
 export default defineComponent({
-  components: {
+	components: {
 			MkButton, MkInput, MkContainer, MkFolder, Progress,
-  },
+	},
 
-  props: {
+	props: {
 		otherId: {
-      type: String,
-      required: true
-    },
+			type: String,
+			required: true
+		},
 		otherName: {
 			type: String,
 			required: true
 		},
-  },
+	},
 
-  data() {
-    return {
+	data() {
+		return {
 			otherId: this.$props.otherId,
 			bal_tip: '0',
 			amount: null,
@@ -76,32 +76,32 @@ export default defineComponent({
 			response_om_pend: null,
 			response_om_ok: null,
 			faBtc, faOm, faLongArrowAltRight, faCartArrowDown, faMoneyBillWaveAlt
-    };
-  },
+		};
+	},
 
 	watch: {
 
 	},
 
-  created() {
-    this.fetch();
-  },
+	created() {
+		this.fetch();
+	},
 
-  methods: {
+	methods: {
 
-    fetch() {
-      Progress.start();
-      os.api('wallet/balance').then(balances => {
-        //console.log(balances);
+		fetch() {
+			Progress.start();
+			os.api('wallet/balance').then(balances => {
+				//console.log(balances);
 				this.bal_tip = Number(balances.tipping);
 				//this.bal_net = parseFloat(balances.network);
-      }).catch(e => {
-        this.error = e;
+			}).catch(e => {
+				this.error = e;
 				this.response_om_error = "Error Fetching Balance!";
-      }).finally(() => {
-        Progress.done();
-      });
-    },
+			}).finally(() => {
+				Progress.done();
+			});
+		},
 
 		doTip() {
 			const tmin = 0.00100000;
@@ -118,10 +118,10 @@ export default defineComponent({
 					this.response_om_pend = "Input Amount must be valid number greater than \'" + tmin + "\' coins.";
 					return;
 				}
-	    } catch (e) {
-        this.response_om_pend = "Input cannot be parsed to Number..";
+			} catch (e) {
+				this.response_om_pend = "Input cannot be parsed to Number..";
 				return;
-	    }
+			}
 			if (Number(this.amount) <= tmin) {
 				this.response_om_pend = "Sorry, Amount must be above \'" + tmin + "\' coins.";
 				return;
@@ -131,7 +131,7 @@ export default defineComponent({
 				return;
 			}
 			if (Number(this.bal_tip) - Number(this.amount) <= 0 || Number(this.amount) > Number(this.bal_tip)) {
-				this.response_om_pend = "Amount greater than your available balance.  Please use a smaller amount.";
+				this.response_om_pend = "Amount greater than your available balance.	Please use a smaller amount.";
 			}
 			Progress.start();
 			this.activated = true;
@@ -156,7 +156,7 @@ export default defineComponent({
 		},
 
 		isNumeric(val: any): boolean {
-		  return !(val instanceof Array) && (val - parseFloat(val) + 1) >= 0;
+			return !(val instanceof Array) && (val - parseFloat(val) + 1) >= 0;
 		}
 
 		dispose() {
@@ -165,7 +165,7 @@ export default defineComponent({
 		},
 
 		number,
-  }
+	}
 
 });
 </script>
@@ -173,7 +173,7 @@ export default defineComponent({
 <style lang="scss" scoped>
 
 .monospace {
-  font-family: Lucida Console, Courier, monospace;
+	font-family: Lucida Console, Courier, monospace;
 }
 .info-div {
 	width: 72%;
