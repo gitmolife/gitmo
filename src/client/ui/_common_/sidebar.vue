@@ -26,7 +26,7 @@
 				</template>
 				<div class="divider"></div>
 				<MkA class="item" active-class="active" to="/my/wallet">
-					<Fa :icon="faWallet" fixed-width/><span class="text">Wallet</span>
+					<i class="fas fa-wallet fa-fw"></i><span class="text">Wallet</span>
 				</MkA>
 				<MkA v-if="$i.isAdmin || $i.isModerator" class="item" active-class="active" to="/instance">
 					<i class="fas fa-server fa-fw"></i><span class="text">{{ $ts.instance }}</span>
@@ -49,7 +49,6 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import { faWallet } from '@fortawesome/free-solid-svg-icons';
 import { host } from '@client/config';
 import { search } from '@client/scripts/search';
 import * as os from '@client/os';
@@ -74,7 +73,6 @@ export default defineComponent({
 			menuDef: sidebarDef,
 			iconOnly: false,
 			hidden: this.defaultHidden,
-			faGripVertical, faChevronLeft, faComments, faHashtag, faBroadcastTower, faFireAlt, faEllipsisH, faPencilAlt, faBars, faTimes, faBell, faSearch, faUserCog, faCog, faUser, faHome, faStar, faCircle, faAt, faEnvelope, faListUl, faPlus, faUserClock, faLaugh, faUsers, faTachometerAlt, faExchangeAlt, faGlobe, faChartBar, faCloud, faServer, faProjectDiagram, faWallet
 		};
 	},
 

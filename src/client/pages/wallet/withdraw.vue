@@ -2,31 +2,33 @@
 		<div>
 
 			<MkFolder>
-				<template #header><Fa :icon="faBtc"/> CryptoWallet Transfer</template>
+				<template #header><i class="fab fa-btc"></i> CryptoWallet Transfer</template>
 				<div class="contents">
 
-					<MkContainer :body-togglable="true" class="_gap">
-						<template #header><Fa :icon="faBoxOpen"/> Wallet Withdraw - OHM</template>
+					<MkContainer :foldable="true" class="_gap">
+						<template #header><i class="fas fa-box-open"></i> Wallet Withdraw - OHM</template>
 
-						<div class="_content">
+						<div class="_content rowEntry rowMain">
 							<div class="_keyValue"><b>Current Balance</b><span class="monospace" style="font-size: 1.07em;">{{ wallet.network }} OHM</span></div>
 						</div>
-						<div class="_content">
+						<div class="_content rowEntry">
 							<div class="_keyValue">
 								<b><MkInput v-model:value="address" style="margin: 0; flex: 1;"><span class="monospace">External Public Address</span></MkInput></b>
 								<MkInput v-model:value="amount" style="margin: 0; flex: 1;"><span class="monospace">Withdraw Amount</span></MkInput>
 							</div>
 						</div>
-						<div v-if="response.ok || response.pend || response.error" class="resp-div">
-							<span class="resp-text-pend">{{ response.pend }}</span>
-							<span class="resp-text-ack">{{ response.ok }}</span>
-							<span class="resp-text-nack">{{ response.error }}</span>
-						</div>
-						<div class="info-div">
-							<span class="info-text">This will move OHM off site. Your Network balance will decrease.</span>
-						</div>
-						<div style="width: 67%; margin: auto; padding-bottom: 20px; margin-bottom: 30px;">
-							<MkButton full primary @click="doWithdraw()"><Fa :icon="faExternalLinkSquareAlt"/> Confirm Withdraw</MkButton>
+						<div class="_content rowEntry">
+							<div v-if="response.ok || response.pend || response.error" class="resp-div">
+								<span class="resp-text-pend">{{ response.pend }}</span>
+								<span class="resp-text-ack">{{ response.ok }}</span>
+								<span class="resp-text-nack">{{ response.error }}</span>
+							</div>
+							<div class="info-div">
+								<span class="info-text">This will move OHM off site. Your Network balance will decrease.</span>
+							</div>
+							<div style="width: 67%; margin: auto; padding-bottom: 2px; margin-bottom: 16px;">
+								<MkButton full primary @click="doWithdraw()"><i class="fas fa-external-link-square-alt"></i> Confirm Withdraw</MkButton>
+							</div>
 						</div>
 					</MkContainer>
 
@@ -39,8 +41,6 @@
 <script lang="ts">
 import { computed, defineComponent } from 'vue';
 import Progress from '@client/scripts/loading';
-import { faBoxOpen, faExternalLinkSquareAlt, faOm } from '@fortawesome/free-solid-svg-icons';
-import { faBtc } from '@fortawesome/free-brands-svg-icons';
 import { query as urlQuery } from '../../../prelude/url';
 import MkButton from '@client/components/ui/button.vue';
 import MkInput from '@client/components/ui/input.vue';
@@ -70,7 +70,6 @@ export default defineComponent({
 				pend: null,
 				ok: null,
 			},
-			faBtc, faOm, faExternalLinkSquareAlt,
 		};
 	},
 
@@ -242,6 +241,18 @@ export default defineComponent({
 .resp-text-pend {
 	color: orange;
 	padding: 3px;
+}
+.rowEntry {
+	border-bottom: 1px solid rgba(161, 161, 161, 0.08);
+	padding-left: 10px;
+	padding-right: 10px;
+	padding-top: 12px;
+	padding-bottom: 2px;
+}
+.rowMain {
+	border-bottom: 1px solid rgba(161, 161, 161, 0.18);
+	padding-top: 15px;
+	padding-bottom: 5px;
 }
 
 </style>

@@ -15,8 +15,8 @@
 			<i v-else-if="notification.type === 'mention'" class="fas fa-at"></i>
 			<i v-else-if="notification.type === 'quote'" class="fas fa-quote-left"></i>
 			<i v-else-if="notification.type === 'pollVote'" class="fas fa-poll-h"></i>
-			<Fa :icon="faPlusCircle" v-else-if="notification.type === 'tipReceive'"/>
-			<Fa :icon="faMinusCircle" v-else-if="notification.type === 'tipSent'"/>
+			<i v-else-if="notification.type === 'tipReceive'" class="fas fa-plus-circle"></i>
+			<i v-else-if="notification.type === 'tipSent'" class="fas fa-minus-circle"></i>
 			<XReactionIcon v-else-if="notification.type === 'reaction'" :reaction="notification.reaction" :custom-emojis="notification.note.emojis" :no-style="true"/>
 		</div>
 	</div>
@@ -80,7 +80,6 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import { faIdCardAlt, faPlus, faQuoteLeft, faQuoteRight, faRetweet, faReply, faAt, faCheck, faPollH, faPlusCircle, faMinusCircle } from '@fortawesome/free-solid-svg-icons';
 import { getNoteSummary } from '@/misc/get-note-summary';
 import XReactionIcon from './reaction-icon.vue';
 import MkFollowButton from './follow-button.vue';
@@ -116,7 +115,6 @@ export default defineComponent({
 			groupInviteDone: false,
 			connection: null,
 			readObserver: null,
-			faIdCardAlt, faPlus, faQuoteLeft, faQuoteRight, faRetweet, faReply, faAt, faClock, faCheck, faPollH, faPlusCircle, faMinusCircle
 		};
 	},
 
@@ -263,12 +261,14 @@ export default defineComponent({
 			}
 
 			&.tipReceive {
-				padding: 2px;
+				padding: 0.5px 3px;
+				font-size: 15px;
 				background: #36d250;
 			}
 
 			&.tipSent {
-				padding: 2px;
+				padding: 0.5px 3px;
+				font-size: 15px;
 				background: #abb833;
 			}
 		}

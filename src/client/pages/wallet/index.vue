@@ -1,129 +1,130 @@
 <template>
 		<div>
 			<MkFolder>
-				<template #header><Fa :icon="faBtc"/> CryptoWallet Overview</template>
+				<template #header><i class="fab fa-btc"></i> CryptoWallet Overview</template>
+			<div class="_section" v-if="wallet">
 
-			<div class="ftskorzw wide _section" v-if="wallet">
-				<div class="contents">
+				<MkContainer :foldable="true" class="_gap">
+					<template #header><i class="fas fa-info-circle"></i> Wallet Info - OHM</template>
 
-					<MkContainer :body-togglable="true" class="_gap">
-						<template #header><Fa :icon="faInfoCircle"/> Wallet Info - OHM</template>
-
-						<div class="zbcjwnqg" v-size="{ max: [550, 1000] }">
-							<div class="stats">
-								<div class="_panel">
-									<div style="width: 30%;">
-										<small>Account</small>
-										<b><img src="/static-assets/client/coin/ohmie128.png" style="height: 42px;" /></b>
-									</div>
-									<div style="width: 70%;">
-										<dl class="total">
-											<dt>Balance</dt>
-											<dd>{{ number(parseFloat(wallet.balance.total) + parseFloat(wallet.balance.pending)) }}</dd>
-										</dl>
-										<dl class="diff">
-											<dt>Pending</dt>
-											<dd>{{ number(wallet.balance.pending) }}</dd>
-										</dl>
-										<dl class="diff">
-											<dt>Available</dt>
-											<dd>{{ number(wallet.balance.total) }}</dd>
-										</dl>
-									</div>
+					<div class="zbcjwnqg" v-size="{ max: [550, 1000] }">
+						<div class="stats">
+							<div class="_panel">
+								<div style="width: 30%;">
+									<small>Account</small>
+									<b><img src="/static-assets/client/coin/ohmie128.png" style="height: 42px;" /></b>
 								</div>
-								<div class="_panel">
-									<div style="width: 30%;">
-										<small>System</small>
-										<b><img src="/static-assets/client/coin/ohm100.png" style="height: 42px;" /></b>
-									</div>
-									<div style="width: 70%;">
-										<dl class="total">
-											<dt>Status</dt>
-											<dd v-bind:style="{ color: statusColor}">{{ wallet.server.status }}</dd>
-										</dl>
-										<dl class="diff">
-											<dt>Synced</dt>
-											<dd>{{ wallet.server.synced ? "Yes" : "No" }}</dd>
-										</dl>
-										<dl class="diff">
-											<dt>Height</dt>
-											<dd class="monospace">{{ wallet.server.synced ? number(wallet.server.height) : 'Pending..' }}</dd>
-										</dl>
-									</div>
+								<div style="width: 70%;">
+									<dl class="total">
+										<dt>Balance</dt>
+										<dd>{{ number(parseFloat(wallet.balance.total) + parseFloat(wallet.balance.pending)) }}</dd>
+									</dl>
+									<dl class="diff">
+										<dt>Pending</dt>
+										<dd>{{ number(wallet.balance.pending) }}</dd>
+									</dl>
+									<dl class="diff">
+										<dt>Available</dt>
+										<dd>{{ number(wallet.balance.total) }}</dd>
+									</dl>
+								</div>
+							</div>
+							<div class="_panel">
+								<div style="width: 30%;">
+									<small>System</small>
+									<b><img src="/static-assets/client/coin/ohm100.png" style="height: 42px;" /></b>
+								</div>
+								<div style="width: 70%;">
+									<dl class="total">
+										<dt>Status</dt>
+										<dd v-bind:style="{ color: statusColor}">{{ wallet.server.status }}</dd>
+									</dl>
+									<dl class="diff">
+										<dt>Synced</dt>
+										<dd>{{ wallet.server.synced ? "Yes" : "No" }}</dd>
+									</dl>
+									<dl class="diff">
+										<dt>Height</dt>
+										<dd class="monospace">{{ wallet.server.synced ? number(wallet.server.height) : 'Pending..' }}</dd>
+									</dl>
 								</div>
 							</div>
 						</div>
-					</MkContainer>
+					</div>
+				</MkContainer>
 
-					<MkContainer :body-togglable="true" class="_gap">
-						<template #header><Fa :icon="faTachometerAlt"/> Wallet Control - OHM</template>
-						<div class="_content">
+				<MkContainer :foldable="true" class="_gap">
+					<template #header><i class="fas fa-tachometer-alt"></i> Wallet Control - OHM</template>
+					<div class="_content zbcjwnqg" v-size="{ max: [550, 1000] }">
+						<div class="rowEntry rowMain">
 							<div class="_keyValue"><b>Balance</b><span class="monospace" style="font-size: 1.07em;">{{ wallet.balance.total }} OHM</span></div>
 						</div>
-						<div class="_content">
-							<div class="_keyValue"><b>Tipping Balance</b><span class="monospace" style="font-size: 1.07em;">{{ wallet.balance.tipping }} <Fa :icon="faOm"/></span></div>
+						<div class="rowEntry rowMain">
+							<div class="_keyValue"><b>Tipping Balance</b><span class="monospace" style="font-size: 1.07em;">{{ wallet.balance.tipping }} <i class="fas fa-om"></i></span></div>
 							<div class="_keyValue"><b>Network Balance</b><span class="monospace" style="font-size: 1.07em;">{{ wallet.balance.network }} OHM</span></div>
 						</div>
-						<div class="_content">
+						<div class="rowEntry">
 							<div class="_keyValue"><b>Network Deposit</b><span class="monospace"><a @click="showAddress()">{{ wallet.account }}</a></span></div>
-							<div class="_keyValue"><b>Site Tipping</b><span><a @click="showTransfer()"><Fa :icon="faExchangeAlt"/> Internal Transfer</a></span></div>
-							<div class="_keyValue"><b>Transfer External</b><span><a @click="showWithdraw()"><Fa :icon="faBoxOpen"/> Withdraw Offsite</a></span></div>
-							<div class="_keyValue" style="margin-top: 5px;"><b>Help</b><span><a @click="showHelp()"><Fa :icon="faQuestionCircle"/> Usage FAQ</a></span></div>
 						</div>
-					</MkContainer>
-
-					<MkContainer :body-togglable="true" :scrollable="true" class="_gap" style="max-height: 420px;">
-						<template #header><Fa :icon="faDatabase"/> Action History</template>
-						<div class="_content" v-if="wallet.walletHist">
-							<table class="hist-table" style="border-collapse: collapse; width: 100%;">
-								<thead class="hist-table-header">
-									<tr style="opacity: 0.84;">
-										<th style="text-align: left; padding: 1px 0px 4px 0; width: 25%;">Date and Time</th>
-										<th style="text-align: left; padding: 1px 6px 4px 0; font-size: 0.92em; width: 6%;">Type</th>
-										<th style="text-align: right; padding: 1px 8px 4px 22px; width: 18%;">Amount</th>
-										<th style="text-align: center; padding: 1px 20px 4px 4px;">Action</th>
-										<th style="text-align: center; padding: 1px 6px 4px 8px; font-size: 0.88em; width: 9%;">Audit</th>
-										<th style="text-align: left; padding: 1px 2px 4px 0; font-size: 0.97em;">Transaction Id</th>
-									</tr>
-								</thead>
-								<tbody>
-									<tr v-for="table in wallet.walletHist" :key="table[0]">
-										<th style="width: 25%; text-align: left; padding: 1px 2px 2px 0; word-break: break-all; font-size: 13px;" class="monospace"><span class="_date">{{ table[3] }}</span> <span class="_time">{{ table[7] }}</span></th>
-										<td style="width: 6%; padding: 1px 6px 2px 0; text-align: left;" class="monospace">{{ table[1] }}</td>
-										<td v-if="table[1] === 'SYNC'" style="width: 19%; text-align: right; padding: 1px 8px 2px 22px;" class="monospace">
-											<span v-html="prefixAmt(table[4],table[1])"></span><span class="strikeout" title="Change from Transfer">{{ table[4].replace('-', '').replace('~', '') }}</span>
-										</td>
-										<td v-else style="width: 19%; text-align: right; padding: 1px 8px 2px 22px;" class="monospace">
-											<span v-html="prefixAmt(table[4],table[1])"></span>{{ table[4].replace('-', '').replace('~', '') }}
-										</td>
-										<td style="padding: 1px 6px 2px 8px; opacity: 0.8; text-align: center;" class="monospace">{{ table[2] }}</td>
-										<td v-if="table[1] === 'TIP'" style="width: 8%; padding: 1px 6px 2px 8px; opacity: 0.77; text-align: center; font-size: 12px;" class="monospace">
-											<span><Fa :icon="faCheckCircle" title="Internal Transfer"/></span>
-										</td>
-										<td v-else style="width: 9%; padding: 1px 6px 2px 8px; opacity: 0.73; text-align: center; font-size: 12.5px;" class="monospace" title="Network Confirmations Count">
-											<span :class="prefixConf(table[6])">{{ table[6] }}</span><span style="font-weight: 700; font-size: 9px;">&nbsp;/&nbsp;</span><span :class="suffixConf(table[6], wallet.confRequire)">{{ wallet.confRequire }}</span>
-										</td>
-										<td style="padding: 1px 0px 2px 0; font-size: 12px;" class="monospace">
-											<a v-if="table[5].length === 64" @click="showDetail(table[5])" target="_blank" title="View on Explorer">{{ table[5].substr(0, 14) + '..' }}</a>
-											<span v-if="table[5].length !== 64">{{ table[5] }}</span>
-										</td>
-									</tr>
-								</tbody>
-								<tfoot class="hist-table-footer">
-									<tr style="opacity: 0.84;">
-										<th style="text-align: left; padding: 2px 0px 0px 0; width: 25%;">Date and Time</th>
-										<th style="text-align: left; padding: 2px 6px 0px 0; font-size: 0.92em; width: 6%;">Type</th>
-										<th style="text-align: right; padding: 2px 8px 0px 22px; width: 18%;">Amount</th>
-										<th style="text-align: center; padding: 2px 20px 0px 4px;">Action</th>
-										<th style="text-align: center; padding: 2px 6px 0px 8px; font-size: 0.88em; width: 9%;">Audit</th>
-										<th style="text-align: left; padding: 2px 2px 0px 0; font-size: 0.97em;">Transaction Id</th>
-									</tr>
-								</tfoot>
-							</table>
+						<div class="rowEntry">
+							<div class="_keyValue"><b>Site Tipping</b><span><a @click="showTransfer()"><i class="fas fa-exchange-alt"></i> Internal Transfer</a></span></div>
+							<div class="_keyValue"><b>Transfer External</b><span><a @click="showWithdraw()"><i class="fas fa-box-open"></i> Withdraw Offsite</a></span></div>
+							<div class="_keyValue" style="margin-top: 5px;"><b>Help</b><span><a @click="showHelp()"><i class="fas fa-question-circle"></i> Usage FAQ</a></span></div>
 						</div>
-					</MkContainer>
+					</div>
+				</MkContainer>
 
-				</div>
+				<MkContainer :foldable="true" :scrollable="true" class="_gap" style="max-height: 420px;">
+					<template #header><i class="fas fa-database"></i> Action History</template>
+					<div class="_content rowEntry" v-if="wallet.walletHist">
+						<table class="hist-table" style="border-collapse: collapse; width: 100%;">
+							<thead class="hist-table-header">
+								<tr style="opacity: 0.84;">
+									<th style="text-align: left; padding: 1px 0px 4px 0; width: 25%;">Date and Time</th>
+									<th style="text-align: left; padding: 1px 6px 4px 0; font-size: 0.92em; width: 6%;">Type</th>
+									<th style="text-align: right; padding: 1px 8px 4px 22px; width: 18%;">Amount</th>
+									<th style="text-align: center; padding: 1px 20px 4px 4px;">Action</th>
+									<th style="text-align: center; padding: 1px 6px 4px 8px; font-size: 0.88em; width: 9%;">Audit</th>
+									<th style="text-align: left; padding: 1px 2px 4px 0; font-size: 0.97em;">Transaction Id</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr v-for="table in wallet.walletHist" :key="table[0]">
+									<th style="width: 25%; text-align: left; padding: 1px 2px 2px 0; word-break: break-all; font-size: 13px;" class="monospace"><span class="_date">{{ table[3] }}</span> <span class="_time">{{ table[7] }}</span></th>
+									<td style="width: 6%; padding: 1px 6px 2px 0; text-align: left;" class="monospace">{{ table[1] }}</td>
+									<td v-if="table[1] === 'SYNC'" style="width: 19%; text-align: right; padding: 1px 8px 2px 22px;" class="monospace">
+										<span v-html="prefixAmt(table[4],table[1])"></span><span class="strikeout" title="Change from Transfer">{{ table[4].replace('-', '').replace('~', '') }}</span>
+									</td>
+									<td v-else style="width: 19%; text-align: right; padding: 1px 8px 2px 22px;" class="monospace">
+										<span v-html="prefixAmt(table[4],table[1])"></span>{{ table[4].replace('-', '').replace('~', '') }}
+									</td>
+									<td style="padding: 1px 6px 2px 8px; opacity: 0.8; text-align: center;" class="monospace">{{ table[2] }}</td>
+									<td v-if="table[1] === 'TIP'" style="width: 8%; padding: 1px 6px 2px 8px; opacity: 0.77; text-align: center; font-size: 12px;" class="monospace">
+										<span title="Internal Transfer"><i class="fas fa-check-circle"></i></span>
+									</td>
+									<td v-else style="width: 9%; padding: 1px 6px 2px 8px; opacity: 0.73; text-align: center; font-size: 12.5px;" class="monospace" title="Network Confirmations Count">
+										<span :class="prefixConf(table[6])">{{ table[6] }}</span><span style="font-weight: 700; font-size: 9px;">&nbsp;/&nbsp;</span><span :class="suffixConf(table[6], wallet.confRequire)">{{ wallet.confRequire }}</span>
+									</td>
+									<td style="padding: 1px 0px 2px 0; font-size: 12px;" class="monospace">
+										<a v-if="table[5].length === 64" @click="showDetail(table[5])" target="_blank" title="View on Explorer">{{ table[5].substr(0, 14) + '..' }}</a>
+										<span v-if="table[5].length !== 64">{{ table[5] }}</span>
+									</td>
+								</tr>
+							</tbody>
+							<tfoot class="hist-table-footer">
+								<tr style="opacity: 0.84;">
+									<th style="text-align: left; padding: 2px 0px 0px 0; width: 25%;">Date and Time</th>
+									<th style="text-align: left; padding: 2px 6px 0px 0; font-size: 0.92em; width: 6%;">Type</th>
+									<th style="text-align: right; padding: 2px 8px 0px 22px; width: 18%;">Amount</th>
+									<th style="text-align: center; padding: 2px 20px 0px 4px;">Action</th>
+									<th style="text-align: center; padding: 2px 6px 0px 8px; font-size: 0.88em; width: 9%;">Audit</th>
+									<th style="text-align: left; padding: 2px 2px 0px 0; font-size: 0.97em;">Transaction Id</th>
+								</tr>
+							</tfoot>
+						</table>
+					</div>
+				</MkContainer>
+
 			</div>
 			</MkFolder>
 		</div>
@@ -133,8 +134,6 @@
 import { computed, defineComponent } from 'vue';
 import parseAcct from '@/misc/acct/parse';
 import Progress from '@client/scripts/loading';
-import { faBoxOpen, faDatabase, faInfoCircle, faTachometerAlt, faTicketAlt, faExchangeAlt, faOm, faQuestionCircle, faCheckCircle, faWallet } from '@fortawesome/free-solid-svg-icons';
-import { faBtc } from '@fortawesome/free-brands-svg-icons';
 import { query as urlQuery } from '../../../prelude/url';
 import MkButton from '@client/components/ui/button.vue';
 import MkSelect from '@client/components/ui/select.vue';
@@ -167,12 +166,10 @@ export default defineComponent({
 		return {
 			[symbols.PAGE_INFO]: {
 				title: 'CryptoWallet',
-				icon: faWallet
 			},
 			user: null,
 			error: null,
 			wallet: null,
-			faBtc, faOm, faTachometerAlt, faInfoCircle, faBoxOpen, faDatabase, faExchangeAlt, faQuestionCircle, faCheckCircle
 		};
 	},
 
@@ -305,6 +302,19 @@ export default defineComponent({
 
 ._keyValue {
 	margin-bottom: 4px;
+}
+
+.rowEntry {
+	border-bottom: 1px solid rgba(161, 161, 161, 0.08);
+	padding-left: 10px;
+	padding-right: 10px;
+	padding-top: 8px;
+	padding-bottom: 2px;
+}
+.rowMain {
+	border-bottom: 1px solid rgba(161, 161, 161, 0.22);
+	padding-top: 13px;
+	padding-bottom: 5px;
 }
 
 .hist-table tr {

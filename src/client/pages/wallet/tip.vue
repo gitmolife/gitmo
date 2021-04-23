@@ -1,11 +1,11 @@
 <template>
 		<div>
 			<MkFolder>
-				<template #header><Fa :icon="faBtc"/> CryptoWallet Transfer</template>
+				<template #header><i class="fab fa-btc"></i> CryptoWallet Transfer</template>
 				<div class="contents" styyle="margin-bottom: 20px;">
 
-					<MkContainer :body-togglable="true" class="_gap">
-						<template #header><Fa :icon="faOm"/> Tipping - <span class="monospace">OHM</span></template>
+					<MkContainer :foldable="true" class="_gap">
+						<template #header><i class="fas fa-om"></i> Tipping - <span class="monospace">OHM</span></template>
 
 						<div class="_content">
 							<div class="_keyValue"><b>Current Tipping Balance</b><span class="monospace" style="font-size: 1.07em;">{{ bal_tip }} OHM</span></div>
@@ -25,7 +25,7 @@
 							<span class="info-text">This will 'tip' OHM to another user. Your Tipping balance will decrease.</span>
 						</div>
 						<div id="conf-btn" style="width: 67%; margin: auto; padding-bottom: 20px; margin-bottom: 4px; text-shadow: -1px 1px 4px #777777;">
-							<MkButton full primary @click="doTip()" style="color: black; background-color: #48f7c3; font-weight: 700;">Confirm and Process Tip <Fa :icon="faMoneyBillWaveAlt"/></MkButton>
+							<MkButton full primary @click="doTip()" style="color: black; background-color: #48f7c3; font-weight: 700;">Confirm and Process Tip <i class="fas fa-money-bill-wave-alt"></i></MkButton>
 						</div>
 					</MkContainer>
 
@@ -37,8 +37,6 @@
 <script lang="ts">
 import { computed, defineComponent, Ref, ref } from 'vue';
 import Progress from '@client/scripts/loading';
-import { faOm, faLongArrowAltRight, faCartArrowDown, faMoneyBillWaveAlt } from '@fortawesome/free-solid-svg-icons';
-import { faBtc } from '@fortawesome/free-brands-svg-icons';
 import { query as urlQuery } from '../../../prelude/url';
 import MkModal from '@client/components/ui/modal.vue';
 import MkButton from '@client/components/ui/button.vue';
@@ -75,7 +73,6 @@ export default defineComponent({
 			response_om_error: null,
 			response_om_pend: null,
 			response_om_ok: null,
-			faBtc, faOm, faLongArrowAltRight, faCartArrowDown, faMoneyBillWaveAlt
 		};
 	},
 

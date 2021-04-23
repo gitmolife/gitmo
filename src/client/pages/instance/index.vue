@@ -6,26 +6,6 @@
 				<div class="_formItem">
 					<div class="_formPanel lxpfedzu">
 						<img :src="$instance.iconUrl || '/favicon.ico'" alt="" class="icon"/>
-
-			<MkContainer :body-togglable="true" class="_gap" v-if="wallet && wallet.status">
-				<template #header><Fa :icon="faInfoCircle"/>Wallet Information - OHM</template>
-
-				<div class="_content">
-					<div class="_keyValue"><b>Block Height</b><span>{{ wallet.status.blockheight }}</span></div>
-					<div class="_keyValue"><b>Last Update</b><span>{{ new Date(wallet.status.updatedAt).toLocaleString() }}</span></div>
-				</div>
-				<div class="_content">
-					<div class="_keyValue"><b>Online</b><span>{{ wallet.status.online }}</span></div>
-					<div class="_keyValue"><b>Synced</b><span>{{ wallet.status.synced }}</span></div>
-					<div class="_keyValue"><b>Crawling</b><span>{{ wallet.status.crawling }}</span></div>
-					<div class="_keyValue"><b>Wallet Total Balance</b><span>{{ wallet.balance.walletTotal }}</span></div>
-					<div class="_keyValue"><b>Account Total Delta</b><span :class="prefixDelta(wallet.balance.accountDelta)">{{ wallet.balance.accountDelta }}</span></div>
-					<div class="_keyValue"><b>User Wallet Balance</b><span>{{ wallet.balance.userTotal }}</span></div>
-					<div class="_keyValue"><b>Tip Wallet Balance</b><span>{{ wallet.balance.walletTips }}</span></div>
-					<div class="_keyValue"><b>User Tips Balance</b><span>{{ wallet.balance.tipsTotal }}</span></div>
-				</div>
-			</MkContainer>
-
 					</div>
 				</div>
 				<FormLink :active="page === 'overview'" replace to="/instance/overview"><template #icon><i class="fas fa-tachometer-alt"></i></template>{{ $ts.overview }}</FormLink>
@@ -181,21 +161,11 @@ export default defineComponent({
 				});
 			}).catch(e => {
 				os.dialog({
-		prefixDelta(d) {
-			if (d >= 1000 || d <= -10) {
-				return 'delta-derp';
-			} else if (d >= 500 || d <= -5) {
-				return 'delta-first';
-			} else if (d >= 100 || d <= -1) {
-				return 'delta-third';
-			} else if (d >= 10 || d <= -0.1) {
-				return 'delta-fifth';
-			} else if (d >= 1 || d < -0.0) {
-				return 'delta-seventh';
-			}
-			return 'delta-okay';
-		},
-
+					type: 'error',
+					text: e
+				});
+			});
+		};
 
 		const lookup = (ev) => {
 			os.modalMenu([{
@@ -242,25 +212,6 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
-
-.delta-derp {
-	color: #e34c32;
-}
-.delta-first {
-	color: #e37332;
-}
-.delta-third {
-	color: #ebb331;
-}
-.delta-fifth {
-	color: #36d9d3;
-}
-.delta-seventh {
-	color: #32e388;
-}
-.delta-okay {
-	color: #32e34f;
-}
 
 .hiyeyicy {
 	&.wide {

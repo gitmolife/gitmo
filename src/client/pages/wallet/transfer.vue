@@ -2,56 +2,60 @@
 		<div>
 
 			<MkFolder>
-				<template #header><Fa :icon="faBtc"/> CryptoWallet Transfer</template>
+				<template #header><i class="fab fa-btc"></i> CryptoWallet Transfer</template>
 				<div class="contents">
 
-					<MkContainer :body-togglable="true" class="_gap">
-						<template #header><Fa :icon="faCartArrowDown"/> Network Transfer - <span class="monospace">OM <Fa :icon="faLongArrowAltRight"/> OHM</span></template>
+					<MkContainer :foldable="true" class="_gap">
+						<template #header><i class="fas fa-cart-arrow-down"></i> Network Transfer - <span class="monospace">OM <i class="fas fa-long-down-arrow-right"></i> OHM</span></template>
 
-						<div class="_content">
+						<div class="_content rowEntry rowMain">
 							<div class="_keyValue"><b>Current Tipping Balance</b><span class="monospace" style="font-size: 1.07em;">{{ bal_tip }} OM</span></div>
 						</div>
-						<div class="_content">
-							<div class="_keyValue">
+						<div class="_content rowEntry">
+							<div class="_keyValue ">
 								<b>Convert OM Amount</b>
 								<MkInput v-model:value="amountN" style="margin: 0; flex: 1;"><span class="monospace">Amount Network Wallet</span></MkInput>
 							</div>
 						</div>
-						<div v-if="response_ohm_ok || response_ohm_pend || response_ohm_error" class="resp-div">
-							<span class="resp-text-ack">{{ response_ohm_ok }}</span>
-							<span class="resp-text-pend">{{ response_ohm_pend }}</span>
-							<span class="resp-text-nack">{{ response_ohm_error }}</span>
-						</div>
-						<div class="info-div">
-							<span class="info-text">This will convert OM into OHM. Your Network balance will increase.</span>
-						</div>
-						<div style="width: 67%; margin: auto; padding-bottom: 20px; margin-bottom: 20px; text-shadow: -1px 1px 5px #777777;">
-							<MkButton full @click="doTransfer('ohm')" style="color: black; background-color: #eda737; font-weight: 700;"><Fa :icon="faCaretSquareUp"/> Confirm Convert to OHM</MkButton>
+						<div class="_content rowEntry">
+							<div v-if="response_ohm_ok || response_ohm_pend || response_ohm_error" class="resp-div">
+								<span class="resp-text-ack">{{ response_ohm_ok }}</span>
+								<span class="resp-text-pend">{{ response_ohm_pend }}</span>
+								<span class="resp-text-nack">{{ response_ohm_error }}</span>
+							</div>
+							<div class="info-div">
+								<span class="info-text">This will convert OM into OHM. Your Network balance will increase.</span>
+							</div>
+							<div style="width: 67%; margin: auto; padding-bottom: 2px; margin-bottom: 20px; text-shadow: -1px 1px 5px #777777;">
+								<MkButton full @click="doTransfer('ohm')" style="color: black; background-color: #eda737; font-weight: 700;"><i class="fas fa-caret-square-up"></i> Confirm Convert to OHM</MkButton>
+							</div>
 						</div>
 					</MkContainer>
 
-					<MkContainer :body-togglable="true" class="_gap">
-						<template #header><Fa :icon="faOm"/> Tipping Transfer - <span class="monospace">OHM <Fa :icon="faLongArrowAltRight"/> OM</span></template>
+					<MkContainer :foldable="true" class="_gap">
+						<template #header><i class="fas fa-om"></i> Tipping Transfer - <span class="monospace">OHM <i class="fas fa-long-arrow-alt-right"></i> OM</span></template>
 
-						<div class="_content">
+						<div class="_content rowEntry rowMain">
 							<div class="_keyValue"><b>Current Network Balance</b><span class="monospace" style="font-size: 1.07em;">{{ bal_net }} OHM</span></div>
 						</div>
-						<div class="_content">
+						<div class="_content rowEntry">
 							<div class="_keyValue">
 								<b>Convert OHM Amount</b>
 								<MkInput v-model:value="amountT" style="margin: 0; flex: 1;"><span class="monospace">Amount Tip Wallet</span></MkInput>
 							</div>
 						</div>
-						<div v-if="response_om_ok || response_om_pend || response_om_error" class="resp-div">
-							<span class="resp-text-ack">{{ response_om_ok }}</span>
-							<span class="resp-text-pend">{{ response_om_pend }}</span>
-							<span class="resp-text-nack">{{ response_om_error }}</span>
-						</div>
-						<div class="info-div">
-							<span class="info-text">This will convert OHM into OM. Your Network balance will decrease.</span>
-						</div>
-						<div id="conf-btn" style="width: 67%; margin: auto; padding-bottom: 20px; margin-bottom: 20px; text-shadow: -1px 1px 4px #777777;">
-							<MkButton full @click="doTransfer('om')" style="color: black; background-color: #4897f7; font-weight: 700;"><Fa :icon="faCaretSquareDown"/> Confirm Convert to OM</MkButton>
+						<div class="_content rowEntry">
+							<div v-if="response_om_ok || response_om_pend || response_om_error" class="resp-div">
+								<span class="resp-text-ack">{{ response_om_ok }}</span>
+								<span class="resp-text-pend">{{ response_om_pend }}</span>
+								<span class="resp-text-nack">{{ response_om_error }}</span>
+							</div>
+							<div class="info-div">
+								<span class="info-text">This will convert OHM into OM. Your Network balance will decrease.</span>
+							</div>
+							<div id="conf-btn" style="width: 67%; margin: auto; padding-bottom: 2px; margin-bottom: 20px; text-shadow: -1px 1px 4px #777777;">
+								<MkButton full @click="doTransfer('om')" style="color: black; background-color: #4897f7; font-weight: 700;"><i class="fas fa-caret-square-down"></i> Confirm Convert to OM</MkButton>
+							</div>
 						</div>
 					</MkContainer>
 
@@ -64,8 +68,6 @@
 <script lang="ts">
 import { computed, defineComponent } from 'vue';
 import Progress from '@client/scripts/loading';
-import { faOm, faLongArrowAltRight, faCartArrowDown, faCaretSquareUp, faCaretSquareDown } from '@fortawesome/free-solid-svg-icons';
-import { faBtc } from '@fortawesome/free-brands-svg-icons';
 import { query as urlQuery } from '../../../prelude/url';
 import MkButton from '@client/components/ui/button.vue';
 import MkInput from '@client/components/ui/input.vue';
@@ -98,7 +100,6 @@ export default defineComponent({
 			response_om_error: null,
 			response_om_pend: null,
 			response_om_ok: null,
-			faBtc, faOm, faLongArrowAltRight, faCartArrowDown, faCaretSquareUp, faCaretSquareDown
 		};
 	},
 
@@ -323,6 +324,18 @@ export default defineComponent({
 .resp-text-pend {
 	color: orange;
 	padding: 3px;
+}
+.rowEntry {
+	border-bottom: 1px solid rgba(161, 161, 161, 0.08);
+	padding-left: 10px;
+	padding-right: 10px;
+	padding-top: 12px;
+	padding-bottom: 2px;
+}
+.rowMain {
+	border-bottom: 1px solid rgba(161, 161, 161, 0.18);
+	padding-top: 15px;
+	padding-bottom: 5px;
 }
 
 </style>

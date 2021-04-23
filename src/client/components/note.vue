@@ -87,7 +87,7 @@
 					<i class="fas fa-ellipsis-h"></i>
 				</button>
 				<button v-if="showTipper" class="button _button" @click="tip()">
-					<Fa :icon="faCommentDollar"/>
+					<i class="fas fa-comment-dollar"></i>
 				</button>
 			</footer>
 		</div>
@@ -106,8 +106,6 @@
 
 <script lang="ts">
 import { defineAsyncComponent, defineComponent, markRaw } from 'vue';
-import { faSatelliteDish, faBolt, faTimes, faBullhorn, faStar, faLink, faExternalLinkSquareAlt, faPlus, faMinus, faRetweet, faReply, faReplyAll, faEllipsisH, faHome, faUnlock, faEnvelope, faThumbtack, faBan, faQuoteRight, faInfoCircle, faBiohazard, faPlug, faExclamationCircle, faPaperclip, faShareAlt, faCommentDollar } from '@fortawesome/free-solid-svg-icons';
-import { faOm } from '@fortawesome/free-solid-svg-icons';
 import * as mfm from 'mfm-js';
 import { sum } from '../../prelude/array';
 import XSub from './note.sub.vue';
@@ -169,7 +167,6 @@ export default defineComponent({
 			collapsed: false,
 			isDeleted: false,
 			muted: false,
-			faEdit, faBolt, faTimes, faBullhorn, faPlus, faMinus, faRetweet, faReply, faReplyAll, faEllipsisH, faHome, faUnlock, faEnvelope, faThumbtack, faBan, faBiohazard, faPlug, faSatelliteDish, faCommentDollar, faOm
 		};
 	},
 
@@ -892,7 +889,6 @@ export default defineComponent({
 				return;
 			}
 			await os.dialog({
-				icon: faOm,
 				type: 'question',
 				title: 'Send OHM to ' + oUsr.username + ' as Tip?',
 				text: 'You have ' + bal + ' OHM available.',

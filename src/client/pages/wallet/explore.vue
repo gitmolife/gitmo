@@ -1,8 +1,8 @@
 <template>
 		<div style="text-align: center; margin-top: 7px; margin-bottom: 30px;">
 
-			<MkContainer :body-togglable="true" class="_gap">
-				<template #header><Fa :icon="faTachometerAlt"/> Wallet Explorer - OHM</template>
+			<MkContainer :foldable="true" class="_gap">
+				<template #header><i class="fas fa-tachometer-alt"></i> Wallet Explorer - OHM</template>
 				<div class="_content">
 					<div class="_keyValue"><b>TxID</b><span class="monospace" style="font-size: 1.07em;">{{ tx.txid }}</span></div>
 				</div>
@@ -18,8 +18,6 @@
 import { computed, defineComponent } from 'vue';
 import parseAcct from '@/misc/acct/parse';
 import Progress from '@client/scripts/loading';
-import { faOm } from '@fortawesome/free-solid-svg-icons';
-import { faBtc } from '@fortawesome/free-brands-svg-icons';
 import { query as urlQuery } from '../../../prelude/url';
 import { acct as getAcct } from '../../filters/user';
 import * as os from '@client/os';
@@ -45,7 +43,6 @@ export default defineComponent({
 			},
 			url: "",
 			resp_message: "",
-			faBtc, faOm,
 		};
 	},
 

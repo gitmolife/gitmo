@@ -1,7 +1,7 @@
 <template>
 	<div>
 		<MkFolder>
-			<template #header><Fa :icon="faBtc"/> CryptoWallet Overview</template>
+			<template #header><i class="fab fa-btc"></i> CryptoWallet Overview</template>
 
 			<div class="_content">
 				<div style="font-size: 1.15em;">
@@ -30,7 +30,6 @@
 
 <script lang="ts">
 import { computed, defineComponent } from 'vue';
-import { faBtc } from '@fortawesome/free-brands-svg-icons';
 import MkContainer from '@client/components/ui/container.vue';
 import MkFolder from '@client/components/ui/folder.vue';
 import Progress from '@client/scripts/loading';
@@ -47,7 +46,7 @@ export default defineComponent({
 
 	data() {
 		return {
-			faBtc,
+
 		};
 	},
 

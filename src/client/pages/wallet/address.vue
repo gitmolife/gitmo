@@ -11,8 +11,6 @@
 import { computed, defineComponent } from 'vue';
 import parseAcct from '@/misc/acct/parse';
 import Progress from '@client/scripts/loading';
-import { faOm } from '@fortawesome/free-solid-svg-icons';
-import { faBtc } from '@fortawesome/free-brands-svg-icons';
 import { query as urlQuery } from '../../../prelude/url';
 import { acct as getAcct } from '../../filters/user';
 import * as os from '@client/os';
@@ -36,7 +34,6 @@ export default defineComponent({
 			qrcode: "0x",
 			resp_message: "",
 			bbusy: false,
-			faBtc, faOm,
 		};
 	},
 

@@ -19,7 +19,7 @@
 			<span v-if="menuDef[item].indicated" class="indicator"><i class="fas fa-circle"></i></span>
 		</component>
 		<MkA v-if="item === 'drive'" class="item" active-class="active" to="/my/wallet">
-			<Fa :icon="faWallet" fixed-width/><span class="text">CryptoWallet</span>
+			<i class="fas fa-wallet fa-fw"></i><span class="text">CryptoWallet</span>
 		</MkA>
 	</template>
 	<div class="divider"></div>
@@ -43,7 +43,6 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import { faWallet } from '@fortawesome/free-solid-svg-icons';
 import { host } from '@client/config';
 import { search } from '@client/scripts/search';
 import * as os from '@client/os';
@@ -66,8 +65,7 @@ export default defineComponent({
 			connection: null,
 			menuDef: sidebarDef,
 			iconOnly: false,
-			settingsWindowed: false,
-			faGripVertical, faChevronLeft, faComments, faHashtag, faBroadcastTower, faFireAlt, faEllipsisH, faPencilAlt, faBars, faTimes, faBell, faSearch, faUserCog, faCog, faUser, faHome, faStar, faCircle, faAt, faEnvelope, faListUl, faPlus, faUserClock, faLaugh, faUsers, faTachometerAlt, faExchangeAlt, faGlobe, faChartBar, faCloud, faServer, faProjectDiagram, faWallet
+			settingsWindowed: false
 		};
 	},
 
