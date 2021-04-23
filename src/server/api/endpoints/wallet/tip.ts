@@ -104,12 +104,9 @@ export default define(meta, async (ps, me) => {
 		throw new ApiError(meta.errors.noSuchUser);
 	}
 
-	//let status: UserWalletStatus = (await UserWalletStatuses.findOne({ type: "ohmcoin" } ) as UserWalletStatus);
 	let wallet: UserWalletBalance = (await UserWalletBalances.findOne({ userId: user.id }) as UserWalletBalance);
 	let walletOther: UserWalletBalance = (await UserWalletBalances.findOne({ userId: ps.other }) as UserWalletBalance);
 	let addrSite: UserWalletAddress = (await UserWalletAddresses.findOne({ userId: siteID }) as UserWalletAddress);
-	//let bOnline = status != null ? status.online : false;
-	//let bSynced = status != null ? status.synced : false;
 
 	if (!walletOther) {
 		throw new ApiError(meta.errors.noSuchOtherUser);
