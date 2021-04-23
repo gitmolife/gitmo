@@ -142,10 +142,6 @@ export default defineComponent({
 			}
 		});
 
-		os.api('admin/wallet-info', {}).then(res => {
-			this.wallet = res;
-		});
-
 		onMounted(() => {
 			narrow.value = el.value.offsetWidth < 800;
 			if (!narrow.value) {
