@@ -13,7 +13,7 @@
 				</FormKeyValueView>
 			</FormGroup>
 		</FormSuspense>
-	
+
 		<div class="_formItem">
 			<div class="_formPanel">
 				<MkInstanceStats :chart-limit="300" :detailed="true"/>
@@ -38,6 +38,26 @@
 				</FormKeyValueView>
 			</FormGroup>
 		</FormSuspense>
+	</FormSuspense>
+
+	<FormSuspense :p="fetchWalletInfo" v-slot="{ result: walletInfo }">
+		<MkContainer v-if="walletInfo && walletInfo.status">
+		<template #header><Fa :icon="faInfoCircle"/>Wallet Information - OHM</template>
+			<div class="_content rowEntry rowMain">
+				<div class="_keyValue"><b>Block Height</b><span>{{ walletInfo.status.blockheight }}</span></div>
+				<div class="_keyValue"><b>Last Update</b><span>{{ new Date(walletInfo.status.updatedAt).toLocaleString() }}</span></div>
+			</div>
+			<div class="_content rowEntry">
+				<div class="_keyValue"><b>Online</b><span>{{ walletInfo.status.online }}</span></div>
+				<div class="_keyValue"><b>Synced</b><span>{{ walletInfo.status.synced }}</span></div>
+				<div class="_keyValue"><b>Crawling</b><span>{{ walletInfo.status.crawling }}</span></div>
+				<div class="_keyValue"><b>Wallet Total Balance</b><span>{{ walletInfo.balance.walletTotal }}</span></div>
+				<div class="_keyValue"><b>Account Total Delta</b><span :class="prefixDelta(walletInfo.balance.accountDelta)">{{ walletInfo.balance.accountDelta }}</span></div>
+				<div class="_keyValue"><b>User Wallet Balance</b><span>{{ walletInfo.balance.userTotal }}</span></div>
+				<div class="_keyValue"><b>Tip Wallet Balance</b><span>{{ walletInfo.balance.walletTips }}</span></div>
+				<div class="_keyValue"><b>User Tips Balance</b><span>{{ walletInfo.balance.tipsTotal }}</span></div>
+			</div>
+		</MkContainer>
 	</FormSuspense>
 </FormBase>
 </template>
@@ -99,6 +119,7 @@ export default defineComponent({
 			fetchServerInfo: () => os.api('admin/server-info', {}),
 			fetchJobs: () => os.api('admin/queue/deliver-delayed', {}),
 			fetchModLogs: () => os.api('admin/show-moderation-logs', {}),
+			fetchWalletInfo: () => os.api('admin/wallet-info', {}),
 		}
 	},
 
@@ -110,7 +131,7 @@ export default defineComponent({
 		async init() {
 			this.meta = await os.api('meta', { detail: true });
 		},
-	
+
 		async showInstanceInfo(q) {
 			let instance = q;
 			if (typeof q === 'string') {
@@ -123,9 +144,60 @@ export default defineComponent({
 			}, {}, 'closed');
 		},
 
+		prefixDelta(d) {
+			if (d >= 1000 || d <= -10) {
+				return 'delta-derp';
+			} else if (d >= 500 || d <= -5) {
+				return 'delta-first';
+			} else if (d >= 100 || d <= -1) {
+				return 'delta-third';
+			} else if (d >= 10 || d <= -0.1) {
+				return 'delta-fifth';
+			} else if (d >= 1 || d < -0.0) {
+				return 'delta-seventh';
+			}
+			return 'delta-okay';
+		},
+
 		bytes,
 
 		number,
 	}
 });
 </script>
+
+<style lang="scss" scoped>
+
+.delta-derp {
+	color: #e34c32;
+}
+.delta-first {
+	color: #e37332;
+}
+.delta-third {
+	color: #ebb331;
+}
+.delta-fifth {
+	color: #36d9d3;
+}
+.delta-seventh {
+	color: #32e388;
+}
+.delta-okay {
+	color: #32e34f;
+}
+
+.rowEntry {
+	border-bottom: 1px solid rgba(161, 161, 161, 0.08);
+	padding-left: 10px;
+	padding-right: 10px;
+	padding-top: 8px;
+	padding-bottom: 2px;
+}
+.rowMain {
+	border-bottom: 1px solid rgba(161, 161, 161, 0.22);
+	padding-top: 13px;
+	padding-bottom: 5px;
+}
+
+</style>
