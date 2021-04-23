@@ -6,7 +6,7 @@
 				<div class="contents">
 
 					<MkContainer :foldable="true" class="_gap">
-						<template #header><i class="fas fa-cart-arrow-down"></i> Network Transfer - <span class="monospace">OM <i class="fas fa-long-down-arrow-right"></i> OHM</span></template>
+						<template #header><i class="fas fa-cart-arrow-down"></i> Network Transfer - <span class="monospace">OM <i class="fas fa-long-arrow-alt-right"></i> OHM</span></template>
 
 						<div class="_content rowEntry rowMain">
 							<div class="_keyValue"><b>Current Tipping Balance</b><span class="monospace" style="font-size: 1.07em;">{{ bal_tip }} OM</span></div>
