@@ -67,11 +67,12 @@
 		</span>
 		<span v-if="notification.type === 'tipReceive'" class="text" style="opacity: 0.76;">
 			<Mfm :text="notification.body" :nowrap="!full"></Mfm>
-			<span v-if="notification.note" style="opacity: 0.92;">&nbsp;<MkA class="text" :to="notePage(notification.note)" :title="getNoteSummary(notification.note)">{{ notification.note.id }}</MkA></span>
+			<span v-if="notification.note" style="opacity: 0.92;">&nbsp;<MkA class="text" :to="notePage(notification.note)" :title="getNoteSummary(notification.note)">[Note]</MkA></span>
 		</span>
 		<span v-if="notification.type === 'tipSent'" class="text" style="opacity: 0.76;">
 			<Mfm :text="notification.body" :nowrap="!full"></Mfm>
-			<span v-if="notification.note" style="opacity: 0.92;">&nbsp;<MkA class="text" :to="notePage(notification.note)" :title="getNoteSummary(notification.note)">{{ notification.note.id }}</MkA></span>
+			<span v-if="notification.note">&nbsp;for&nbsp;</span>
+			<span v-if="notification.note" style="opacity: 0.88; font-weight: 700;"><MkA class="text" :to="notePage(notification.note)" :title="getNoteSummary(notification.note)">[Note]</MkA></span>
 		</span>
 	</div>
 </div>

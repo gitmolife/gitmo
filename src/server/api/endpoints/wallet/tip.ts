@@ -1,10 +1,11 @@
 import $ from 'cafy';
 import define from '../../define';
 import { ApiError } from '../../error';
-import { Users, UserWalletBalances, UserWalletStatuses, UserWalletAddresses } from '../../../../models';
+import { Users, Notes, UserWalletBalances, UserWalletStatuses, UserWalletAddresses } from '../../../../models';
 import { UserWalletBalance } from '../../../../models/entities/user-wallet-balance';
 import { UserWalletAddress } from '../../../../models/entities/user-wallet-address';
 import { UserWalletStatus } from '../../../../models/entities/user-wallet-status';
+import { Note } from '../../../../models/entities/note';
 import { createNotification } from '../../../../services/create-notification';
 import { siteID } from '../../../../services/intercom/intercom-functions';
 import { ID } from '@/misc/cafy-id';
@@ -87,6 +88,11 @@ export const meta = {
 			message: 'Amount must be valid number.',
 			code: 'INVALID_AMOUNT',
 			id: '88b36214-5918-4cec-be59-df48a42c53d1'
+		},
+		noSuchNote: {
+			message: 'This note no longer or does not exist.',
+			code: 'NO_SUCH_NOTE',
+			id: '88b36214-5918-4cec-be59-df48a42c53d6'
 		}
 	},
 };
@@ -107,6 +113,13 @@ export default define(meta, async (ps, me) => {
 
 	if (!walletOther) {
 		throw new ApiError(meta.errors.noSuchOtherUser);
+	}
+
+	if (ps.noteId) {
+		let note: Note = (await Notes.findOne({ id: ps.noteId }) as Note);
+		if (!note) {
+			throw new ApiError(meta.errors.noSuchNote);
+		}
 	}
 
 	let amount: number;
@@ -206,19 +219,19 @@ export default define(meta, async (ps, me) => {
 		// Notification to user receiving tip.
 		createNotification(uido, 'tipReceive', {
 			notifierId: _uid,
-			customBody: 'You Received Tip of ' + amount + " OHM for Note..",
-			customHeader: 'Tip Received',
+			customBody: 'Received Tip of ' + amount + " OHM",
+			customHeader: 'You Received a Tip',
 			customIcon: '/static-assets/client/coin/ohm100.png',
-			isRead: true,
+			//isRead: true,
 			noteId: note,
 		});
 		// Notification to user who created tip..
 		createNotification(uid, 'tipSent', {
 			notifierId: uido,
-			customBody: 'You Sent Tip of ' + amount + " OHM for Note..",
-			customHeader: 'Tip Sent',
+			customBody: 'Sent Tip of ' + amount + " OHM",
+			customHeader: 'You Sent a Tip',
 			customIcon: '/static-assets/client/coin/ohm100.png',
-			isRead: true,
+			//isRead: true,
 			noteId: note,
 		});
 		data = {
