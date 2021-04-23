@@ -18,7 +18,26 @@
 					<div class="_keyValue"><b>Redis</b><span>v{{ serverInfo.redis }}</span></div>
 				</div>
 			</MkContainer>
-			
+
+			<MkContainer :body-togglable="true" class="_gap" v-if="wallet && wallet.status">
+				<template #header><Fa :icon="faInfoCircle"/>Wallet Information - OHM</template>
+
+				<div class="_content">
+					<div class="_keyValue"><b>Block Height</b><span>{{ wallet.status.blockheight }}</span></div>
+					<div class="_keyValue"><b>Last Update</b><span>{{ new Date(wallet.status.updatedAt).toLocaleString() }}</span></div>
+				</div>
+				<div class="_content">
+					<div class="_keyValue"><b>Online</b><span>{{ wallet.status.online }}</span></div>
+					<div class="_keyValue"><b>Synced</b><span>{{ wallet.status.synced }}</span></div>
+					<div class="_keyValue"><b>Crawling</b><span>{{ wallet.status.crawling }}</span></div>
+					<div class="_keyValue"><b>Wallet Total Balance</b><span>{{ wallet.balance.walletTotal }}</span></div>
+					<div class="_keyValue"><b>Account Total Delta</b><span :class="prefixDelta(wallet.balance.accountDelta)">{{ wallet.balance.accountDelta }}</span></div>
+					<div class="_keyValue"><b>User Wallet Balance</b><span>{{ wallet.balance.userTotal }}</span></div>
+					<div class="_keyValue"><b>Tip Wallet Balance</b><span>{{ wallet.balance.walletTips }}</span></div>
+					<div class="_keyValue"><b>User Tips Balance</b><span>{{ wallet.balance.tipsTotal }}</span></div>
+				</div>
+			</MkContainer>
+
 			<MkContainer :body-togglable="true" :scrollable="true" class="_gap" style="height: 300px;">
 				<template #header><Fa :icon="faDatabase"/>{{ $ts.database }}</template>
 
@@ -115,6 +134,7 @@ export default defineComponent({
 			url,
 			stats: null,
 			serverInfo: null,
+			wallet: null,
 			modLogs: [],
 			dbInfo: null,
 			faPlay, faPause, faDatabase, faServer, faExchangeAlt, faMicrochip, faHdd, faStream, faTrashAlt, faInfoCircle, faExclamationTriangle, faTachometerAlt, faHeartbeat, faClipboardList,
@@ -137,6 +157,10 @@ export default defineComponent({
 
 		os.api('admin/get-table-stats', {}).then(res => {
 			this.dbInfo = Object.entries(res).sort((a, b) => b[1].size - a[1].size);
+		});
+
+		os.api('admin/wallet-info', {}).then(res => {
+			this.wallet = res;
 		});
 	},
 
@@ -165,9 +189,47 @@ export default defineComponent({
 			});
 		},
 
+		prefixDelta(d) {
+			if (d >= 1000 || d <= -10) {
+				return 'delta-derp';
+			} else if (d >= 500 || d <= -5) {
+				return 'delta-first';
+			} else if (d >= 100 || d <= -1) {
+				return 'delta-third';
+			} else if (d >= 10 || d <= -0.1) {
+				return 'delta-fifth';
+			} else if (d >= 1 || d < -0.0) {
+				return 'delta-seventh';
+			}
+			return 'delta-okay';
+		},
+
 		bytes,
 
 		number,
 	}
 });
 </script>
+
+<style lang="scss" scoped>
+
+.delta-derp {
+	color: #e34c32;
+}
+.delta-first {
+	color: #e37332;
+}
+.delta-third {
+	color: #ebb331;
+}
+.delta-fifth {
+	color: #36d9d3;
+}
+.delta-seventh {
+	color: #32e388;
+}
+.delta-okay {
+	color: #32e34f;
+}
+
+</style>
