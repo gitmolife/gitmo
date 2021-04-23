@@ -6,6 +6,7 @@ import { UserWalletBalance } from '../../../../models/entities/user-wallet-balan
 import { UserWalletAddress } from '../../../../models/entities/user-wallet-address';
 import { UserWalletStatus } from '../../../../models/entities/user-wallet-status';
 import { createNotification } from '../../../../services/create-notification';
+import { siteID } from '../../../../services/intercom/intercom-functions';
 import { ID } from '@/misc/cafy-id';
 import { getConnection } from 'typeorm';
 
@@ -98,9 +99,9 @@ export default define(meta, async (ps, me) => {
 	}
 
 	//let status: UserWalletStatus = (await UserWalletStatuses.findOne({ type: "ohmcoin" } ) as UserWalletStatus);
-	let wallet: UserWalletBalance = (await UserWalletBalances.findOne({ userId: user.id} ) as UserWalletBalance);
-	let walletOther: UserWalletBalance = (await UserWalletBalances.findOne({ userId: ps.other} ) as UserWalletBalance);
-	let addrSite: UserWalletAddress = (await UserWalletAddresses.findOne({ userId: 'system-pool_root'} ) as UserWalletAddress);
+	let wallet: UserWalletBalance = (await UserWalletBalances.findOne({ userId: user.id }) as UserWalletBalance);
+	let walletOther: UserWalletBalance = (await UserWalletBalances.findOne({ userId: ps.other }) as UserWalletBalance);
+	let addrSite: UserWalletAddress = (await UserWalletAddresses.findOne({ userId: siteID }) as UserWalletAddress);
 	//let bOnline = status != null ? status.online : false;
 	//let bSynced = status != null ? status.synced : false;
 

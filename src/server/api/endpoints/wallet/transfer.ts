@@ -5,6 +5,7 @@ import { Users, UserWalletAddresses, UserWalletBalances, UserWalletStatuses } fr
 import { UserWalletAddress } from '../../../../models/entities/user-wallet-address';
 import { UserWalletBalance } from '../../../../models/entities/user-wallet-balance';
 import { UserWalletStatus } from '../../../../models/entities/user-wallet-status';
+import { siteID } from '../../../../services/intercom/intercom-functions';
 import { ID } from '@/misc/cafy-id';
 import { getConnection } from 'typeorm';
 
@@ -47,10 +48,10 @@ export default define(meta, async (ps, me) => {
 		throw new ApiError(meta.errors.noSuchUser);
 	}
 
-	let status: UserWalletStatus = (await UserWalletStatuses.findOne({ type: "ohmcoin" } ) as UserWalletStatus);
-	let wallet: UserWalletBalance = (await UserWalletBalances.findOne({ userId: user.id} ) as UserWalletBalance);
-	let addrUser: UserWalletAddress = (await UserWalletAddresses.findOne({ userId: user.id} ) as UserWalletAddress);
-	let addrSite: UserWalletAddress = (await UserWalletAddresses.findOne({ userId: 'system-pool_root'} ) as UserWalletAddress);
+	let status: UserWalletStatus = (await UserWalletStatuses.findOne({ type: "ohmcoin" }) as UserWalletStatus);
+	let wallet: UserWalletBalance = (await UserWalletBalances.findOne({ userId: user.id }) as UserWalletBalance);
+	let addrUser: UserWalletAddress = (await UserWalletAddresses.findOne({ userId: user.id }) as UserWalletAddress);
+	let addrSite: UserWalletAddress = (await UserWalletAddresses.findOne({ userId: siteID }) as UserWalletAddress);
 	let bOnline = status != null ? status.online : false;
 	let bSynced = status != null ? status.synced : false;
 

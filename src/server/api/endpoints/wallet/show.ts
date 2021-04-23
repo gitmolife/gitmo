@@ -168,7 +168,7 @@ export default define(meta, async (ps, me) => {
 	if (wallet) {
 		accountHistory.sort(function(a, b) {
 			var keyA = new Date(a[3] + ' ' + a[7]);
-			var keyB = new Date(b[3] + ' ' + a[7]);
+			var keyB = new Date(b[3] + ' ' + b[7]);
 			if (keyA < keyB) return -1;
 			if (keyA > keyB) return 1;
 			return 0;

@@ -27,7 +27,7 @@ import MessageIPC from './message-ipc-cmd';
 import IntercomBroker from './intercom-broker';
 
 // Root Account Label for Site Internal Wallet.
-const siteID: string = 'system-pool_root';
+export const siteID: string = 'system-pool_root';
 
 // Init Broker Check
 export async function initBroker(brokerLogger: Logger, intercomBroker?: IntercomBroker): Promise<void> {
@@ -279,7 +279,7 @@ export async function transfer(brokerLogger: Logger, intercomBroker: IntercomBro
 				.createQueryBuilder()
 				.select("user_wallet_address")
 				.from('user_wallet_address')
-				.where({ userId: 'system-pool_root' })
+				.where({ userId: siteID })
 				.getOne();
 			// Get current Balance..
 			const userBalance = await getConnection()
@@ -356,7 +356,7 @@ export async function transfer(brokerLogger: Logger, intercomBroker: IntercomBro
 				.set({
 					balance: nbal_site,
 				})
-				.where({ userId: 'system-pool_root' })
+				.where({ userId: siteID })
 				.execute();
 				// Update user network balance
 				/*getConnection()
@@ -436,7 +436,7 @@ export async function transfer(brokerLogger: Logger, intercomBroker: IntercomBro
 				.set({
 					balance: nbal_site,
 				})
-				.where({ userId: 'system-pool_root' })
+				.where({ userId: siteID })
 				.execute();
 			}
 			// Update user site balance
