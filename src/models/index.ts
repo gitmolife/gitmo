@@ -63,6 +63,7 @@ import { UserWalletBalance } from './entities/user-wallet-balance';
 import { UserWalletJob } from './entities/user-wallet-job';
 import { UserWalletTx } from './entities/user-wallet-tx';
 import { UserWalletStatus } from './entities/user-wallet-status';
+import { UserWalletTip } from './entities/user-wallet-tips';
 
 export const Announcements = getRepository(Announcement);
 export const AnnouncementReads = getRepository(AnnouncementRead);
@@ -128,3 +129,4 @@ export const UserWalletBalances = getRepository(UserWalletBalance);
 export const UserWalletJobs = getRepository(UserWalletJob);
 export const UserWalletTxs = getRepository(UserWalletTx);
 export const UserWalletStatuses = getRepository(UserWalletStatus);
+export const UserWalletTips = getRepository(UserWalletTip);
