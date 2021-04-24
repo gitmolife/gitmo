@@ -86,8 +86,14 @@
 				<button class="button _button" @click="menu()" ref="menuButton">
 					<i class="fas fa-ellipsis-h"></i>
 				</button>
-				<button v-if="showTipper" class="button _button" @click="tip()">
-					<i class="fas fa-comment-dollar"></i>
+				<button v-if="showTipper && !isMyNote" class="button _button" @click="tip()">
+					<i v-if="haveTipped" class="fas fa-comments-dollar" style="color: orange;"></i>
+					<i v-else class="fas fa-comment-dollar"></i>
+					<span v-if="totalTipped > 0" class="monospace totalTipped"><span style="color: #2dcf50;">+</span>{{ totalTipped }}</span>
+				</button>
+				<button v-else-if="showTipper && totalTipped > 0" class="button _button" @click="tipInfo()">
+					<i class="fas fa-search-dollar"></i>
+					<span v-if="totalTipped > 0" class="monospace totalTipped"><span style="color: #2dcf50;">+</span>{{ totalTipped }}</span>
 				</button>
 			</footer>
 		</div>
@@ -167,6 +173,7 @@ export default defineComponent({
 			collapsed: false,
 			isDeleted: false,
 			muted: false,
+			tips: [],
 		};
 	},
 
@@ -244,11 +251,25 @@ export default defineComponent({
 		},
 
 		showTipper() {
-			if (!this.isRenote && this.isMyNote) return false;
 			if (this.appearNote.user.instance && this.appearNote.user.instance === this.$instance.name) return true;
 			if (this.$store.state.instanceTicker === 'remote' && this.appearNote.user.instance) return false;
 			if (this.appearNote.user.instance) return false;
 			return true;
+		},
+
+		haveTipped() {
+			for (var tip of this.tips) {
+				if (tip.userIdFrom === this.$i.id) return true;
+			}
+			return false;
+		},
+
+		totalTipped() {
+			let total: number = 0;
+			for (var tip of this.tips) {
+				total += Number(tip.amount);
+			}
+			return total.toFixed(2);
 		}
 	},
 
@@ -262,6 +283,10 @@ export default defineComponent({
 			(this.appearNote.text.length > 500)
 		);
 		this.muted = await checkWordMute(this.appearNote, this.$i, this.$store.state.mutedWords);
+
+		this.tips = await os.api('wallet/tips', { noteId: this.appearNote.id }).catch((e: Error) => {
+			console.error(e);
+		});
 
 		// plugin
 		if (noteViewInterruptors.length > 0) {
@@ -422,6 +447,11 @@ export default defineComponent({
 
 				case 'deleted': {
 					this.isDeleted = true;
+					break;
+				}
+
+				case 'tipped': {
+					this.updateTipped(body.tip);
 					break;
 				}
 			}
@@ -854,6 +884,18 @@ export default defineComponent({
 			focusNext(this.$el);
 		},
 
+		async updateTipped(tip) {
+			this.tips.push(tip);
+		},
+
+		async tipInfo() {
+			os.dialog({
+				type: 'info',
+				title: 'You have Received Tips!',
+				text: 'Total of ' + this.totalTipped + ' OHM received for this comment.',
+			});
+		},
+
 		async tip() {
 			let oId = this.note.userId;
 			let oUsr = this.note.user;
@@ -1279,5 +1321,15 @@ export default defineComponent({
 	padding: 8px;
 	text-align: center;
 	opacity: 0.7;
+}
+
+.totalTipped {
+	padding-left: 7px;
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.monospace {
+	font-family: Lucida Console, Courier, monospace;
 }
 </style>

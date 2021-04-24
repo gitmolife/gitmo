@@ -4,8 +4,10 @@ import { ApiError } from '../../error';
 import { Users, Notes, UserWalletBalances, UserWalletAddresses } from '../../../../models';
 import { UserWalletBalance } from '../../../../models/entities/user-wallet-balance';
 import { UserWalletAddress } from '../../../../models/entities/user-wallet-address';
+import { UserWalletTip } from '@/models/entities/user-wallet-tips';
 import { Note } from '../../../../models/entities/note';
 import { createNotification } from '../../../../services/create-notification';
+import { publishNoteStream } from '../../../../services/stream';
 import { siteID } from '../../../../services/intercom/intercom-functions';
 import { ID } from '@/misc/cafy-id';
 import { getConnection } from 'typeorm';
@@ -214,7 +216,7 @@ export default define(meta, async (ps, me) => {
 		logTip(uid, uido, amount, 'from', note);
 		logTip(uid, uido, amount, 'to', note);
 		// Add Entry to Tip Log..
-		await getConnection()
+		let insert = await getConnection()
 			.createQueryBuilder()
 			.insert()
 			.into('user_wallet_tip')
@@ -251,6 +253,16 @@ export default define(meta, async (ps, me) => {
 			//isRead: true,
 			noteId: note,
 		});
+		if (note && insert) {
+			// Publish note update..
+			let updateNote: UserWalletTip = insert.raw[0];
+			if (updateNote.anon) {
+				updateNote.userIdFrom = '';
+			}
+			publishNoteStream(note, 'tipped', {
+				tip: updateNote
+			});
+		}
 		data = {
 			message: 'Processed',
 			ourUser: nBalance,
