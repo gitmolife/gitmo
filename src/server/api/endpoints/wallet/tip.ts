@@ -119,6 +119,7 @@ export default define(meta, async (ps, me) => {
 	}
 
 	let amount: number;
+	let message: string | null = null; // TODO: tip messages..
 
 	let error: string | null = null;
 	let data: {
@@ -148,7 +149,7 @@ export default define(meta, async (ps, me) => {
 			return;
 		}
 		let alog: string = usrB + ':' + note;
-		// Add Entry to Log..
+		// Add Entry to Transaction Log??
 		await getConnection()
 			.createQueryBuilder()
 			.insert()
@@ -212,6 +213,21 @@ export default define(meta, async (ps, me) => {
 		// Add Log Entries
 		logTip(uid, uido, amount, 'from', note);
 		logTip(uid, uido, amount, 'to', note);
+		// Add Entry to Tip Log..
+		await getConnection()
+			.createQueryBuilder()
+			.insert()
+			.into('user_wallet_tip')
+			.values({
+				userIdFrom: uid,
+				userIdTo: uido,
+				anon: ps.anon,
+				type: 50,
+				coinType: 0,
+				amount: amount,
+				message: message,
+			})
+			.execute();
 		let _uid: string | null = null;
 		if (!ps.anon) {
 			_uid = uid;
