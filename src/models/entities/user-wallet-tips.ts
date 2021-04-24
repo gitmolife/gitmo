@@ -47,9 +47,9 @@ export class UserWalletTip {
 
 	@Column('decimal', {
 		default: 0,
-		comment: 'The balance of this address.'
+		comment: 'The amount of the Tip.'
 	})
-	public balance: number;
+	public amount: number;
 
 	@Column('varchar', {
 		length: 256,
