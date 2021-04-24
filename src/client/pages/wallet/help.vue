@@ -1,24 +1,45 @@
 <template>
 	<div>
 		<MkFolder>
-			<template #header><i class="fab fa-btc"></i> CryptoWallet Overview</template>
+			<template #header><i class="fab fa-btc"></i> CryptoWallet Help</template>
 
 			<div class="_content">
-				<div style="font-size: 1.15em;">
-					OHM Wallet Help
-				</div>
 				<div class="_panel">
-					<ul>
-						<li>Wallet</li>
-						<li>Tipping</li>
-						<li>Deposit</li>
-						<li>Withdraw</li>
-						<li>Soon...</li>
-					</ul>
-					<div class="help-info">
-						<dl class="diff">
-							<dt>OHMCoin</dt>
-							<dd><a href="https://ohmcoin.org/"></a></dd>
+					<div class="help-info rowEntry">
+						<dl class="">
+							<dt>About Ohmcoin</dt>
+							<dd><a href="https://ohmcoin.org/">Homepage</a></dd>
+						</dl>
+						<dl class="">
+							<dt>Trade Ohmcoin</dt>
+							<dd><a href="https://www.coingecko.com/en/coins/ohm-coin">Coin Listing</a></dd>
+						</dl>
+						<dl class="">
+							<dt>Site Features</dt>
+							<dd>
+								Instance Abilities:
+								<ul>
+									<li>Wallet</li>
+									<li>Tipping</li>
+								</ul>
+							</dd>
+						</dl>
+						<div style="margin-top: 16px; padding-top: 4px; border-top: 1px solid rgba(161, 161, 161, 0.52); font-size: 18px; font-weight: 700; text-align: center;">Wallet Usage</div>
+						<dl class="divbar">
+							<dt>Deposit Ohmcoin</dt>
+							<dd>Send OHM from an external wallet to the site, using your <a href="/my/wallet/address/"><b>Network Deposit</b> address</a> on the site.<br/>This is located on your <a href="/my/wallet/">wallet dashboard</a> page.</dd>
+						</dl>
+						<dl class="divbar">
+							<dt>Withdraw Ohmcoin</dt>
+							<dd>Send OHM from your wallet on the site to an external wallet off the site using the <a href="/my/wallet/withdraw/"><b>Withdraw Offsite</b></a> function on the site.<br/>This is also located on your <a href="/my/wallet/">wallet dashboard</a> page.</dd>
+						</dl>
+						<dl class="divbar">
+							<dt>Transfer Ohmcoin - Tipping</dt>
+							<dd>Transfer OHM to your tipping wallet account using the <a href="/my/wallet/withdraw/"><b>Interal Transfer</b></a> function on the site.<br/>This is also located on your <a href="/my/wallet/">wallet dashboard</a> page.</dd>
+						</dl>
+						<dl class="divbar">
+							<dt>Tip Ohmcoin</dt>
+							<dd>Tip OHM to another user via the tip feature on a note.</dd>
 						</dl>
 					</div>
 				</div>
@@ -38,6 +59,7 @@ import * as os from '@client/os';
 
 export default defineComponent({
 	components: {
+		MkContainer, MkFolder,
 	},
 
 	props: {
@@ -71,28 +93,55 @@ export default defineComponent({
 	font-family: Lucida Console, Courier, monospace;
 }
 
+.rowEntry {
+	/*border-bottom: 1px solid rgba(161, 161, 161, 0.08);*/
+	padding-left: 10px;
+	padding-right: 10px;
+	padding-top: 8px;
+	padding-bottom: 2px;
+}
+.rowMain {
+	border-bottom: 1px solid rgba(161, 161, 161, 0.22);
+	padding-top: 13px;
+	padding-bottom: 5px;
+}
+
 .help-info {
+	margin-bottom: 10px;
+	overflow: hidden;
+
+	> .divbar {
+		border-top: 1px solid rgba(161, 161, 161, 0.20);
+		padding-top: 3px;
+	}
+
 	> dl {
 		display: flex;
 		margin: 0;
-		line-height: 1.5em;
+		line-height: 1.15em;
+		margin-top: 4px;
+		margin-bottom: 8px;
 
-		> dt,
+		> dt {
+				width: 30%;
+				margin: 0;
+		}
+
 		> dd {
-			width: 50%;
+			width: 70%;
 			margin: 0;
 		}
 
 		> dd {
-			text-overflow: ellipsis;
-			overflow: hidden;
-			white-space: nowrap;
-		}
+			font-size: 0.87em;
 
-		&.total {
-			> dt,
-			> dd {
-				font-weight: bold;
+			> a {
+				font-style: italic;
+				opacity: 0.80;
+			}
+
+			> ul {
+				margin: 0;
 			}
 		}
 	}
