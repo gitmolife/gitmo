@@ -75,7 +75,7 @@ process.on('message', async (msg) => {
 		// Broker Init Check..
 		await initBroker(brokerLogger, intercomBroker);
 		brokerLogger.succ('Systems Initialized.  Site Ready!');	/* SITE READY */
-	} else if (isJson(msg)) {
+	} else if (isJson(msg) && intercomBroker) {
 		const res: MessageIPC = <MessageIPC> msg;  // Message parse from ipc..
 		if (res.prc === 'relay' && res.cmd === 'getNewAddress') {
 			// New Address
