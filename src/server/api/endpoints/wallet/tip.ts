@@ -221,6 +221,7 @@ export default define(meta, async (ps, me) => {
 			.values({
 				userIdFrom: uid,
 				userIdTo: uido,
+				noteId: note,
 				anon: ps.anon,
 				type: 50,
 				coinType: 0,

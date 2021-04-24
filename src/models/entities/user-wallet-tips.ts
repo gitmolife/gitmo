@@ -20,6 +20,13 @@ export class UserWalletTip {
 	})
 	public userIdTo: string;
 
+	@Index()
+	@Column('varchar', {
+		length: 16,
+		comment: 'The Post Id.'
+	})
+	public noteId: string;
+
 	@Column('boolean', {
 		default: true,
 		comment: 'Whether this tip is anon.'

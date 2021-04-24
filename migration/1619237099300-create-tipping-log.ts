@@ -32,8 +32,9 @@ export class registry1619237099300 implements MigrationInterface {
 		await queryRunner.query(`CREATE TABLE user_wallet_tip
 			(
 				"id" SERIAL PRIMARY KEY,
-				"userIdFrom" VARCHAR(32) NOT NULL,
-				"userIdTo" VARCHAR(32) NOT NULL,
+				"userIdFrom" VARCHAR(16) NOT NULL,
+				"userIdTo" VARCHAR(16) NOT NULL,
+				"noteId" VARCHAR(16) NOT NULL,
 				"anon" BOOLEAN NOT NULL DEFAULT FALSE,
 				"type" INTEGER NOT NULL DEFAULT 0,
 				"coinType" INTEGER NOT NULL DEFAULT 0,
