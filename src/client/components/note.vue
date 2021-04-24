@@ -907,7 +907,7 @@ export default defineComponent({
 				await os.dialog({
 					type: 'question',
 					title: "Tip as Anon?",
-					text: 'Do you with to remain anonymous for this Tip?'
+					text: 'Do you wish to remain anonymous for this Tip?'
 					select: {
 						items: [{
 							value: true, text: 'Yes'
