@@ -25,6 +25,9 @@ import { getConnection } from 'typeorm';
 import Logger from '../logger';
 import MessageIPC from './message-ipc-cmd';
 import IntercomBroker from './intercom-broker';
+import TransactionRequest from './transaction-request';
+import { UserWalletAddress } from '../../models/entities/user-wallet-address';
+import { UserWalletBalance } from '../../models/entities/user-wallet-balance';
 
 // Root Account Label for Site Internal Wallet.
 export const siteID: string = 'system-pool_root';
@@ -37,14 +40,14 @@ export async function initBroker(brokerLogger: Logger, intercomBroker?: Intercom
 	const addressCount = await getConnection()
 		.createQueryBuilder()
 		.select("user_wallet_address")
-		.from('user_wallet_address')
+		.from(UserWalletAddress, 'user_wallet_address')
 		.where({ active: true })
 		.getCount();
 	brokerLogger.info('>> Site contains: ' + addressCount + ' active address accounts.');
 	const siteAddress = await getConnection()
 		.createQueryBuilder()
 		.select("user_wallet_address")
-		.from('user_wallet_address')
+		.from(UserWalletAddress, 'user_wallet_address')
 		.where({ userId: siteID })
 		.getOne();
 	if (siteAddress) {
@@ -123,17 +126,20 @@ export async function withdraw(brokerLogger: Logger, intercomBroker: IntercomBro
 	brokerLogger.debug('withdraw() ' + cmd.dat.address);
 	let jobId = Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 5);
 	let uid: string = cmd.dat.userId;
-	let outAddress: string = cmd.dat.address;
-	let amount = parseFloat(cmd.dat.amount);
+	let outAddress: string = cmd.dat.address!;
+	let amount = Number(cmd.dat.amount);
 	const xfee = '0.00001100';
-	let amountFee = parseFloat(xfee) + amount;
+	let amountFee = Number(xfee) + amount;
 	// Get current Balance..
 	const userAddress = await getConnection()
 		.createQueryBuilder()
 		.select("user_wallet_address")
-		.from('user_wallet_address')
+		.from(UserWalletAddress, 'user_wallet_address')
 		.where({ userId: uid })
 		.getOne();
+	if (!userAddress) {
+		return;
+	}
 	let cb = async (error: Error | null, data: any) => {
 		if (error) {
 			//brokerLogger.error(error);
@@ -154,8 +160,8 @@ export async function withdraw(brokerLogger: Logger, intercomBroker: IntercomBro
 		} else {
 			let json = JSON.parse(data);
 			brokerLogger.debug('withdraw().callback() ' + json.txid);
-			let rfee: number = (parseFloat(json.fee) * 0.000000001);
-			let ibal: number = parseFloat(userAddress.balance);
+			let rfee: number = (Number(json.fee) * 0.000000001);
+			let ibal: number = Number(userAddress.balance);
 			let nbal: number = ibal - (amount + rfee);
 			// Update Balance..
 			await getConnection()
@@ -234,18 +240,21 @@ export async function transfer(brokerLogger: Logger, intercomBroker: IntercomBro
 	}
 	brokerLogger.debug('doTransfer() ' + cmd.dat.address);
 	let jobId = Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 5);
-	let type: string = cmd.dat.type;
+	let type: string = cmd.dat.type!;
 	let uid: string = cmd.dat.userId;
-	let outAddress: string = cmd.dat.address;
-	let amount = parseFloat(cmd.dat.amount);
+	let outAddress: string = cmd.dat.address!;
+	let amount = Number(cmd.dat.amount);
 	const xfee = '0.00071750';
-	let amountFee = amount + parseFloat(xfee);
+	let amountFee = amount + Number(xfee);
 	const siteAddress = await getConnection()
 		.createQueryBuilder()
 		.select("user_wallet_address")
-		.from('user_wallet_address')
+		.from(UserWalletAddress, 'user_wallet_address')
 		.where({ userId: siteID })
 		.getOne();
+	if (!siteAddress) {
+		return;
+	}
 	let cb = async (error: Error | null, data: any) => {
 		if (error) {
 			//brokerLogger.error(error);
@@ -266,32 +275,28 @@ export async function transfer(brokerLogger: Logger, intercomBroker: IntercomBro
 		} else {
 			let json = JSON.parse(data);
 			brokerLogger.debug('doneTransfer() ' + json.txid);
-			let rfee: number = (parseFloat(json.fee) * 0.000000001);
+			let rfee: number = (Number(json.fee) * 0.000000001);
 			// Get current Balance..
 			const userAddress = await getConnection()
 				.createQueryBuilder()
 				.select("user_wallet_address")
-				.from('user_wallet_address')
+				.from(UserWalletAddress, 'user_wallet_address')
 				.where({ userId: uid })
-				.getOne();
-			// Get site current Balance..
-			const siteAddress = await getConnection()
-				.createQueryBuilder()
-				.select("user_wallet_address")
-				.from('user_wallet_address')
-				.where({ userId: siteID })
 				.getOne();
 			// Get current Balance..
 			const userBalance = await getConnection()
 				.createQueryBuilder()
 				.select("user_wallet_balance")
-				.from('user_wallet_balance')
+				.from(UserWalletBalance, 'user_wallet_balance')
 				.where({ userId: uid })
 				.getOne();
+			if (!userAddress || !userBalance) {
+				return;
+			}
 			// Setup Balances..
-			let ubal: number = parseFloat(userBalance.balance);
-			let abal: number = parseFloat(userAddress.balance);
-			let sbal: number = parseFloat(siteAddress.balance);
+			let ubal: number = Number(userBalance.balance);
+			let abal: number = Number(userAddress.balance);
+			let sbal: number = Number(siteAddress.balance);
 			let nbal_user: number = 0;
 			let nbal_addr: number = 0;
 			let nbal_site: number = 0;
@@ -474,7 +479,7 @@ export async function transfer(brokerLogger: Logger, intercomBroker: IntercomBro
 		// convert om to ohm
 		let inAddress: string = siteAddress.address;
 		let changeAddress: string = siteAddress.address;
-		let amountSend: string = (parseFloat(amount) * 100000000).toFixed(0);
+		let amountSend: string = (Number(amount) * 100000000).toFixed(0);
 		let trq: TransactionRequest = {
 			senders: [inAddress],
 			recipients: [
@@ -488,7 +493,7 @@ export async function transfer(brokerLogger: Logger, intercomBroker: IntercomBro
 		// convert ohm to om
 		let inAddress: string = siteAddress.address;
 		let changeAddress: string = outAddress;
-		let amountSend: string = (parseFloat(amount) * 100000000).toFixed(0);
+		let amountSend: string = (Number(amount) * 100000000).toFixed(0);
 		let trq: TransactionRequest = {
 			senders: [outAddress],
 			recipients: [
