@@ -1,4 +1,3 @@
-import $ from 'cafy';
 import define from '../../define';
 import { ApiError } from '../../error';
 import { Users, UserWalletAddresses, UserWalletBalances, UserWalletStatuses, UserWalletTxs } from '../../../../models';
@@ -6,7 +5,6 @@ import { UserWalletAddress } from '../../../../models/entities/user-wallet-addre
 import { UserWalletBalance } from '../../../../models/entities/user-wallet-balance';
 import { UserWalletStatus } from '../../../../models/entities/user-wallet-status';
 import { UserWalletTx } from '../../../../models/entities/user-wallet-tx';
-import { ID } from '@/misc/cafy-id';
 import { getConnection } from 'typeorm';
 
 export const meta = {
@@ -15,13 +13,7 @@ export const meta = {
 	requireCredential: true as const,
 
 	params: {
-		username: {
-			validator: $.optional.nullable.str
-		},
 
-		host: {
-			validator: $.optional.nullable.str
-		},
 	},
 
 	res: {
@@ -40,14 +32,12 @@ export const meta = {
 };
 
 export default define(meta, async (ps, me) => {
-	const user = await Users.findOne(me != null ? me.id : null);
+	const user = await Users.findOne(me.id);
 
 	if (user == null) {
 		throw new ApiError(meta.errors.noSuchUser);
 	}
 
-	ps.userId = user.id;
-	ps.username = user.username!.toLowerCase();
 	let ct = 0;
 
 	// TODO: move to config
@@ -55,10 +45,10 @@ export default define(meta, async (ps, me) => {
 	const confirmsRequired: number = 7;
 
 	let status: UserWalletStatus = (await UserWalletStatuses.findOne({ type: "ohmcoin" } ) as UserWalletStatus);
-	let wallet = (await UserWalletAddresses.findOne({ userId: user.id, coinType: ct } ) as UserWalletAddress);
-	let balance = (await UserWalletBalances.findOne({ userId: user.id, coinType: ct} ) as UserWalletBalance);
-	let bOnline = status != null ? status.online : false;
-	let bSynced = status != null ? status.synced : false;
+	let wallet: UserWalletAddress = (await UserWalletAddresses.findOne({ userId: user.id, coinType: ct } ) as UserWalletAddress);
+	let balance: UserWalletBalance = (await UserWalletBalances.findOne({ userId: user.id, coinType: ct} ) as UserWalletBalance);
+	let bOnline: boolean = status != null ? status.online : false;
+	let bSynced: boolean = status != null ? status.synced : false;
 
 	var cb: (error: Error | null) => void = (error: Error | null) => {
 		if (error) {
@@ -82,13 +72,13 @@ export default define(meta, async (ps, me) => {
 			// TODO: don't delete? mark as invalid..
 			await getConnection()
 				.createQueryBuilder()
-				.delete("user_wallet_address")
+				.delete()
 				.from('user_wallet_address')
 				.where({ userId: user.id })
 				.execute();
 			await getConnection()
 				.createQueryBuilder()
-				.delete("user_wallet_balance")
+				.delete()
 				.from('user_wallet_balance')
 				.where({ userId: user.id })
 				.execute();
@@ -102,13 +92,13 @@ export default define(meta, async (ps, me) => {
 		//console.log("Wallet Exists.");
 	}
 
-	let history = await getConnection()
+	let history: UserWalletTx[] = await getConnection()
 						.createQueryBuilder()
-						.select("user_wallet_tx")
-						.from('user_wallet_tx')
+						.select('user_wallet_tx')
+						.from(UserWalletTx, 'user_wallet_tx')
 						.where({ userId: user.id })
 						.limit(500)
-						.getMany();
+						.getMany() as UserWalletTx[];
 
 	var accountHistory: any[] = [];
 	var pending: number = 0;
@@ -119,7 +109,7 @@ export default define(meta, async (ps, me) => {
 		var dt = new Date(h.createdAt).toLocaleString().split(',');
 		var date = dt[0];
 		var time = dt[1];
-		var amt = h.amount;
+		var amt: string = '' + h.amount;
 		var conf: number = h.confirms;
 		if (conf > 999) {
 			conf = 999;
@@ -128,7 +118,7 @@ export default define(meta, async (ps, me) => {
 			a = "IN";
 			t = "DEPOSIT";
 			if (!h.complete) {
-				pending = pending + parseFloat(h.amount);
+				pending = pending + h.amount;
 			}
 		} else if (h.txtype === 2 || h.txtype === 4) {
 			t = "WITHDRAW";
@@ -137,7 +127,7 @@ export default define(meta, async (ps, me) => {
 			t = "LOCAL-Tx";
 			a = "IN+";
 			if (!h.complete) {
-				pending = pending + parseFloat(h.amount);
+				pending = pending + h.amount;
 			}
 		} else if (h.txtype === 11) {
 			t = "Tx->TIPS";
@@ -178,8 +168,8 @@ export default define(meta, async (ps, me) => {
 			account: wallet.address,
 			confRequire: confirmsRequired,
 			balance: {
-				total: (parseFloat(wallet.balance) + parseFloat(balance.balance)).toFixed(8),
-				pending: (pending).toFixed(8),
+				total: (Number(wallet.balance) + Number(balance.balance)).toFixed(8),
+				pending: Number(pending).toFixed(8),
 				network: wallet.balance,
 				tipping: balance.balance,
 			},

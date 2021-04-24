@@ -44,9 +44,9 @@ export const meta = {
 };
 
 export default define(meta, async (ps, me) => {
-	const user = await Users.findOne(ps.userId != null
+	const user = me != null ? await Users.findOne(ps.userId != null
 		? { id: ps.userId }
-		: { id: me.id });
+		: { id: me.id }) : null;
 
 	if (user == null) {
 		throw new ApiError(meta.errors.noSuchUser);

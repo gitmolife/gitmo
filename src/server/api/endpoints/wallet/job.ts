@@ -3,7 +3,6 @@ import define from '../../define';
 import { ApiError } from '../../error';
 import { Users, UserWalletJobs } from '../../../../models';
 import { UserWalletJob } from '../../../../models/entities/user-wallet-job';
-import { ID } from '@/misc/cafy-id';
 import { getConnection } from 'typeorm';
 
 export const meta = {
@@ -36,7 +35,7 @@ export const meta = {
 };
 
 export default define(meta, async (ps, me) => {
-	const user = await Users.findOne(me != null ? me.id : null);
+	const user = me != null ? await Users.findOne(me.id) : null;
 
 	if (user == null) {
 		throw new ApiError(meta.errors.noSuchUser);
@@ -45,7 +44,7 @@ export default define(meta, async (ps, me) => {
 	const jobs = await getConnection()
 		.createQueryBuilder()
 		.select("user_wallet_job")
-		.from('user_wallet_job')
+		.from(UserWalletJob, 'user_wallet_job')
 		.where('user_wallet_job."userId" = :uid', { uid: user.id })
 		.andWhere('user_wallet_job."job" = :job', { job: ps.jobId })
 		.getCount();
@@ -55,18 +54,20 @@ export default define(meta, async (ps, me) => {
 		let data = await getConnection()
 				.createQueryBuilder()
 				.select("user_wallet_job")
-				.from('user_wallet_job')
+				.from(UserWalletJob, 'user_wallet_job')
 				.where('user_wallet_job."userId" = :uid', { uid: user.id })
 				.andWhere('user_wallet_job."job" = :job', { job: ps.jobId })
 				.getOne();
 		await getConnection()
 	    .createQueryBuilder()
-	    .delete("user_wallet_job")
+	    .delete()
 	    .from('user_wallet_job')
 			.where('user_wallet_job."userId" = :uid', { uid: user.id })
 			.andWhere('user_wallet_job."job" = :job', { job: ps.jobId })
 	    .execute();
-		response = JSON.stringify({ error: null, data: data.result });
+		if (data) {
+			response = JSON.stringify({ error: null, data: data.result });
+		}
 	}
 
 	return response;

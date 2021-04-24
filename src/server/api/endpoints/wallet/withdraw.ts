@@ -4,8 +4,6 @@ import { ApiError } from '../../error';
 import { Users, UserWalletAddresses, UserWalletStatuses } from '../../../../models';
 import { UserWalletAddress } from '../../../../models/entities/user-wallet-address';
 import { UserWalletStatus } from '../../../../models/entities/user-wallet-status';
-import { ID } from '@/misc/cafy-id';
-import { getConnection } from 'typeorm';
 
 export const meta = {
 	tags: ['wallet'],
@@ -35,12 +33,17 @@ export const meta = {
 			message: 'No such user.',
 			code: 'NO_SUCH_USER',
 			id: '88b36214-5918-4cec-be59-df48a42c53d7'
-		}
+		},
+		amountInvalid: {
+			message: 'Amount must be valid number.',
+			code: 'INVALID_AMOUNT',
+			id: '88b36214-5918-4cec-be59-df48a42c53d1'
+		},
 	},
 };
 
 export default define(meta, async (ps, me) => {
-	const user = await Users.findOne(me != null ? me.id : null);
+	const user = await Users.findOne(me.id);
 
 	if (user == null) {
 		throw new ApiError(meta.errors.noSuchUser);
@@ -60,18 +63,22 @@ export default define(meta, async (ps, me) => {
 		}
 	}
 
-	let error: string = null;
-	let data: string = null;
+	let error: string | null = null;
+	let data: string | null = null;
 
 	if (addrUser && bOnline && bSynced) {
 		//console.log('doWithdraw() requested');
-		if (isNaN(ps.amount)) {
-			error = 'Amount must be number';
-			let result = {
-				data,
-				error,
-			};
-			return result;
+		try {
+			if (isNaN(Number(ps.amount))) {
+				error = 'Amount must be number';
+				let result = {
+					data,
+					error,
+				};
+				return result;
+			}
+		} catch (e) {
+			throw new ApiError(meta.errors.amountInvalid);
 		}
 		let amt = parseFloat(ps.amount);
 		const xfee = '0.00001100';

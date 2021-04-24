@@ -1,10 +1,9 @@
 import $ from 'cafy';
 import define from '../../define';
 import { ApiError } from '../../error';
-import { Users, Notes, UserWalletBalances, UserWalletStatuses, UserWalletAddresses } from '../../../../models';
+import { Users, Notes, UserWalletBalances, UserWalletAddresses } from '../../../../models';
 import { UserWalletBalance } from '../../../../models/entities/user-wallet-balance';
 import { UserWalletAddress } from '../../../../models/entities/user-wallet-address';
-import { UserWalletStatus } from '../../../../models/entities/user-wallet-status';
 import { Note } from '../../../../models/entities/note';
 import { createNotification } from '../../../../services/create-notification';
 import { siteID } from '../../../../services/intercom/intercom-functions';
@@ -98,7 +97,7 @@ export const meta = {
 };
 
 export default define(meta, async (ps, me) => {
-	const user = await Users.findOne(me != null ? me.id : null);
+	const user = await Users.findOne(me.id);
 
 	if (user == null) {
 		throw new ApiError(meta.errors.noSuchUser);
@@ -121,10 +120,14 @@ export default define(meta, async (ps, me) => {
 
 	let amount: number;
 
-	let error: string = null;
-	let data: string = null;
+	let error: string | null = null;
+	let data: {
+		message: string,
+		ourUser: number,
+		othUser: number,
+	} | null;
 
-	async function logTip(uidFrom: string, uidTo: string, amount: number, type: string, note: string) {
+	async function logTip(uidFrom: string, uidTo: string, amount: number, type: string, note: string | null | undefined) {
 		let t: number = 50;
 		let amt: number;
 		let usrA: string;
@@ -164,10 +167,10 @@ export default define(meta, async (ps, me) => {
 	}
 
 	try {
-		if (ps.amount === null || isNaN(ps.amount)) {
+		if (ps.amount === null || isNaN(Number(ps.amount))) {
 			throw new ApiError(meta.errors.amountInvalid);
 		}
-		amount = parseFloat(ps.amount);
+		amount = Number(ps.amount);
 		if (amount <= 0) {
 			throw new ApiError(meta.errors.amountToSmall);
 		}
@@ -187,8 +190,8 @@ export default define(meta, async (ps, me) => {
 		error = 'Amount too high';
 		throw new ApiError(meta.errors.amountToHigh);
 	} else {
-		let nBalance = parseFloat(wallet.balance) - amount;
-		let nBalanceOther = parseFloat(walletOther.balance) + amount;
+		let nBalance = Number(wallet.balance) - amount;
+		let nBalanceOther = Number(walletOther.balance) + amount;
 		let uid = wallet.userId;
 		let uido = walletOther.userId;
 		let note = ps.noteId;
@@ -209,7 +212,7 @@ export default define(meta, async (ps, me) => {
 		// Add Log Entries
 		logTip(uid, uido, amount, 'from', note);
 		logTip(uid, uido, amount, 'to', note);
-		let _uid: string = null;
+		let _uid: string | null = null;
 		if (!ps.anon) {
 			_uid = uid;
 		}
