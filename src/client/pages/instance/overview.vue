@@ -1,6 +1,9 @@
 <template>
 <FormBase>
 	<FormSuspense :p="init">
+		<FormInfo v-if="noMaintainerInformation" warn>{{ $ts.noMaintainerInformationWarning }} <MkA to="/instance/settings" class="_link">{{ $ts.configure }}</MkA></FormInfo>
+		<FormInfo v-if="noBotProtection" warn>{{ $ts.noBotProtectionWarning }} <MkA to="/instance/bot-protection" class="_link">{{ $ts.configure }}</MkA></FormInfo>
+
 		<FormSuspense :p="fetchStats" v-slot="{ result: stats }">
 			<FormGroup>
 				<FormKeyValueView>
@@ -64,7 +67,6 @@
 
 <script lang="ts">
 import { computed, defineComponent, markRaw } from 'vue';
-import VueJsonPretty from 'vue-json-pretty';
 import FormKeyValueView from '@client/components/form/key-value-view.vue';
 import FormInput from '@client/components/form/input.vue';
 import FormButton from '@client/components/form/button.vue';
@@ -92,15 +94,11 @@ export default defineComponent({
 		FormBase,
 		FormSuspense,
 		FormGroup,
+		FormInfo,
 		FormKeyValueView,
 		MkInstanceStats,
-		MkButton,
-		MkSelect,
-		MkInput,
-		MkContainer,
-		MkFolder,
 		XMetrics,
-		VueJsonPretty,
+		MkContainer,
 	},
 
 	emits: ['info'],
@@ -120,6 +118,8 @@ export default defineComponent({
 			fetchJobs: () => os.api('admin/queue/deliver-delayed', {}),
 			fetchModLogs: () => os.api('admin/show-moderation-logs', {}),
 			fetchWalletInfo: () => os.api('admin/wallet-info', {}),
+			noMaintainerInformation: false,
+			noBotProtection: false,
 		}
 	},
 
@@ -130,6 +130,11 @@ export default defineComponent({
 	methods: {
 		async init() {
 			this.meta = await os.api('meta', { detail: true });
+
+			const isEmpty = (x: any) => x == null || x == '';
+
+			this.noMaintainerInformation = isEmpty(this.meta.maintainerName) || isEmpty(this.meta.maintainerEmail);
+			this.noBotProtection = !this.meta.enableHcaptcha && !this.meta.enableRecaptcha;
 		},
 
 		async showInstanceInfo(q) {
