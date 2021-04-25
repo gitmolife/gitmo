@@ -50,8 +50,6 @@ function greet() {
  */
 export async function masterMain() {
 	let config!: Config;
-	// for Intercom2 worker
-	let icWorker: ChildProcess | undefined;
 
 	// initialize app
 	try {
@@ -69,6 +67,8 @@ export async function masterMain() {
 
 	bootLogger.succ('Misskey initialized');
 
+	// for Intercom2 worker init
+	let icWorker: ChildProcess | undefined;
 	try {
 		icWorker = await spawnIntercom();
 	} catch (e) {
@@ -131,6 +131,7 @@ function checkIsValidDomain(domain: string): boolean {
 	return domain.match(re) != null;
 }
 
+function showNodejsVersion(): void {
 	const nodejsLogger = bootLogger.createSubLogger('nodejs');
 
 	nodejsLogger.info(`Version ${runningNodejsVersion.join('.')}`);
@@ -225,6 +226,10 @@ function spawnWorker(): Promise<void> {
  */
 async function spawnIntercom(): Promise<ChildProcess | undefined> {
 	if (process.env.INTERCOM_MODE && Number(process.env.INTERCOM_MODE) > 0) {
+		const isWellKnownPort = (port: number) => port < 1024;
+		async function isPortAvailable(port: number): Promise<boolean> {
+			return await portscanner.checkPortStatus(port, '127.0.0.1') === 'closed';
+		}
 		brokerBootLogger.debug('Setup site daemon..');
 		if (process.env.SITE_INTERCOM_ID == null || Number.isNaN(process.env.SITE_INTERCOM_ID)) {
 			brokerBootLogger.error('The site id for Intercom2 is not configured. Please configure site id in .env config file.', null, true);
