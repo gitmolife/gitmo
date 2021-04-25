@@ -33,7 +33,7 @@
 				</td>
 			</tr>
 		</tbody>
-		<tfoot class="hist-table-footer">
+		<tfoot v-if="walletHistory.length > 0" class="hist-table-footer">
 			<tr style="opacity: 0.84;">
 				<th style="text-align: left; padding: 1px 0px 0px 0; width: 25%;">Date and Time</th>
 				<th style="text-align: left; padding: 1px 6px 0px 0; font-size: 0.92em; width: 6%;">Type</th>

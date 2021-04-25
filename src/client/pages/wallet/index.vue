@@ -62,14 +62,14 @@
 						<div class="rowEntry rowMain">
 							<div class="_keyValue"><b>Tipping Balance</b><span class="monospace" style="font-size: 1.07em;">{{ wallet.balance.tipping }} <i class="fas fa-om"></i></span></div>
 							<div class="_keyValue"><b>Network Balance</b><span class="monospace" style="font-size: 1.07em;">{{ wallet.balance.network }} OHM</span></div>
-							<div v-if="history" class="_keyValue"><b>Pending Balance</b><span class="monospace" style="font-size: 1.07em;">{{ history.balance.pending }} OHM</span></div>
+							<div v-if="history" class="_keyValue" style="opacity: 0.88;"><i>Pending Balance</i><span class="monospace" style="font-size: 0.84;">{{ history.balance.pending }} OHM</span></div>
 						</div>
 						<div class="rowEntry">
 							<div class="_keyValue"><b>Network Deposit</b><span class="monospace"><a @click="showAddress()">{{ wallet.account }}</a></span></div>
 						</div>
 						<div class="rowEntry" style="font-size: 0.95em;">
 							<div class="_keyValue"><b>Site Tipping</b><span><a @click="showTransfer()"><i class="fas fa-exchange-alt"></i> Internal Transfer</a></span></div>
-							<div class="_keyValue"><b>Transfer External</b><span><a @click="showWithdraw()"><i class="fas fa-box-open"></i> Withdraw Offsite</a></span></div>
+							<div class="_keyValue"><b>Transfer External</b><span><a @click="showWithdraw()"><i class="fas fa-box-open"></i> Withdraw To Address</a></span></div>
 						</div>
 						<div class="rowEntry">
 							<div class="_keyValue"><b>Help</b><span><a @click="showHelp()"><i class="fas fa-question-circle"></i> Usage Info</a></span></div>
@@ -225,6 +225,13 @@ export default defineComponent({
 
 ._keyValue {
 	margin-bottom: 4px;
+}
+
+._keyValue {
+	> i {
+		font-size: 0.90em;
+		font-weight: 600;
+	}
 }
 
 .rowEntry {

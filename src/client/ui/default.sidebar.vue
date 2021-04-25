@@ -18,7 +18,7 @@
 			<i class="fa-fw" :class="menuDef[item].icon"></i><span class="text">{{ $ts[menuDef[item].title] }}</span>
 			<span v-if="menuDef[item].indicated" class="indicator"><i class="fas fa-circle"></i></span>
 		</component>
-		<MkA v-if="item === 'drive'" class="item" active-class="active" to="/my/wallet">
+		<MkA v-if="item === 'drive'" class="item" active-class="active" to="/my/wallet" v-click-anime>
 			<i class="fas fa-wallet fa-fw"></i><span class="text">CryptoWallet</span>
 		</MkA>
 	</template>
