@@ -5,7 +5,7 @@
 				<template #header><i class="fab fa-btc"></i> CryptoWallet Transfer</template>
 				<div class="contents">
 
-					<MkContainer :foldable="true" class="_gap">
+					<MkContainer :foldable="true">
 						<template #header><i class="fas fa-cart-arrow-down"></i> Network Transfer - <span class="monospace">OM <i class="fas fa-long-arrow-alt-right"></i> OHM</span></template>
 
 						<div class="_content rowEntry rowMain">

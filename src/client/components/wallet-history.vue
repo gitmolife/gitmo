@@ -75,14 +75,14 @@ export default defineComponent({
 	methods: {
 
 		showDetail(txid: string) {
-			modalPageWindow('/my/wallet/explore/tx/' + txid);
+			modalPageWindow('/my/wallet/explore/tx/' + txid + '/true');
 		},
 
-		prefixAmt(amount, type) {
+		prefixAmt(amount: string, type: string) {
 			if (amount.indexOf('~') >= 0) {
 				return '<span style="color: #ebb331;">~</span>';
 			}
-			let amt = parseFloat(amount);
+			let amt = Number(amount);
 			if (amt < 0) {
 				if (type === 'SITE') {
 					return '<span style="color: #8832e3;">-</span>';
@@ -99,10 +99,12 @@ export default defineComponent({
 				} else {
 					return '<span style="color: #32e34f;">+</span>';
 				}
+			} else {
+				return '';
 			}
 		},
 
-		prefixConf(cnf) {
+		prefixConf(cnf: number) {
 			if (cnf <= 0) {
 				return 'confirms-new';
 			} else if (cnf <= 1) {
@@ -117,7 +119,7 @@ export default defineComponent({
 			return 'confirms-complete';
 		},
 
-		suffixConf(cnf, req) {
+		suffixConf(cnf: number, req: number) {
 			if (cnf <= 5) {
 				return 'confirms-third';
 			} else if (req > 0 && cnf >= req) {

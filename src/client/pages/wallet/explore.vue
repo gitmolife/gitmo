@@ -1,6 +1,6 @@
 <template>
 		<div style="margin-top: 7px; margin-bottom: 30px;">
-			<MkContainer :foldable="true" class="_gap">
+			<MkContainer :foldable="true">
 				<template #header><i class="fas fa-binoculars"></i> Wallet Explorer - OHM</template>
 
 				<div class="rowEntry rowMain explore-info">
@@ -26,7 +26,7 @@
 								<div class="_valueItem" v-for="vin in tx.vins" :key="vin.vout">
 									<div class="_keyValue"><b>Index</b><span class="monospace" style="font-size: 0.94em;">{{ vin.vout }}</span></div>
 									<div v-if="vin.txid" class="_keyValue"><b>TxID</b><span class="monospace" style="font-size: 0.80em;">
-										<a @click="showTx(vin.txid)" style="font-style: italic;">{{ vin.txid }}</a></span>
+										<a @click="showTx(vin.txid, false)" style="font-style: italic;">{{ vin.txid }}</a></span>
 									</div>
 								</div>
 							</div>
@@ -53,7 +53,7 @@
 						<div class="_content">
 							<div class="_keyValue" style="font-size: 0.88em;">
 								<b style="opacity: 0.87;"><i class="fas fa-step-backward"></i> Previous TxID:</b>
-								<span class="monospace" style="font-size: 0.77em; opacity: 0.72;"><a @click="showTx(tx.prevTx)">{{ tx.prevTx }}</a></span>
+								<span class="monospace" style="font-size: 0.77em; opacity: 0.72;"><a @click="showTx(tx.prevTx, true)">{{ tx.prevTx }}</a></span>
 							</div>
 						</div>
 					</div>
@@ -64,12 +64,10 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent } from 'vue';
-import parseAcct from '@/misc/acct/parse';
+import { defineComponent } from 'vue';
 import MkContainer from '@client/components/ui/container.vue';
 import MkFolder from '@client/components/ui/folder.vue';
 import Progress from '@client/scripts/loading';
-import { query as urlQuery } from '../../../prelude/url';
 import * as symbols from '@client/symbols';
 import * as os from '@client/os';
 
@@ -81,8 +79,12 @@ export default defineComponent({
 	props: {
 		txid: {
 			type: String,
-			required: false
+			required: true
 		},
+		modal: {
+			type: Boolean,
+			required: false
+		}
 	},
 
 	data() {
@@ -98,6 +100,7 @@ export default defineComponent({
 				size: 0,
 				vins: [],
 				vouts: [],
+				prevTxs: [],
 				prevTx: "",
 			},
 		};
@@ -110,13 +113,30 @@ export default defineComponent({
 	methods: {
 
 		fetch() {
-			this.getTx(this.txid);
+			this.getTx(this.txid!);
 		},
 
-		async showTx(txid: string) {
-			this.tx.prevTx = this.tx.txid;
-			window.history.pushState('', '', '/my/wallet/explore/tx/' + txid);
-			this.getTx(txid);
+		async getTxPrev(pop: boolean) {
+			let prvs = (this.tx.prevTxs as string[]);
+			let txid: string = '';
+			if (pop && prvs.length > 0) {
+				prvs.pop();
+			}
+			if (prvs.length > 0) {
+				txid = prvs[prvs.length-1];
+			}
+			return this.tx.prevTx = txid;
+		},
+
+		async showTx(txid: string, pop: boolean) {
+			if (!pop) {
+				(this.tx.prevTxs as string[]).push(this.tx.txid);
+			}
+			if (!this.modal) {
+				window.history.pushState('', '', '/my/wallet/explore/tx/' + txid);
+			}
+			await this.getTx(txid);
+			await this.getTxPrev(pop);
 		},
 
 		async showExp(txid: string) {
@@ -125,7 +145,7 @@ export default defineComponent({
 				title: 'Open Block Explorer.. Continue?',
 				text: 'This will open the OHM Block Explorer and take you to an external site.',
 				showCancelButton: true,
-			}).then(async ({ canceled }) => {
+			}).then(async ({ canceled }: any) => {
 				if (!canceled) {
 					window.open('http://explore.ohmcoin.org/tx/' + txid, '_blank')
 				}
@@ -139,7 +159,7 @@ export default defineComponent({
 				return;
 			}
 			Progress.start();
-			let res = await os.api('wallet/explore', { txid: txid }).finally(() => {
+			let res: any = await os.api('wallet/explore', { txid: txid }).finally(() => {
 				Progress.done();
 			});
 			if (res && 'txid' in res) {

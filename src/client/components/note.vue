@@ -89,11 +89,11 @@
 				<button v-if="showTipper && !isMyNote" class="button _button" @click="tip()">
 					<i v-if="haveTipped" class="fas fa-comments-dollar" style="color: orange;"></i>
 					<i v-else class="fas fa-comment-dollar"></i>
-					<span v-if="totalTipped > 0" class="monospace totalTipped"><span style="color: #2dcf50;">+</span>{{ totalTipped }}</span>
+					<span v-if="Number(totalTipped) > 0" class="monospace totalTipped"><span style="color: #2dcf50;">+</span>{{ totalTipped }}</span>
 				</button>
 				<button v-else-if="showTipper && totalTipped > 0" class="button _button" @click="tipInfo()">
 					<i class="fas fa-search-dollar"></i>
-					<span v-if="totalTipped > 0" class="monospace totalTipped"><span style="color: #2dcf50;">+</span>{{ totalTipped }}</span>
+					<span v-if="Number(totalTipped) > 0" class="monospace totalTipped"><span style="color: #2dcf50;">+</span>{{ totalTipped }}</span>
 				</button>
 			</footer>
 		</div>
@@ -284,7 +284,7 @@ export default defineComponent({
 		);
 		this.muted = await checkWordMute(this.appearNote, this.$i, this.$store.state.mutedWords);
 
-		this.tips = await os.api('wallet/tips', { noteId: this.appearNote.id }).catch((e: Error) => {
+		(this.tips as any) = await os.api('wallet/tips', { noteId: this.appearNote.id }).catch((e: Error) => {
 			console.error(e);
 		});
 
@@ -884,11 +884,11 @@ export default defineComponent({
 			focusNext(this.$el);
 		},
 
-		async updateTipped(tip) {
-			this.tips.push(tip);
+		updateTipped(tip: any) {
+			(this.tips as any[]).push(tip);
 		},
 
-		async tipInfo() {
+		tipInfo() {
 			os.dialog({
 				type: 'info',
 				title: 'You have Received Tips!',
@@ -900,12 +900,12 @@ export default defineComponent({
 			let oId = this.note.userId;
 			let oUsr = this.note.user;
 			let nId = this.appearNote.id;
-			let bal: number = null;
-			if (this.isRenote {
+			let bal: number | null = null;
+			if (this.isRenote) {
 				oId = this.note.renote.userId;
 				oUsr = this.note.renote.user;
 			}
-			if (this.$i.id === oId) {
+			if (!this.$i || this.$i.id === oId) {
 					os.dialog({
 						type: 'warning',
 						title: 'Unable to Tip!',
@@ -913,7 +913,7 @@ export default defineComponent({
 					});
 					return;
 			}
-			await os.api('wallet/balance').then(balances => {
+			await os.api('wallet/balance').then((balances: any) => {
 				bal = parseFloat(balances.tipping);
 			}).catch((e: Error) => {
 				os.dialog({

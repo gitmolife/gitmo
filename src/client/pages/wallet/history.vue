@@ -36,7 +36,7 @@ export default defineComponent({
 			[symbols.PAGE_INFO]: {
 				title: 'CryptoWallet History',
 			},
-			history: null,
+			history: { history: null, confRequire: 9, },
 		};
 	},
 
@@ -46,10 +46,10 @@ export default defineComponent({
 
 	methods: {
 
-		fetch() {
+		async fetch() {
 			Progress.start();
-			os.api('wallet/history').then(history => {
-				this.history = history;
+			await os.api('wallet/history').then(history => {
+				(this.history as any) = history;
 			}).catch(e => {
 				// error
 			}).finally(() => {

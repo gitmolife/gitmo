@@ -4,7 +4,7 @@
 				<template #header><i class="fab fa-btc"></i> CryptoWallet Overview</template>
 			<div class="_section" v-if="wallet && history">
 
-				<MkContainer :foldable="true" class="_gap">
+				<MkContainer :foldable="true">
 					<template #header><i class="fas fa-info-circle"></i> Wallet Info - OHM</template>
 
 					<div class="zbcjwnqg" v-size="{ max: [550, 1000] }">
@@ -45,7 +45,7 @@
 									</dl>
 									<dl class="diff">
 										<dt>Height</dt>
-										<dd class="monospace">{{ wallet.server.synced ? number(wallet.server.height) : 'Pending..' }}</dd>
+										<dd class="monospace" :style="synced(wallet.server.synced)">{{ wallet.server.online && wallet.server.synced ? number(wallet.server.height) : wallet.server.online ? '~' + number(wallet.server.height) : 'Pending..' }}</dd>
 									</dl>
 								</div>
 							</div>
@@ -78,8 +78,8 @@
 					</div>
 				</MkContainer>
 
-				<MkContainer v-if="history" :foldable="true" :scrollable="true" class="_gap" style="max-height: 280px;">
-					<template #header><i class="fas fa-atlas"></i> Action History</template>
+				<MkContainer v-if="history" :foldable="true" :scrollable="true" class="_gap" style="max-height: 256px;">
+					<template #header><i class="fas fa-atlas"></i> Action History Log</template>
 					<div class="_content rowEntry" v-if="history.history">
 						<MkWalletHistory :walletHistory="history.history" :confRequire="wallet.confRequire">
 						</MkWalletHistory>
@@ -92,10 +92,8 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent } from 'vue';
-import parseAcct from '@/misc/acct/parse';
+import { defineComponent } from 'vue';
 import Progress from '@client/scripts/loading';
-import { query as urlQuery } from '../../../prelude/url';
 import MkButton from '@client/components/ui/button.vue';
 import MkSelect from '@client/components/ui/select.vue';
 import MkInput from '@client/components/ui/input.vue';
@@ -131,7 +129,13 @@ export default defineComponent({
 				title: 'CryptoWallet',
 			},
 			error: null,
-			wallet: null,
+			statusColor: 'red',
+			wallet: {
+				server: { status: 'UNKNOWN', online: false, synced: false, height: 0, },
+				balance: { total: 0, tipping: 0, network: 0, },
+				account: '',
+				confRequire: 9,
+			},
 			history: {
 				balance: {
 					pending: 0,
@@ -174,7 +178,7 @@ export default defineComponent({
 			this.error = null;
 			Progress.start();
 			await os.api('wallet/dashboard').then(wallet => {
-				this.wallet = wallet;
+				(this.wallet as any) = wallet;
 				this.colorize();
 			}).catch(e => {
 				this.error = e;
@@ -184,7 +188,7 @@ export default defineComponent({
 			});
 			Progress.start();
 			await os.api('wallet/history', { limit: 50 }).then(history => {
-				this.history = history;
+				(this.history as any) = history;
 			}).catch(e => {
 				this.error = e;
 				//console.error(e);
@@ -194,13 +198,22 @@ export default defineComponent({
 		},
 
 		colorize() {
-			if (this.wallet.server.status == "Online") {
-				this.statusColor = "#11c711";
-			} else if (this.wallet.server.status == "Offline") {
-				this.statusColor = "#e64747";
-			} else {
-				this.statusColor = "orangered";
+			if (this.wallet) {
+				if (this.wallet.server.status == "Online") {
+					this.statusColor = "#11c711";
+				} else if (this.wallet.server.status == "Offline") {
+					this.statusColor = "#e64747";
+				} else {
+					this.statusColor = "orangered";
+				}
 			}
+		},
+
+		synced(sync: boolean) {
+			if (!sync) {
+				return 'color: orange;';
+			}
+			return '';
 		},
 
 		updatePoll() {

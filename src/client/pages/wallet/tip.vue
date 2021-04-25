@@ -4,7 +4,7 @@
 				<template #header><i class="fab fa-btc"></i> CryptoWallet Transfer</template>
 				<div class="contents" styyle="margin-bottom: 20px;">
 
-					<MkContainer :foldable="true" class="_gap">
+					<MkContainer :foldable="true">
 						<template #header><i class="fas fa-om"></i> Tipping - <span class="monospace">OHM</span></template>
 
 						<div class="_content">
