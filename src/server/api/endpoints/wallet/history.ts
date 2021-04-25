@@ -113,7 +113,7 @@ export default define(meta, async (ps, me) => {
 			if (keyA > keyB) return 1;
 			return 0;
 		});
-		return { history: accountHistory.reverse(), balance: { pending: Number(pending).toFixed(8), confRequire: confirmsRequired }, };
+		return { history: accountHistory.reverse(), balance: { pending: Number(pending).toFixed(8), }, confRequire: confirmsRequired };
 	} else {
 		return { history: [], balance: { pending: 0, confRequire: confirmsRequired }, };
 	}
