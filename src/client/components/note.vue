@@ -892,7 +892,7 @@ export default defineComponent({
 			os.dialog({
 				type: 'info',
 				title: 'You have Received Tips!',
-				text: 'Total of ' + this.totalTipped + ' OHM received for this comment.',
+				text: 'Total of ' + this.totalTipped + ' OHM received for this Note.',
 			});
 		},
 
