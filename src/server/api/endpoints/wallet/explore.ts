@@ -1,35 +1,36 @@
 import $ from 'cafy';
 import define from '../../define';
 import { ApiError } from '../../error';
-import { Users } from '../../../../models';
-import { ID } from '@/misc/cafy-id';
+import { Users, UserWalletAddresses } from '../../../../models';
+import { UserWalletAddress } from '../../../../models/entities/user-wallet-address';
+import fetch from 'node-fetch';
+import { siteID } from '@/services/intercom/intercom-functions';
 
 export const meta = {
 	tags: ['wallet'],
 
-	requireCredential: false as const,
+	requireCredential: true as const,
 
 	params: {
-		userId: {
-			validator: $.optional.type(ID),
+		txid: {
+			validator: $.optional.nullable.str,
 			desc: {
-				'ja-JP': '対象のユーザーのID',
-				'en-US': 'Target user ID'
+				'ja-JP': '対象のユーザーのTx ID',
+				'en-US': 'Target Tx ID'
 			}
 		},
-
-		username: {
-			validator: $.optional.str
-		},
-
-		host: {
-			validator: $.optional.nullable.str
+		blockhash: {
+			validator: $.optional.nullable.str,
+			desc: {
+				'ja-JP': '対象のユーザーのTx blockhash',
+				'en-US': 'Target Tx blockhash'
+			}
 		},
 	},
 
 	res: {
 		type: 'object' as const,
-		optional: false as const, nullable: false as const,
+		optional: false as const, nullable: true as const,
 		ref: 'Wallet',
 	},
 
@@ -43,19 +44,35 @@ export const meta = {
 };
 
 export default define(meta, async (ps, me) => {
-	const user = await Users.findOne(ps.userId != null
-		? { id: ps.userId }
-		: { id: me.id });
-
+	const user = me !== null ? await Users.findOne(me.id) : null;
 	if (user == null) {
 		throw new ApiError(meta.errors.noSuchUser);
 	}
-
-	let wallet: UserWalletAddress = (await UserWalletAddresses.findOne({ userId: user.id} ) as UserWalletAddress);
-
-	if (wallet) {
-		return wallet.address;
-	} else {
-		return '';
+	let tx = null;
+	const url = "http://explorer.ohm.sqdmc.net/";
+	if (!ps.txid || ps.txid.length != 64) {
+		return tx;
 	}
+	const res = await fetch(url + 'api/getrawtransaction?txid=' + ps.txid + '&decrypt=1', { method: 'GET' });
+	let json = await res.json();
+	if (res.status === 200 && json) {
+		tx = json;
+		if ('txid' in tx) {
+			let siteWallet: UserWalletAddress = (await UserWalletAddresses.findOne({ userId: siteID }) as UserWalletAddress);
+			for (var vout of tx.vout) {
+				if (vout.scriptPubKey && vout.scriptPubKey.addresses[0]) {
+					let address = vout.scriptPubKey.addresses[0];
+					if (address === siteWallet.address) {
+						vout.site = true;
+						continue;
+					}
+					let wallet: UserWalletAddress = (await UserWalletAddresses.findOne({ address: address, userId: user.id }) as UserWalletAddress);
+					if (wallet) {
+						vout.mine = true;
+					}
+				}
+			}
+		}
+	}
+	return tx;
 });

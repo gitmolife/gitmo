@@ -8,11 +8,11 @@
 					<div class="help-info rowEntry">
 						<dl class="">
 							<dt>About Ohmcoin</dt>
-							<dd><a href="https://ohmcoin.org/">Homepage</a></dd>
+							<dd><a href="https://ohmcoin.org/" target="_blank">Homepage</a></dd>
 						</dl>
 						<dl class="">
 							<dt>Trade Ohmcoin</dt>
-							<dd><a href="https://www.coingecko.com/en/coins/ohm-coin">Coin Listing</a></dd>
+							<dd><a href="https://www.coingecko.com/en/coins/ohm-coin" target="_blank">Coin Listing</a></dd>
 						</dl>
 						<dl class="">
 							<dt>Site Features</dt>
@@ -35,7 +35,7 @@
 						</dl>
 						<dl class="divbar">
 							<dt>Transfer Ohmcoin - Tipping</dt>
-							<dd>Transfer OHM to your tipping wallet account using the <a href="/my/wallet/withdraw/"><b>Interal Transfer</b></a> function on the site.<br/>This is also located on your <a href="/my/wallet/">wallet dashboard</a> page.</dd>
+							<dd>Transfer OHM to your tipping wallet account using the <a href="/my/wallet/transfer/"><b>Interal Transfer</b></a> function on the site.<br/>This is also located on your <a href="/my/wallet/">wallet dashboard</a> page.</dd>
 						</dl>
 						<dl class="divbar">
 							<dt>Tip Ohmcoin</dt>
@@ -55,6 +55,7 @@ import MkContainer from '@client/components/ui/container.vue';
 import MkFolder from '@client/components/ui/folder.vue';
 import Progress from '@client/scripts/loading';
 import { query as urlQuery } from '../../../prelude/url';
+import * as symbols from '@client/symbols';
 import * as os from '@client/os';
 
 export default defineComponent({
@@ -68,7 +69,9 @@ export default defineComponent({
 
 	data() {
 		return {
-
+			[symbols.PAGE_INFO]: {
+				title: 'CryptoWallet Help',
+			},
 		};
 	},
 

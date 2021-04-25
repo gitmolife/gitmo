@@ -2,7 +2,7 @@
 		<div>
 			<MkFolder>
 				<template #header><i class="fab fa-btc"></i> CryptoWallet Overview</template>
-			<div class="_section" v-if="wallet">
+			<div class="_section" v-if="wallet && history">
 
 				<MkContainer :foldable="true" class="_gap">
 					<template #header><i class="fas fa-info-circle"></i> Wallet Info - OHM</template>
@@ -17,11 +17,11 @@
 								<div style="width: 70%;">
 									<dl class="total">
 										<dt>Balance</dt>
-										<dd>{{ number(parseFloat(wallet.balance.total) + parseFloat(wallet.balance.pending)) }}</dd>
+										<dd>{{ number(Number(wallet.balance.total) + Number(history.balance.pending)) }}</dd>
 									</dl>
 									<dl class="diff">
 										<dt>Pending</dt>
-										<dd>{{ number(wallet.balance.pending) }}</dd>
+										<dd>{{ number(history.balance.pending) }}</dd>
 									</dl>
 									<dl class="diff">
 										<dt>Available</dt>
@@ -54,7 +54,7 @@
 				</MkContainer>
 
 				<MkContainer :foldable="true" class="_gap">
-					<template #header><i class="fas fa-tachometer-alt"></i> Wallet Control - OHM</template>
+					<template #header><i class="fas fa-gamepad"></i> Wallet Control - OHM</template>
 					<div class="_content zbcjwnqg" v-size="{ max: [550, 1000] }">
 						<div class="rowEntry rowMain">
 							<div class="_keyValue"><b>Balance</b><span class="monospace" style="font-size: 1.07em;">{{ wallet.balance.total }} OHM</span></div>
@@ -62,22 +62,26 @@
 						<div class="rowEntry rowMain">
 							<div class="_keyValue"><b>Tipping Balance</b><span class="monospace" style="font-size: 1.07em;">{{ wallet.balance.tipping }} <i class="fas fa-om"></i></span></div>
 							<div class="_keyValue"><b>Network Balance</b><span class="monospace" style="font-size: 1.07em;">{{ wallet.balance.network }} OHM</span></div>
+							<div v-if="history" class="_keyValue"><b>Pending Balance</b><span class="monospace" style="font-size: 1.07em;">{{ history.balance.pending }} OHM</span></div>
 						</div>
 						<div class="rowEntry">
 							<div class="_keyValue"><b>Network Deposit</b><span class="monospace"><a @click="showAddress()">{{ wallet.account }}</a></span></div>
 						</div>
-						<div class="rowEntry">
+						<div class="rowEntry" style="font-size: 0.95em;">
 							<div class="_keyValue"><b>Site Tipping</b><span><a @click="showTransfer()"><i class="fas fa-exchange-alt"></i> Internal Transfer</a></span></div>
 							<div class="_keyValue"><b>Transfer External</b><span><a @click="showWithdraw()"><i class="fas fa-box-open"></i> Withdraw Offsite</a></span></div>
-							<div class="_keyValue" style="margin-top: 5px;"><b>Help</b><span><a @click="showHelp()"><i class="fas fa-question-circle"></i> Usage FAQ</a></span></div>
+						</div>
+						<div class="rowEntry">
+							<div class="_keyValue"><b>Help</b><span><a @click="showHelp()"><i class="fas fa-question-circle"></i> Usage Info</a></span></div>
+							<div class="_keyValue"><b>Historical Actions</b><span><a href="/my/wallet/history/">View Tx Logs</a></span></div>
 						</div>
 					</div>
 				</MkContainer>
 
-				<MkContainer :foldable="true" :scrollable="true" class="_gap" style="max-height: 420px;">
-					<template #header><i class="fas fa-database"></i> Action History</template>
-					<div class="_content rowEntry" v-if="wallet.walletHist">
-						<MkWalletHistory :walletHistory="wallet.walletHist" :confRequire="wallet.confRequire" :explorer="wallet.explorer">
+				<MkContainer v-if="history" :foldable="true" :scrollable="true" class="_gap" style="max-height: 280px;">
+					<template #header><i class="fas fa-atlas"></i> Action History</template>
+					<div class="_content rowEntry" v-if="history.history">
+						<MkWalletHistory :walletHistory="history.history" :confRequire="wallet.confRequire">
 						</MkWalletHistory>
 					</div>
 				</MkContainer>
@@ -126,9 +130,15 @@ export default defineComponent({
 			[symbols.PAGE_INFO]: {
 				title: 'CryptoWallet',
 			},
-			user: null,
 			error: null,
 			wallet: null,
+			history: {
+				balance: {
+					pending: 0,
+				},
+				history: [],
+				confRequire: 9,
+			},
 		};
 	},
 
@@ -160,14 +170,24 @@ export default defineComponent({
 			os.modalPageWindow("/my/wallet/help");
 		},
 
-		fetch() {
+		async fetch() {
+			this.error = null;
 			Progress.start();
-			os.api('wallet/show').then(wallet => {
-				//console.log(wallet);
+			await os.api('wallet/dashboard').then(wallet => {
 				this.wallet = wallet;
 				this.colorize();
 			}).catch(e => {
 				this.error = e;
+				//console.error(e);
+			}).finally(() => {
+				Progress.done();
+			});
+			Progress.start();
+			await os.api('wallet/history', { limit: 50 }).then(history => {
+				this.history = history;
+			}).catch(e => {
+				this.error = e;
+				//console.error(e);
 			}).finally(() => {
 				Progress.done();
 			});

@@ -53,8 +53,8 @@ export default define(meta, async (ps, me) => {
 		throw new ApiError(meta.errors.noSuchUser);
 	}
 
-	let wallet: UserWalletBalance = (await UserWalletBalances.findOne({ userId: user.id} ) as UserWalletBalance);
-	let address: UserWalletAddress = (await UserWalletAddresses.findOne({ userId: user.id} ) as UserWalletAddress);
+	let wallet: UserWalletBalance = (await UserWalletBalances.findOne({ userId: user.id }) as UserWalletBalance);
+	let address: UserWalletAddress = (await UserWalletAddresses.findOne({ userId: user.id }) as UserWalletAddress);
 
 	if (wallet == null || address == null) {
 		throw new ApiError(meta.errors.noSuchUser);

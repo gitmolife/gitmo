@@ -126,6 +126,7 @@ export default define(meta, async (ps, me) => {
 	let error: string | null = null;
 	let data: {
 		message: string,
+		anonTip: boolean,
 		ourUser: number,
 		othUser: number,
 	} | null;
@@ -265,6 +266,7 @@ export default define(meta, async (ps, me) => {
 		}
 		data = {
 			message: 'Processed',
+			anonTip: ps.anon ? true : false,
 			ourUser: nBalance,
 			othUser: nBalanceOther,
 		};

@@ -13,6 +13,7 @@ import parseAcct from '@/misc/acct/parse';
 import Progress from '@client/scripts/loading';
 import { query as urlQuery } from '../../../prelude/url';
 import { acct as getAcct } from '../../filters/user';
+import * as symbols from '@client/symbols';
 import * as os from '@client/os';
 import QRCode from 'qrcode';
 
@@ -30,6 +31,9 @@ export default defineComponent({
 
 	data() {
 		return {
+			[symbols.PAGE_INFO]: {
+				title: 'CryptoWallet Address',
+			},
 			address: "",
 			qrcode: "0x",
 			resp_message: "",

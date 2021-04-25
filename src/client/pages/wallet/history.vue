@@ -1,10 +1,10 @@
 <template>
-		<div class="_section" v-if="wallet" style="margin-top: 7px; margin-bottom: 30px;">
+		<div class="_section" v-if="history" style="margin-top: 7px; margin-bottom: 30px;">
 
 			<MkContainer :foldable="true" :scrollable="true" style="max-height: 880px;">
 				<template #header><i class="fas fa-book"></i> Wallet History - OHM</template>
-				<div class="_content rowEntry" v-if="wallet.walletHist">
-					<MkWalletHistory :walletHistory="wallet.walletHist" :confRequire="wallet.confRequire" :explorer="wallet.explorer">
+				<div class="_content rowEntry" v-if="history.history">
+					<MkWalletHistory :walletHistory="history.history" :confRequire="history.confRequire">
 					</MkWalletHistory>
 				</div>
 			</MkContainer>
@@ -36,7 +36,7 @@ export default defineComponent({
 			[symbols.PAGE_INFO]: {
 				title: 'CryptoWallet History',
 			},
-			wallet: null,
+			history: null,
 		};
 	},
 
@@ -48,8 +48,8 @@ export default defineComponent({
 
 		fetch() {
 			Progress.start();
-			os.api('wallet/show').then(wallet => {
-				this.wallet = wallet;
+			os.api('wallet/history').then(history => {
+				this.history = history;
 			}).catch(e => {
 				// error
 			}).finally(() => {

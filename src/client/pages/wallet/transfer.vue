@@ -74,6 +74,7 @@ import MkInput from '@client/components/ui/input.vue';
 import MkContainer from '@client/components/ui/container.vue';
 import MkFolder from '@client/components/ui/folder.vue';
 import number from '../../filters/number';
+import * as symbols from '@client/symbols';
 import * as os from '@client/os';
 
 
@@ -88,6 +89,9 @@ export default defineComponent({
 
 	data() {
 		return {
+			[symbols.PAGE_INFO]: {
+				title: 'CryptoWallet Transfer',
+			},
 			bal_tip: '0',
 			bal_net: '0',
 			amountT: null,

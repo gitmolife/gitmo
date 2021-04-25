@@ -28,19 +28,19 @@
 					<span :class="prefixConf(table[6])">{{ table[6] }}</span><span style="font-weight: 700; font-size: 9px;">&nbsp;/&nbsp;</span><span :class="suffixConf(table[6], confRequire)">{{ confRequire }}</span>
 				</td>
 				<td style="padding: 1px 0px 2px 0; font-size: 12px;" class="monospace">
-					<a v-if="table[5].length === 64" @click="showDetail(table[5])" target="_blank" title="View on Explorer">{{ table[5].substr(0, 14) + '..' }}</a>
+					<a v-if="table[5].length === 64" @click="showDetail(table[5])" target="_blank" title="View with Explorer">{{ table[5].substr(0, 14) + '..' }}</a>
 					<span v-if="table[5].length !== 64">{{ table[5] }}</span>
 				</td>
 			</tr>
 		</tbody>
 		<tfoot class="hist-table-footer">
 			<tr style="opacity: 0.84;">
-				<th style="text-align: left; padding: 2px 0px 0px 0; width: 25%;">Date and Time</th>
-				<th style="text-align: left; padding: 2px 6px 0px 0; font-size: 0.92em; width: 6%;">Type</th>
-				<th style="text-align: right; padding: 2px 8px 0px 22px; width: 18%;">Amount</th>
-				<th style="text-align: center; padding: 2px 20px 0px 4px;">Action</th>
-				<th style="text-align: center; padding: 2px 6px 0px 8px; font-size: 0.88em; width: 9%;">Audit</th>
-				<th style="text-align: left; padding: 2px 2px 0px 0; font-size: 0.97em;">Transaction Id</th>
+				<th style="text-align: left; padding: 1px 0px 0px 0; width: 25%;">Date and Time</th>
+				<th style="text-align: left; padding: 1px 6px 0px 0; font-size: 0.92em; width: 6%;">Type</th>
+				<th style="text-align: right; padding: 1px 8px 0px 22px; width: 18%;">Amount</th>
+				<th style="text-align: center; padding: 1px 20px 0px 4px;">Action</th>
+				<th style="text-align: center; padding: 1px 6px 0px 8px; font-size: 0.88em; width: 9%;">Audit</th>
+				<th style="text-align: left; padding: 1px 2px 0px 0; font-size: 0.97em;">Transaction Id</th>
 			</tr>
 		</tfoot>
 	</table>
@@ -64,23 +64,18 @@ export default defineComponent({
 			type: Number,
 			required: true,
 		},
-		explorer: {
-			type: String,
-			required: true,
-		},
 	},
 
 	data() {
 		return {
+
 		};
 	},
 
 	methods: {
 
 		showDetail(txid: string) {
-			let url = this.explorer + 'tx/' + txid;
-			window.open(url, '_blank');
-			//modalPageWindow('/my/wallet/explore/tx/' + txid);
+			modalPageWindow('/my/wallet/explore/tx/' + txid);
 		},
 
 		prefixAmt(amount, type) {

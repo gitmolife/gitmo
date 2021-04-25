@@ -907,7 +907,7 @@ export default defineComponent({
 			}
 			if (this.$i.id === oId) {
 					os.dialog({
-						type: 'error',
+						type: 'warning',
 						title: 'Unable to Tip!',
 						text: 'May not Tip Self..',
 					});
@@ -924,7 +924,7 @@ export default defineComponent({
 			});
 			if (bal === null || !bal) {
 				await os.dialog({
-					type: 'error',
+					type: 'warning',
 					title: 'Unable to Tip!',
 					text: 'You require a balance to tip..',
 				});
@@ -935,10 +935,10 @@ export default defineComponent({
 				title: 'Send OHM to ' + oUsr.username + ' as Tip?',
 				text: 'You have ' + bal + ' OHM available.',
 				input: {
-					placeholder: 'Amount',
+					placeholder: 'Tip Amount',
 					type: 'string',
 					required: true,
-				}
+				},
 			}).then(async ({ canceled, result: amount }) => {
 				if (canceled) { return; }
 				let tipItems = new Map();
@@ -949,7 +949,7 @@ export default defineComponent({
 				await os.dialog({
 					type: 'question',
 					title: "Tip as Anon?",
-					text: 'Do you wish to remain anonymous for this Tip?'
+					text: 'Do you wish to remain anonymous for this Tip?',
 					select: {
 						items: [{
 							value: true, text: 'Yes'
@@ -968,9 +968,13 @@ export default defineComponent({
 					amount: amount,
 					noteId: nId,
 				}, undefined, (res: any) => {
+					let message = 'Tip of ' + amount + ' OHM Sent to ' + oUsr.username + '!';
+					if (res.anonTip) {
+						message = 'Anonymous ' + message;
+					}
 					os.dialog({
 						type: 'success',
-						text: 'Tip of ' + amount + ' OHM Sent to ' + oUsr.username + '!',
+						text: message,
 						title: res.data.message
 					}).then( () => {
 						if (!canceled) {

@@ -52,7 +52,7 @@ export const router = createRouter({
 		{ path: '/my/wallet/withdraw', component: page('wallet/withdraw') },
 		{ path: '/my/wallet/transfer', component: page('wallet/transfer') },
 		//{ path: '/my/wallet/explore', component: page('wallet/explore') },
-		//{ path: '/my/wallet/explore/tx/:txid', component: page('wallet/explore'), props: route => ({ txid: route.params.txid }) },
+		{ path: '/my/wallet/explore/tx/:txid', component: page('wallet/explore'), props: route => ({ txid: route.params.txid }) },
 		{ path: '/my/favorites', component: page('favorites') },
 		{ path: '/my/messages', component: page('messages') },
 		{ path: '/my/mentions', component: page('mentions') },
