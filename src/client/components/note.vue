@@ -890,6 +890,7 @@ export default defineComponent({
 
 		tipInfo() {
 			os.dialog({
+				icon: 'fas fa-comments-dollar',
 				type: 'info',
 				title: 'You have Received Tips!',
 				text: 'Total of ' + this.totalTipped + ' OHM received for this Note.',
@@ -913,7 +914,7 @@ export default defineComponent({
 					});
 					return;
 			}
-			await os.api('wallet/balance').then((balances: any) => {
+			await os.api('wallet/balance').then( (balances: any) => {
 				bal = parseFloat(balances.tipping);
 			}).catch((e: Error) => {
 				os.dialog({
@@ -931,6 +932,7 @@ export default defineComponent({
 				return;
 			}
 			await os.dialog({
+				icon: 'fas fa-comment-dollar',
 				type: 'question',
 				title: 'Send OHM to ' + oUsr.username + ' as Tip?',
 				text: 'You have ' + bal + ' OHM available.',
@@ -939,14 +941,17 @@ export default defineComponent({
 					type: 'string',
 					required: true,
 				},
-			}).then(async ({ canceled, result: amount }) => {
-				if (canceled) { return; }
+			}).then(async (value: unknown) => {
+				let res = value as { canceled: boolean, result: any };
+				if (res.canceled) { return; }
+				let amount: string = res.result;
+				let cancelled: boolean = true;
+				let anon: boolean = true;
 				let tipItems = new Map();
 				tipItems.set(0, { name: 'No' });
 				tipItems.set(1, { name: 'Yes' });
-				let cancelled: boolean = true;
-				let anon: boolean = true;
 				await os.dialog({
+					icon: 'fas fa-user-shield',
 					type: 'question',
 					title: "Tip as Anon?",
 					text: 'Do you wish to remain anonymous for this Tip?',
@@ -957,9 +962,10 @@ export default defineComponent({
 							value: false, text: 'No'
 						}]
 					},
-				}).then(({ canceled, result: bAnon }) => {
-					cancelled = canceled;
-					anon = bAnon;
+				}).then( (value: unknown) => {
+					let res = value as { canceled: boolean, result: any };
+					cancelled = res.canceled;
+					anon = res.result;
 				});
 				if (cancelled) { return; }
 				os.apiWithDialog('wallet/tip', {
@@ -977,9 +983,7 @@ export default defineComponent({
 						text: message,
 						title: res.data.message
 					}).then( () => {
-						if (!canceled) {
-							os.success();
-						}
+						os.success();
 					});
 				}, (e: Error) => {
 					os.dialog({
