@@ -6,15 +6,19 @@
 			<div class="_content">
 				<div class="_panel">
 					<div class="help-info rowEntry">
-						<dl class="">
+						<dl>
 							<dt>About Ohmcoin</dt>
 							<dd><a href="https://ohmcoin.org/" target="_blank">Homepage</a></dd>
 						</dl>
-						<dl class="">
-							<dt>Trade Ohmcoin</dt>
+						<dl>
+							<dt>Ohmcoin Listing</dt>
 							<dd><a href="https://www.coingecko.com/en/coins/ohm-coin" target="_blank">Coin Listing</a></dd>
 						</dl>
-						<dl class="">
+						<dl>
+							<dt>Ohmcoin Trading</dt>
+							<dd><a href="https://socialsend.net/exchange/OHMC_BTC" target="_blank">SocialSend.net Exchange</a></dd>
+						</dl>
+						<dl style="border-top: 1px solid rgba(160, 160, 160, 0.08); margin-top: 6px; padding-top: 2px;">
 							<dt>Site Features</dt>
 							<dd>
 								Instance Abilities:
