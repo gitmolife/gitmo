@@ -18,6 +18,9 @@
 			<i class="fa-fw" :class="menuDef[item].icon"></i><span class="text">{{ $ts[menuDef[item].title] }}</span>
 			<span v-if="menuDef[item].indicated" class="indicator"><i class="fas fa-circle"></i></span>
 		</component>
+		<MkA v-if="item === 'drive'" class="item" active-class="active" to="/my/wallet" v-click-anime>
+			<i class="fas fa-wallet fa-fw"></i><span class="text">CryptoWallet</span>
+		</MkA>
 	</template>
 	<div class="divider"></div>
 	<MkA v-if="$i.isAdmin || $i.isModerator" class="item" active-class="active" to="/instance" :behavior="settingsWindowed ? 'modalWindow' : null" v-click-anime>
@@ -64,7 +67,7 @@ export default defineComponent({
 			connection: null,
 			menuDef: sidebarDef,
 			iconOnly: false,
-			settingsWindowed: false,
+			settingsWindowed: false
 		};
 	},
 

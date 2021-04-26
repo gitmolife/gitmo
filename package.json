@@ -1,7 +1,7 @@
 {
 	"name": "misskey",
 	"author": "syuilo <syuilotan@yahoo.co.jp>",
-	"version": "12.79.1",
+	"version": "12.79.1-gitmo.22",
 	"codename": "indigo",
 	"repository": {
 		"type": "git",
@@ -134,6 +134,7 @@
 		"eslint": "7.25.0",
 		"eslint-plugin-vue": "7.9.0",
 		"eventemitter3": "4.0.7",
+		"express": "4.17.1",
 		"feed": "4.2.2",
 		"file-type": "16.3.0",
 		"fluent-ffmpeg": "2.1.2",
@@ -152,6 +153,7 @@
 		"https-proxy-agent": "5.0.0",
 		"idb-keyval": "5.0.5",
 		"insert-text-at-cursor": "0.3.0",
+		"ip-address": "7.1.0",
 		"is-root": "2.1.0",
 		"is-svg": "4.3.1",
 		"js-yaml": "4.1.0",

@@ -1,7 +1,9 @@
 <template>
 <div class="qglefbjs" :class="notification.type" v-size="{ max: [500, 600] }">
 	<div class="head">
-		<MkAvatar v-if="notification.user" class="icon" :user="notification.user"/>
+		<img v-if="notification.type === 'tipReceive'" class="icon" :src="notification.icon" alt=""/>
+		<img v-else-if="notification.type === 'tipSent'" class="icon" :src="notification.icon" alt=""/>
+		<MkAvatar v-else-if="notification.user" class="icon" :user="notification.user"/>
 		<img v-else-if="notification.icon" class="icon" :src="notification.icon" alt=""/>
 		<div class="sub-icon" :class="notification.type">
 			<i v-if="notification.type === 'follow'" class="fas fa-plus"></i>
@@ -13,11 +15,21 @@
 			<i v-else-if="notification.type === 'mention'" class="fas fa-at"></i>
 			<i v-else-if="notification.type === 'quote'" class="fas fa-quote-left"></i>
 			<i v-else-if="notification.type === 'pollVote'" class="fas fa-poll-h"></i>
+			<i v-else-if="notification.type === 'tipReceive'" class="fas fa-plus-circle"></i>
+			<i v-else-if="notification.type === 'tipSent'" class="fas fa-minus-circle"></i>
 			<XReactionIcon v-else-if="notification.type === 'reaction'" :reaction="notification.reaction" :custom-emojis="notification.note.emojis" :no-style="true"/>
 		</div>
 	</div>
 	<div class="tail">
-		<header>
+
+		<header v-if="notification.type === 'tipReceive' || notification.type === 'tipSent'">
+			<span>{{ notification.header }}</span>
+			<span v-if="notification.user && notification.type === 'tipReceive'" style="opacity: 0.88;">&nbsp;from&nbsp;</span>
+			<span v-else-if="notification.user && notification.type === 'tipSent'" style="opacity: 0.88;">&nbsp;to&nbsp;</span>
+			<MkA v-if="notification.user" class="name" :to="userPage(notification.user)" v-user-preview="notification.user.id"><MkUserName :user="notification.user"/></MkA>
+			<MkTime :time="notification.createdAt" v-if="withTime" class="time"/>
+		</header>
+		<header v-else>
 			<MkA v-if="notification.user" class="name" :to="userPage(notification.user)" v-user-preview="notification.user.id"><MkUserName :user="notification.user"/></MkA>
 			<span v-else>{{ notification.header }}</span>
 			<MkTime :time="notification.createdAt" v-if="withTime" class="time"/>
@@ -52,6 +64,15 @@
 		<span v-if="notification.type === 'groupInvited'" class="text" style="opacity: 0.6;">{{ $ts.groupInvited }}: <b>{{ notification.invitation.group.name }}</b><div v-if="full && !groupInviteDone"><button class="_textButton" @click="acceptGroupInvitation()">{{ $ts.accept }}</button> | <button class="_textButton" @click="rejectGroupInvitation()">{{ $ts.reject }}</button></div></span>
 		<span v-if="notification.type === 'app'" class="text">
 			<Mfm :text="notification.body" :nowrap="!full"/>
+		</span>
+		<span v-if="notification.type === 'tipReceive'" class="text" style="opacity: 0.76;">
+			<Mfm :text="notification.body" :nowrap="!full"></Mfm>
+			<span v-if="notification.note" style="opacity: 0.92;">&nbsp;<MkA class="text" :to="notePage(notification.note)" :title="getNoteSummary(notification.note)">[Note]</MkA></span>
+		</span>
+		<span v-if="notification.type === 'tipSent'" class="text" style="opacity: 0.76;">
+			<Mfm :text="notification.body" :nowrap="!full"></Mfm>
+			<span v-if="notification.note">&nbsp;for&nbsp;</span>
+			<span v-if="notification.note" style="opacity: 0.88; font-weight: 700;"><MkA class="text" :to="notePage(notification.note)" :title="getNoteSummary(notification.note)">[Note]</MkA></span>
 		</span>
 	</div>
 </div>
@@ -237,6 +258,18 @@ export default defineComponent({
 			&.pollVote {
 				padding: 3px;
 				background: #88a6b7;
+			}
+
+			&.tipReceive {
+				padding: 0.5px 3px;
+				font-size: 15px;
+				background: #36d250;
+			}
+
+			&.tipSent {
+				padding: 0.5px 3px;
+				font-size: 15px;
+				background: #abb833;
 			}
 		}
 	}

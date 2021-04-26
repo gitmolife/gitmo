@@ -1,0 +1,19 @@
+{
+  "name": "intercom2",
+  "version": "0.0.3",
+  "description": "intercom2 comms library in typescript",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc --listEmittedFiles -p ."
+  },
+  "author": "loma oopaloopa",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^14.14.14"
+  },
+  "dependencies": {
+    "@types/express": "^4.17.9",
+    "express": "^4.17.1",
+    "ip-address": "^7.1.0"
+  }
+}

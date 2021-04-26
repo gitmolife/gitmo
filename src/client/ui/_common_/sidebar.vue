@@ -25,6 +25,9 @@
 					</component>
 				</template>
 				<div class="divider"></div>
+				<MkA class="item" active-class="active" to="/my/wallet">
+					<i class="fas fa-wallet fa-fw"></i><span class="text">Wallet</span>
+				</MkA>
 				<MkA v-if="$i.isAdmin || $i.isModerator" class="item" active-class="active" to="/instance">
 					<i class="fas fa-server fa-fw"></i><span class="text">{{ $ts.instance }}</span>
 				</MkA>

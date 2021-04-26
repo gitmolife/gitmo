@@ -4,6 +4,7 @@ import * as chalk from 'chalk';
 import * as portscanner from 'portscanner';
 import * as isRoot from 'is-root';
 import { getConnection } from 'typeorm';
+import { fork, ChildProcess } from 'child_process';
 
 import Logger from '../services/logger';
 import loadConfig from '@/config/load';
@@ -12,10 +13,15 @@ import { lessThan } from '../prelude/array';
 import { program } from '../argv';
 import { showMachineInfo } from '@/misc/show-machine-info';
 import { initDb } from '../db/postgre';
+import MessageIPC from '../services/intercom/message-ipc-cmd';
+import { isJson } from '../services/intercom/intercom-functions';
 const meta = require('../meta.json');
 
 const logger = new Logger('core', 'cyan');
 const bootLogger = logger.createSubLogger('boot', 'magenta', false);
+const intercomLogger = logger.createSubLogger('intercom', 'green', false);
+const brokerLogger = intercomLogger.createSubLogger('broker', 'gold', false);
+const brokerBootLogger = brokerLogger.createSubLogger('boot', 'magenta', false);
 
 function greet() {
 	if (!program.quiet) {
@@ -61,6 +67,16 @@ export async function masterMain() {
 
 	bootLogger.succ('Misskey initialized');
 
+	// for Intercom2 worker init
+	let icWorker: ChildProcess | undefined;
+	try {
+		icWorker = await spawnIntercom();
+	} catch (e) {
+		bootLogger.error('Fatal error occurred during initialization attempt for Intercom2', null, true);
+		intercomLogger.error(e, null, true);
+		process.exit(1);
+	}
+
 	if (!program.disableClustering) {
 		await spawnWorkers(config.clusterLimit);
 	}
@@ -72,6 +88,25 @@ export async function masterMain() {
 		require('../daemons/queue-stats').default();
 		require('../daemons/janitor').default();
 	}
+
+	process.on('message', msg => {
+		if (msg === 'ok') {
+			if (icWorker) {
+				// Let Intercom know Misskey is ready
+				icWorker.send('master-ready');
+			}
+			bootLogger.succ('Misskey Ready!');
+		}
+		// Handle command messages to broker.
+		if (icWorker && isJson(msg)) {
+			// Master Handled Process for IPC pass to Broker from Workers.
+			// Workers cannont talk to broker, but broker can talk to workers.
+			const res: MessageIPC = <MessageIPC> msg;
+			if (res.prc === 'relay') {
+				icWorker.send(msg);
+			}
+		}
+	});
 }
 
 const runningNodejsVersion = process.version.slice(1).split('.').map(x => parseInt(x, 10));
@@ -89,6 +124,11 @@ function showEnvironment(): void {
 	}
 
 	logger.info(`You ${isRoot() ? '' : 'do not '}have root privileges`);
+}
+
+function checkIsValidDomain(domain: string): boolean {
+	var re = new RegExp(/^((?:(?:(?:\w[\.\-\+]?)*)\w)+)((?:(?:(?:\w[\.\-\+]?){0,62})\w)+)\.(\w{2,6})$/);
+	return domain.match(re) != null;
 }
 
 function showNodejsVersion(): void {
@@ -179,4 +219,67 @@ function spawnWorker(): Promise<void> {
 			res();
 		});
 	});
+}
+
+/**
+ * Spawn worker instance of intercom
+ */
+async function spawnIntercom(): Promise<ChildProcess | undefined> {
+	if (process.env.INTERCOM_MODE && Number(process.env.INTERCOM_MODE) > 0) {
+		const isWellKnownPort = (port: number) => port < 1024;
+		async function isPortAvailable(port: number): Promise<boolean> {
+			return await portscanner.checkPortStatus(port, '127.0.0.1') === 'closed';
+		}
+		brokerBootLogger.debug('Setup site daemon..');
+		if (process.env.SITE_INTERCOM_ID == null || Number.isNaN(process.env.SITE_INTERCOM_ID)) {
+			brokerBootLogger.error('The site id for Intercom2 is not configured. Please configure site id in .env config file.', null, true);
+			process.exit(1);
+		}
+		if (process.env.SITE_INTERCOM_PORT == null || Number.isNaN(process.env.SITE_INTERCOM_PORT)) {
+			brokerBootLogger.error('The port for Intercom2 is not configured. Please configure port in .env config file.', null, true);
+			process.exit(1);
+		}
+		if (process.platform === 'linux' && isWellKnownPort(Number(process.env.SITE_INTERCOM_PORT)) && !isRoot()) {
+			brokerBootLogger.error('You need root privileges to listen on well-known port on Linux for Intercom2', null, true);
+			process.exit(1);
+		}
+		if (!await isPortAvailable(Number(process.env.SITE_INTERCOM_PORT))) {
+			brokerBootLogger.error(`Port ${process.env.SITE_INTERCOM_PORT} for Intercom2 is already in use`, null, true);
+			process.exit(1);
+		}
+		if (process.env.SITE_INTERCOM_HOST == null || !checkIsValidDomain(process.env.SITE_INTERCOM_HOST)) {
+			brokerBootLogger.error('The host for Intercom2 is not valid. Please set a valid FQDN for host in .env config file.', null, true);
+			process.exit(1);
+		}
+
+		// Spawn Broker Process
+		const broker = fork('./built/boot/xbroker', ['normal'], {});
+		if (broker) {
+			broker.on('message', function(msg) {
+				if (isJson(msg)) {
+					const res = JSON.parse(JSON.stringify(msg));
+					if (res.boot === 'ready') {
+						intercomLogger.succ('Ready!');
+					} else if (res.boot === 'error') {
+						intercomLogger.error('Did not start!');
+						process.exit(1); // EXIT APP!
+					}
+				}
+			});
+
+			broker.on('error', function(e) {
+				brokerLogger.warn(e.message);
+				brokerLogger.error(e.stack as string);
+			});
+
+			broker.on('exit', function(code: number | undefined) {
+				brokerLogger.warn("Exit " + code);
+				process.exit(code); // EXIT APP!
+			});
+
+			brokerBootLogger.succ('Daemon worker started..');
+			return broker;
+		}
+	}
+	return undefined;
 }

@@ -48,6 +48,12 @@ import { UserKeypair } from '../models/entities/user-keypair';
 import { UserPublickey } from '../models/entities/user-publickey';
 import { UserProfile } from '../models/entities/user-profile';
 import { UserSecurityKey } from '../models/entities/user-security-key';
+import { UserWalletAddress } from '../models/entities/user-wallet-address';
+import { UserWalletBalance } from '../models/entities/user-wallet-balance';
+import { UserWalletJob } from '../models/entities/user-wallet-job';
+import { UserWalletTx } from '../models/entities/user-wallet-tx';
+import { UserWalletStatus } from '../models/entities/user-wallet-status';
+import { UserWalletTip } from '../models/entities/user-wallet-tips';
 import { AttestationChallenge } from '../models/entities/attestation-challenge';
 import { Page } from '../models/entities/page';
 import { PageLike } from '../models/entities/page-like';
@@ -126,6 +132,12 @@ export const entities = [
 	UserGroupInvitation,
 	UserNotePining,
 	UserSecurityKey,
+	UserWalletAddress,
+	UserWalletBalance,
+	UserWalletJob,
+	UserWalletTx,
+	UserWalletStatus,
+	UserWalletTip,
 	UsedUsername,
 	AttestationChallenge,
 	Following,

@@ -75,6 +75,7 @@ export default defineComponent({
 		initialPage: {
 			type: String,
 			required: false
+			wallet: null,
 		}
 	},
 
@@ -207,6 +208,7 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
+
 .hiyeyicy {
 	&.wide {
 		display: flex;
