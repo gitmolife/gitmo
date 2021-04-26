@@ -69,7 +69,7 @@ export default define(meta, async (ps, me) => {
 			a = "IN";
 			t = "DEPOSIT";
 			if (!h.complete) {
-				pending = pending + h.amount;
+				pending = pending + Number(h.amount);
 			}
 		} else if (h.txtype === 2 || h.txtype === 4) {
 			t = "WITHDRAW";
@@ -78,7 +78,7 @@ export default define(meta, async (ps, me) => {
 			t = "LOCAL-Tx";
 			a = "IN+";
 			if (!h.complete) {
-				pending = pending + h.amount;
+				pending = pending + Number(h.amount);
 			}
 		} else if (h.txtype === 11) {
 			t = "Tx->TIPS";
