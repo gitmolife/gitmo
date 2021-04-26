@@ -23,11 +23,11 @@
 						<i class="fa-fw" :class="menuDef[item].icon"></i><span class="text">{{ $ts[menuDef[item].title] }}</span>
 						<span v-if="menuDef[item].indicated" class="indicator"><i class="fas fa-circle"></i></span>
 					</component>
+					<MkA v-if="item === 'drive'" class="item" active-class="active" to="/my/wallet">
+						<i class="fas fa-wallet fa-fw"></i><span class="text">CryptoWallet</span>
+					</MkA>
 				</template>
 				<div class="divider"></div>
-				<MkA class="item" active-class="active" to="/my/wallet">
-					<i class="fas fa-wallet fa-fw"></i><span class="text">Wallet</span>
-				</MkA>
 				<MkA v-if="$i.isAdmin || $i.isModerator" class="item" active-class="active" to="/instance">
 					<i class="fas fa-server fa-fw"></i><span class="text">{{ $ts.instance }}</span>
 				</MkA>
