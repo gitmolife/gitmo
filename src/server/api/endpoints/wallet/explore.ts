@@ -60,7 +60,7 @@ export default define(meta, async (ps, me) => {
 		if ('txid' in tx) {
 			let siteWallet: UserWalletAddress = (await UserWalletAddresses.findOne({ userId: siteID }) as UserWalletAddress);
 			for (var vout of tx.vout) {
-				if (vout.scriptPubKey && vout.scriptPubKey.addresses[0]) {
+				if (vout.scriptPubKey && vout.scriptPubKey.addresses && vout.scriptPubKey.addresses[0]) {
 					let address = vout.scriptPubKey.addresses[0];
 					if (address === siteWallet.address) {
 						vout.site = true;
