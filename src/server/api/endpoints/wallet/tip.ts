@@ -70,6 +70,11 @@ export const meta = {
 			code: 'NO_SUCH_USER_OTHER',
 			id: '88b36214-5918-4cec-be59-df48a42c53d9'
 		},
+		noSuchOtherTip: {
+			message: 'This user is not registered to receive Tips.',
+			code: 'NO_SUCH_USER_OTHER_TIP',
+			id: '88b36214-5918-4cec-be59-df48a42c53d8'
+		},
 		amountToSmall: {
 			message: 'Amount must be more than 0.00001',
 			code: 'LESS_MIN_AMOUNT',
@@ -99,30 +104,8 @@ export const meta = {
 };
 
 export default define(meta, async (ps, me) => {
-	const user = await Users.findOne(me.id);
-
-	if (user == null) {
-		throw new ApiError(meta.errors.noSuchUser);
-	}
-
-	let wallet: UserWalletBalance = (await UserWalletBalances.findOne({ userId: user.id }) as UserWalletBalance);
-	let walletOther: UserWalletBalance = (await UserWalletBalances.findOne({ userId: ps.other }) as UserWalletBalance);
-	let addrSite: UserWalletAddress = (await UserWalletAddresses.findOne({ userId: siteID }) as UserWalletAddress);
-
-	if (!walletOther) {
-		throw new ApiError(meta.errors.noSuchOtherUser);
-	}
-
-	if (ps.noteId) {
-		let note: Note = (await Notes.findOne({ id: ps.noteId }) as Note);
-		if (!note) {
-			throw new ApiError(meta.errors.noSuchNote);
-		}
-	}
-
 	let amount: number;
 	let message: string | null = null; // TODO: tip messages..
-
 	let error: string | null = null;
 	let data: {
 		message: string,
@@ -130,45 +113,6 @@ export default define(meta, async (ps, me) => {
 		ourUser: number,
 		othUser: number,
 	} | null;
-
-	async function logTip(uidFrom: string, uidTo: string, amount: number, type: string, note: string | null | undefined) {
-		let t: number = 50;
-		let amt: number;
-		let usrA: string;
-		let usrB: string;
-		if (type === 'to') {
-			// Received
-			amt = amount;
-			t = 51;
-			usrA = uidTo;
-			usrB = uidFrom;
-		} else if (type === 'from') {
-			// Sent
-			amt = -amount;
-			t = 52;
-			usrA = uidFrom;
-			usrB = uidTo;
-		} else {
-			return;
-		}
-		let alog: string = usrB + ':' + note;
-		// Add Entry to Transaction Log??
-		await getConnection()
-			.createQueryBuilder()
-			.insert()
-			.into('user_wallet_tx')
-			.values({
-				userId: usrA,
-				txid: 'INTERNAL_TX_TIP',
-				address: alog,
-				coinType: 0,
-				txtype: t,
-				processed: 3,
-				amount: amt,
-				complete: true,
-			})
-			.execute();
-	}
 
 	try {
 		if (ps.amount === null || isNaN(Number(ps.amount))) {
@@ -181,6 +125,30 @@ export default define(meta, async (ps, me) => {
 	} catch (e) {
 		throw new ApiError(meta.errors.amountInvalid);
 	}
+
+	const user = await Users.findOne(me.id);
+	if (user == null) {
+		throw new ApiError(meta.errors.noSuchUser);
+	}
+	const userOther = await Users.findOne({ id: ps.other });
+	if (userOther == null) {
+		throw new ApiError(meta.errors.noSuchOtherUser);
+	}
+
+	if (ps.noteId) {
+		let note: Note = (await Notes.findOne({ id: ps.noteId }) as Note);
+		if (!note) {
+			throw new ApiError(meta.errors.noSuchNote);
+		}
+	}
+
+	let walletOther: UserWalletBalance = (await UserWalletBalances.findOne({ userId: userOther.id }) as UserWalletBalance);
+	if (!walletOther) {
+		throw new ApiError(meta.errors.noSuchOtherTip);
+	}
+
+	let wallet: UserWalletBalance = (await UserWalletBalances.findOne({ userId: user.id }) as UserWalletBalance);
+	let addrSite: UserWalletAddress = (await UserWalletAddresses.findOne({ userId: siteID }) as UserWalletAddress);
 	if (amount > wallet.balance || amount > 10000000) {
 		error = "Not Enough";
 		throw new ApiError(meta.errors.amountNotEnough);
@@ -193,7 +161,9 @@ export default define(meta, async (ps, me) => {
 	} else if (amount >= addrSite.balance) {
 		error = 'Amount too high';
 		throw new ApiError(meta.errors.amountToHigh);
-	} else {
+	}
+
+	try {
 		let nBalance = Number(wallet.balance) - amount;
 		let nBalanceOther = Number(walletOther.balance) + amount;
 		let uid = wallet.userId;
@@ -232,13 +202,9 @@ export default define(meta, async (ps, me) => {
 				message: message,
 			})
 			.execute();
-		let _uid: string | null = null;
-		if (!ps.anon) {
-			_uid = uid;
-		}
 		// Notification to user receiving tip.
 		createNotification(uido, 'tipReceive', {
-			notifierId: _uid,
+			notifierId: ps.anon ? null : uid,
 			customBody: 'Received Tip of ' + amount + " OHM",
 			customHeader: 'You Received a Tip',
 			customIcon: '/static-assets/client/coin/ohm100.png',
@@ -270,6 +236,11 @@ export default define(meta, async (ps, me) => {
 			ourUser: nBalance,
 			othUser: nBalanceOther,
 		};
+	} catch (e) {
+		console.error('API Error in tip() function:');
+		console.error(e);
+		data = null;
+		error = 'Internal API Error on Tip!';
 	}
 
 	let result = {
@@ -279,3 +250,42 @@ export default define(meta, async (ps, me) => {
 
 	return result;
 });
+
+async function logTip(uidFrom: string, uidTo: string, amount: number, type: string, note: string | null | undefined) {
+	let t: number = 50;
+	let amt: number;
+	let usrA: string;
+	let usrB: string;
+	if (type === 'to') {
+		// Received
+		amt = amount;
+		t = 51;
+		usrA = uidTo;
+		usrB = uidFrom;
+	} else if (type === 'from') {
+		// Sent
+		amt = -amount;
+		t = 52;
+		usrA = uidFrom;
+		usrB = uidTo;
+	} else {
+		return;
+	}
+	let alog: string = usrB + ':' + note;
+	// Add Entry to Transaction Log??
+	await getConnection()
+		.createQueryBuilder()
+		.insert()
+		.into('user_wallet_tx')
+		.values({
+			userId: usrA,
+			txid: 'INTERNAL_TX_TIP',
+			address: alog,
+			coinType: 0,
+			txtype: t,
+			processed: 3,
+			amount: amt,
+			complete: true,
+		})
+		.execute();
+}
