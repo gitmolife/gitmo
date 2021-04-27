@@ -26,6 +26,9 @@
 							<div class="info-div">
 								<span class="info-text">This will convert OM into OHM. Your Network balance will increase.</span>
 							</div>
+							<div class="info-div" style="margin-bottom: 2px;">
+								<span class="info-text">A network fee of about 0.00001000 OHM may be applied to this transfer.</span>
+							</div>
 							<div style="width: 67%; margin: auto; padding-bottom: 2px; margin-bottom: 20px; text-shadow: -1px 1px 5px #777777;">
 								<MkButton full @click="doTransfer('ohm')" style="color: black; background-color: #eda737; font-weight: 700;"><i class="fas fa-caret-square-up"></i> Confirm Convert to OHM</MkButton>
 							</div>
@@ -53,6 +56,9 @@
 							<div class="info-div">
 								<span class="info-text">This will convert OHM into OM. Your Network balance will decrease.</span>
 							</div>
+							<div class="info-div" style="margin-bottom: 4px;">
+								<span class="info-text">A network fee of about 0.00001000 OHM may be applied to this transfer.</span>
+							</div>
 							<div id="conf-btn" style="width: 67%; margin: auto; padding-bottom: 2px; margin-bottom: 20px; text-shadow: -1px 1px 4px #777777;">
 								<MkButton full @click="doTransfer('om')" style="color: black; background-color: #4897f7; font-weight: 700;"><i class="fas fa-caret-square-down"></i> Confirm Convert to OM</MkButton>
 							</div>
@@ -66,9 +72,8 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent } from 'vue';
+import { defineComponent } from 'vue';
 import Progress from '@client/scripts/loading';
-import { query as urlQuery } from '../../../prelude/url';
 import MkButton from '@client/components/ui/button.vue';
 import MkInput from '@client/components/ui/input.vue';
 import MkContainer from '@client/components/ui/container.vue';
@@ -98,12 +103,12 @@ export default defineComponent({
 			amountN: null,
 			error: null,
 			activated: false,
-			response_ohm_error: null,
-			response_ohm_pend: null,
-			response_ohm_ok: null,
-			response_om_error: null,
-			response_om_pend: null,
-			response_om_ok: null,
+			response_ohm_error: '',
+			response_ohm_pend: '',
+			response_ohm_ok: '',
+			response_om_error: '',
+			response_om_pend: '',
+			response_om_ok: '',
 		};
 	},
 
@@ -120,10 +125,9 @@ export default defineComponent({
 
 		fetch() {
 			Progress.start();
-			os.api('wallet/balance').then(balances => {
-				//console.log(balances);
-				this.bal_tip = parseFloat(balances.tipping);
-				this.bal_net = parseFloat(balances.network);
+			os.api('wallet/balance').then( (balances: any) => {
+				(this.bal_tip as any) = Number(balances.tipping);
+				(this.bal_net as any) = Number(balances.network);
 			}).catch(e => {
 				this.error = e;
 			}).finally(() => {
@@ -131,7 +135,16 @@ export default defineComponent({
 			});
 		},
 
-		doTransfer(type: string) {
+		clearMessages() {
+			this.response_ohm_error = '';
+			this.response_ohm_pend = '';
+			this.response_ohm_ok = '';
+			this.response_om_error = '';
+			this.response_om_pend = '';
+			this.response_om_ok = '';
+		},
+
+		async doTransfer(type: string) {
 			if (this.activated) {
 				if (type === 'ohm') {
 					this.response_ohm_error = 'Already Busy.. ' + (this.error ? 'Error' : '');
@@ -140,8 +153,8 @@ export default defineComponent({
 				}
 				return;
 			}
-			let amount = this.amountT ? this.amountT : this.amountN;
-			if (parseFloat(amount) <= 0) {
+			let amount: string | null = this.amountT ? this.amountT : this.amountN;
+			if (!amount || Number(amount) <= 0) {
 				if (type === 'ohm') {
 					this.response_ohm_error = 'Invalid Number Entered for Action..';
 				} else {
@@ -149,29 +162,34 @@ export default defineComponent({
 				}
 				return;
 			}
+			let text: string;
+			if (type === 'ohm') {
+				text = 'Do you want to transfer ' + amount + ' OM to OHM?';
+			} else {
+				text = 'Do you want to transfer ' + amount + ' OHM to OM?';
+			}
+			let res: { canceled: boolean } = await os.dialog({
+				type: 'question',
+				title: "Confirm Transfer?",
+				text: text,
+				showCancelButton: true,
+			}) as { canceled: boolean };
+			if (res.canceled) {
+				return;
+			}
 			Progress.start();
 			this.activated = true;
 			this.error = null;
 			this.amountT = null;
 			this.amountN = null;
-			this.response_ohm_error = null;
-			this.response_ohm_pend = null;
-			this.response_ohm_ok = null;
-			this.response_om_error = null;
-			this.response_om_pend = null;
-			this.response_om_ok = null;
+			this.clearMessages();
 			if (type === 'ohm') {
 				this.response_ohm_pend = 'Processing Request..';
 			} else {
 				this.response_om_pend = 'Processing Request..';
 			}
-			os.api('wallet/transfer', { type, amount }).then(resp => {
-				this.response_ohm_error = null;
-				this.response_ohm_pend = null;
-				this.response_ohm_ok = null;
-				this.response_om_error = null;
-				this.response_om_pend = null;
-				this.response_om_ok = null;
+			os.api('wallet/transfer', { type, amount }).then( (resp: any) => {
+				this.clearMessages();
 				if (resp.error) {
 					//console.log(resp.error);
 					if (type === 'ohm') {
@@ -181,29 +199,23 @@ export default defineComponent({
 						this.response_om_pend = "Error."
 						this.response_om_error = resp.error;
 					}
-					//this.timeoutUpdateAck(type, '', amount);
 					let vm = this;
 					vm.activated = false;
 					setTimeout(function () {
-						vm.response_ohm_error = null;
-						vm.response_ohm_pend = null;
-						vm.response_ohm_ok = null;
-						vm.response_om_error = null;
-						vm.response_om_pend = null;
-						vm.response_om_ok = null;
-					}, 22000);
+						vm.clearMessages();
+					}, 7300);
 				} else {
 					//console.log(resp.data);
 					if (type === 'ohm') {
 						this.response_ohm_ok = "Action Attempt...";
 						this.response_ohm_pend = "Processing.. Please Wait."
-						this.bal_tip = number(parseFloat(this.bal_tip) - parseFloat(amount));
+						this.bal_tip = number(Number(this.bal_tip) - Number(amount));
 					} else {
 						this.response_om_ok = "Action Attempt...";
 						this.response_om_pend = "Processing.. Please Wait."
-						this.bal_net = number(parseFloat(this.bal_net) - parseFloat(amount));
+						this.bal_net = number(Number(this.bal_net) - Number(amount));
 					}
-					this.timeoutUpdateAck(type, resp.data, amount);
+					this.timeoutUpdateAck(type, resp.data, amount!);
 				}
 			}).catch(e => {
 				this.error = e;
@@ -222,13 +234,8 @@ export default defineComponent({
 			setTimeout(function () {
 				Progress.start();
 				let jobId: string = 'TRANSFER_FINAL';
-				vm.response_ohm_error = null;
-				vm.response_ohm_pend = null;
-				vm.response_ohm_ok = null;
-				vm.response_om_error = null;
-				vm.response_om_pend = null;
-				vm.response_om_ok = null;
-				os.api('wallet/job', { jobId, jobData }).then(resp => {
+				vm.clearMessages();
+				os.api('wallet/job', { jobId, jobData }).then( (resp: any) => {
 					let json = JSON.parse(resp);
 					if (!json.error) {
 						let data = JSON.parse(json.data);
@@ -237,40 +244,35 @@ export default defineComponent({
 							let res = JSON.parse(data.data);
 							console.log(res.txid);
 							if (type === 'ohm') {
-								let bn = parseFloat(vm.bal_net);
-								vm.bal_net = number(bn + parseFloat(amount));
+								let bn = Number(vm.bal_net);
+								vm.bal_net = number(bn + Number(amount));
 								vm.response_ohm_ok = "Action Confirmed Process Success. " + res.txid.substring(0, 22) + "..";
 							} else {
-								let bt = parseFloat(vm.bal_tip);
-								vm.bal_tip = number(bt + parseFloat(amount));
+								let bt = Number(vm.bal_tip);
+								vm.bal_tip = number(bt + Number(amount));
 								vm.response_om_ok = "Action Confirmed Process Success. " + res.txid.substring(0, 22) + "..";
 							}
 						} else {
 							console.log(data.error);
 							if (type === 'ohm') {
 								vm.response_ohm_error = "Internal Error! " + data.error;
-								vm.bal_tip = number(parseFloat(vm.bal_tip) + parseFloat(amount)); // add back
+								vm.bal_tip = number(Number(vm.bal_tip) + Number(amount)); // add back
 							} else {
 								vm.response_om_error = "Internal Error! " + data.error;
-								vm.bal_net = number(parseFloat(vm.bal_net) + parseFloat(amount)); // add back
+								vm.bal_net = number(Number(vm.bal_net) + Number(amount)); // add back
 							}
 						}
 						setTimeout(function () {
-							vm.response_ohm_error = null;
-							vm.response_ohm_pend = null;
-							vm.response_ohm_ok = null;
-							vm.response_om_error = null;
-							vm.response_om_pend = null;
-							vm.response_om_ok = null;
+							vm.clearMessages();
 						}, 33000);
 					} else {
 						console.log(json.error);
 						if (type === 'ohm') {
 							vm.response_ohm_error = "Internal Error Occurred!";
-							vm.bal_tip = number(parseFloat(vm.bal_tip) + parseFloat(amount)); // add back
+							vm.bal_tip = number(Number(vm.bal_tip) + Number(amount)); // add back
 						} else {
 							vm.response_om_error = "Internal Error Occurred!";
-							vm.bal_net = number(parseFloat(vm.bal_net) + parseFloat(amount)); // add back
+							vm.bal_net = number(Number(vm.bal_net) + Number(amount)); // add back
 						}
 					}
 				}).catch(e => {
@@ -280,7 +282,7 @@ export default defineComponent({
 					Progress.done();
 					vm.activated = false;
 				});
-			}, 16400);
+			}, 6400);
 		},
 
 		updatePoll() {
@@ -305,6 +307,8 @@ export default defineComponent({
 	width: 72%;
 	margin: auto;
 	text-align: center;
+	line-height: 1;
+	opacity: 0.72;
 }
 .info-text {
 	font-size: 11px;

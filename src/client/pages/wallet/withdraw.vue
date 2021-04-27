@@ -23,8 +23,8 @@
 								<span class="resp-text-ack">{{ response.ok }}</span>
 								<span class="resp-text-nack">{{ response.error }}</span>
 							</div>
-							<div class="info-div">
-								<span class="info-text">This will move OHM off site. Your Network balance will decrease.</span>
+							<div class="info-div" style="margin-bottom: 2px;">
+								<span class="info-text">This will move OHM off site. Your Network balance will decrease. Network fees apply..</span>
 							</div>
 							<div style="width: 67%; margin: auto; padding-bottom: 2px; margin-bottom: 16px;">
 								<MkButton full primary @click="doWithdraw()"><i class="fas fa-external-link-square-alt"></i> Confirm Withdraw</MkButton>
@@ -39,9 +39,8 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent } from 'vue';
+import { defineComponent } from 'vue';
 import Progress from '@client/scripts/loading';
-import { query as urlQuery } from '../../../prelude/url';
 import MkButton from '@client/components/ui/button.vue';
 import MkInput from '@client/components/ui/input.vue';
 import MkContainer from '@client/components/ui/container.vue';
@@ -68,11 +67,15 @@ export default defineComponent({
 			address: "",
 			amount: "",
 			error: null,
-			wallet: "",
+			wallet: {
+				network: null,
+				balance: null,
+			},
+			activated: false,
 			response: {
-				error: null,
-				pend: null,
-				ok: null,
+				error: '',
+				pend: '',
+				ok: '',
 			},
 		};
 	},
@@ -90,8 +93,7 @@ export default defineComponent({
 		fetch(): void {
 			Progress.start();
 			os.api('wallet/balance').then(wallet => {
-				//console.log(wallet);
-				this.wallet = wallet;
+				(this.wallet as any) = wallet;
 			}).catch(e => {
 				this.error = e;
 			}).finally(() => {
@@ -99,49 +101,55 @@ export default defineComponent({
 			});
 		},
 
-		doWithdraw(): void {
+		clearMessages() {
+			this.response.ok = '';
+			this.response.pend = '';
+			this.response.error = '';
+		},
+
+		async doWithdraw(): Promise<void> {
 			if (this.activated) {
 				this.response.error = 'Already Busy.. ' + (this.error ? 'Error' : '');
 				return;
 			}
 			let address = this.address;
 			let amount = this.amount;
-			if (parseFloat(amount) <= 0) {
+			if (!amount || Number(amount) <= 0) {
 				this.response.error = 'Invalid Number Entered for Action..';
+				return;
+			}
+			let text: string = 'Do you want to withdraw ' + amount + ' OHM?';
+			let res: { canceled: boolean } = await os.dialog({
+				type: 'question',
+				title: "Confirm Withdraw?",
+				text: text,
+				showCancelButton: true,
+			}) as { canceled: boolean };
+			if (res.canceled) {
 				return;
 			}
 			Progress.start();
 			this.activated = true;
 			this.error = null;
-			this.amount = null;
-			this.response.ok = null;
-			this.response.pend = null;
-			this.response.error = null;
+			this.amount = '';
+			this.clearMessages();
 			this.response.ok = "Attempting Action...";
-			os.api('wallet/withdraw', { address, amount }).then(resp => {
-				this.address = null;
-				this.response.ok = null;
-				this.response.pend = null;
-				this.response.error = null;
+			os.api('wallet/withdraw', { address, amount }).then( (resp: any)  => {
+				this.address = '';
+				this.clearMessages();
 				if (resp.error) {
 					//console.log(resp.error);
 					this.response.pend = "An Error Occurred!"
 					this.response.error = resp.error;
-					//this.timeoutUpdateAck('', amount);
 					let vm = this;
 					vm.activated = false;
 					setTimeout(function () {
-						vm.response_ohm_error = null;
-						vm.response_ohm_pend = null;
-						vm.response_ohm_ok = null;
-						vm.response_om_error = null;
-						vm.response_om_pend = null;
-						vm.response_om_ok = null;
+						vm.clearMessages();
 					}, 22000);
 				} else {
 					//console.log(resp.data);
 					this.response.pend = "Processing.. Please Wait."
-					this.wallet.network = number(parseFloat(this.wallet.network) - parseFloat(amount));
+					this.wallet.network = number(Number(this.wallet.network) - Number(amount));
 					this.timeoutUpdateAck(resp.data, amount);
 				}
 			}).catch(e => {
@@ -157,10 +165,8 @@ export default defineComponent({
 			setTimeout(function () {
 				Progress.start();
 				let jobId: string = 'WITHDRAW_FINAL';
-				vm.response.ok = null;
-				vm.response.pend = null;
-				vm.response.error = null;
-				os.api('wallet/job', { jobId, jobData }).then(resp => {
+				vm.clearMessages();
+				os.api('wallet/job', { jobId, jobData }).then( (resp: any) => {
 					try {
 						let json = JSON.parse(resp);
 						//console.log(json);
@@ -171,14 +177,13 @@ export default defineComponent({
 								console.log(res.txid);
 								vm.response.ok = "Action Confirmed with Success. " + res.txid.substr(0, 22) + "..";
 							} else {
-								let nbal = parseFloat(vm.wallet.network) + parseFloat(amount);
+								let nbal = Number(vm.wallet.network) + Number(amount);
 								vm.wallet.network = number(nbal);
 								vm.response.error = "Internal Error - " + data.error;
 							}
 						} else {
-							//console.log("ERROR!");
 							console.error(json.error);
-							let nbal = parseFloat(vm.wallet.network) + parseFloat(amount);
+							let nbal = Number(vm.wallet.network) + Number(amount);
 							vm.wallet.network = number(nbal);
 							if (json.error === 'Invalid') {
 								vm.response.error = "Internal Error - Job Not Found!";
@@ -195,9 +200,10 @@ export default defineComponent({
 					console.error(e);
 				}).finally(() => {
 					Progress.done();
+					vm.clearMessages();
 					vm.activated = false;
 				});
-			}, 5600);
+			}, 4600);
 		},
 
 		updatePoll() {
@@ -222,6 +228,8 @@ export default defineComponent({
 	width: 72%;
 	margin: auto;
 	text-align: center;
+	line-height: 1;
+	opacity: 0.72;
 }
 .info-text {
 	font-size: 11px;
@@ -257,6 +265,7 @@ export default defineComponent({
 	border-bottom: 1px solid rgba(161, 161, 161, 0.18);
 	padding-top: 15px;
 	padding-bottom: 5px;
+	margin-bottom: 20px;
 }
 
 </style>

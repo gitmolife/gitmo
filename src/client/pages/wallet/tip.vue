@@ -35,10 +35,8 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, Ref, ref } from 'vue';
+import { defineComponent, } from 'vue';
 import Progress from '@client/scripts/loading';
-import { query as urlQuery } from '../../../prelude/url';
-import MkModal from '@client/components/ui/modal.vue';
 import MkButton from '@client/components/ui/button.vue';
 import MkInput from '@client/components/ui/input.vue';
 import MkContainer from '@client/components/ui/container.vue';
@@ -95,7 +93,7 @@ export default defineComponent({
 			os.api('wallet/balance').then(balances => {
 				//console.log(balances);
 				this.bal_tip = Number(balances.tipping);
-				//this.bal_net = parseFloat(balances.network);
+				//this.bal_net = Number(balances.network);
 			}).catch(e => {
 				this.error = e;
 				this.response_om_error = "Error Fetching Balance!";
@@ -157,8 +155,8 @@ export default defineComponent({
 		},
 
 		isNumeric(val: any): boolean {
-			return !(val instanceof Array) && (val - parseFloat(val) + 1) >= 0;
-		}
+			return !(val instanceof Array) && (val - Number(val) + 1) >= 0;
+		},
 
 		dispose() {
 			console.log("> disposing modal..");
