@@ -75,6 +75,11 @@ export const meta = {
 			code: 'NO_SUCH_USER_OTHER_TIP',
 			id: '88b36214-5918-4cec-be59-df48a42c53d8'
 		},
+		noTipSelf: {
+			message: 'You may not Tip yourself!',
+			code: 'NO_TIP_SELF',
+			id: '88b36214-5918-4cec-be59-df48a42c5366'
+		},
 		amountToSmall: {
 			message: 'Amount must be more than 0.00001',
 			code: 'LESS_MIN_AMOUNT',
@@ -89,6 +94,11 @@ export const meta = {
 			message: 'Amount is more than available.',
 			code: 'OVER_MAX_AMOUNT',
 			id: '88b36214-5918-4cec-be59-df48a42c53d2'
+		},
+		amountToLarge: {
+			message: 'Amount is too large and more than available to process.',
+			code: 'OVER_MAX_AMOUNT_LARGE',
+			id: '88b36214-5918-4cec-be59-df48a42c53d4'
 		},
 		amountInvalid: {
 			message: 'Amount must be valid number.',
@@ -140,6 +150,12 @@ export default define(meta, async (ps, me) => {
 		if (!note) {
 			throw new ApiError(meta.errors.noSuchNote);
 		}
+		if (user.id === note.userId) {
+			throw new ApiError(meta.errors.noTipSelf);
+		}
+	}
+	if (user.id === userOther.id) {
+		throw new ApiError(meta.errors.noTipSelf);
 	}
 
 	let walletOther: UserWalletBalance = (await UserWalletBalances.findOne({ userId: userOther.id }) as UserWalletBalance);
@@ -149,18 +165,18 @@ export default define(meta, async (ps, me) => {
 
 	let wallet: UserWalletBalance = (await UserWalletBalances.findOne({ userId: user.id }) as UserWalletBalance);
 	let addrSite: UserWalletAddress = (await UserWalletAddresses.findOne({ userId: siteID }) as UserWalletAddress);
-	if (amount > wallet.balance || amount > 10000000) {
+	if (amount > 10000000 || walletOther.balance + amount > addrSite.balance - amount) {
 		error = "Not Enough";
-		throw new ApiError(meta.errors.amountNotEnough);
+		throw new ApiError(meta.errors.amountToLarge);
+	} else if (amount >= addrSite.balance || wallet.balance - amount >= addrSite.balance) {
+		error = 'Amount too high';
+		throw new ApiError(meta.errors.amountToHigh);
 	} else if (wallet.balance - amount < 0 || amount > wallet.balance) {
 		error = "Not Enough";
 		throw new ApiError(meta.errors.amountNotEnough);
 	} else if (amount <= 0.00001) {
 		error = 'Amount must be more than 0.00001';
 		throw new ApiError(meta.errors.amountToSmall);
-	} else if (amount >= addrSite.balance) {
-		error = 'Amount too high';
-		throw new ApiError(meta.errors.amountToHigh);
 	}
 
 	try {
