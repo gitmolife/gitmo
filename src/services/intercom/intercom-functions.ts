@@ -508,6 +508,16 @@ export async function transfer(brokerLogger: Logger, intercomBroker: IntercomBro
 	}
 };
 
+// Execute Block Crawler
+export async function crawlBlocks(brokerLogger: Logger, intercomBroker: IntercomBroker, cmd: MessageIPC): Promise<void> {
+	if (!intercomBroker) {
+		return;
+	}
+	if (cmd.dat.address) {
+		intercomBroker.crawl(cmd.dat.address);
+	}
+};
+
 export function isJson(item: any) {
 	try {
 		item = typeof item !== "string" ? JSON.stringify(item) : item;
