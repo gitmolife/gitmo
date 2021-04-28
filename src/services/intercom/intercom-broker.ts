@@ -201,6 +201,10 @@ export default class IntercomBroker {
           );
         }
         var json = JSON.parse(rxData);
+        let strFee = (json.fee as String).replace('-', '');
+        let feeValue: number = 'fee' in json ? Number(this.parseFromIntString(strFee, 8)) : 0;
+        let knValue: number = 5.4;
+        let isStake: boolean = 'isStake' in json ? json.isStake : false;
         // Get Tx if Exists..
         const txe = await getConnection()
           .createQueryBuilder()
@@ -220,7 +224,7 @@ export default class IntercomBroker {
               txid: json.txid,
               address: "",
               coinType: 0,
-              txtype: 1,
+              txtype: isStake ? 15 : 1,
               confirms: json.confirmations,
             })
             .execute();
@@ -250,6 +254,7 @@ export default class IntercomBroker {
 
         // Check Job
         if (tx !== undefined && json.confirmations >= 1) {
+          // Inputs
           var inputs: Map<string, { userId: string; balance: string; vout: number }> = new Map<string, { userId: string; balance: string; vout: number }>();
           for (var bal of json.inputs) {
             // Get Address if Exists..
@@ -265,7 +270,8 @@ export default class IntercomBroker {
               inputs.set(addr, { userId, balance: bal.value, vout: bal.vout });
             }
           }
-          var users: Map<string, { userId: string; balance: string; vout: number; }> = new Map<string, { userId: string; balance: string; vout: number; }>();
+          // Outputs
+          var outputs: Map<string, { userId: string; balance: string; vout: number; }> = new Map<string, { userId: string; balance: string; vout: number; }>();
           for (var bal of json.outputs) {
             // Get Address if Exists..
             const address: UserWalletAddress = await getConnection()
@@ -279,22 +285,37 @@ export default class IntercomBroker {
             if (userId != null) {
               //this.logger.info("Address Located for \'" + userId + "\' ... from TxID \'" + json.txid + "\' Vout \'" + bal.vout + "\'");
               let addr: string = address.address;
-              users.set(addr, { userId, balance: bal.value, vout: bal.vout });
+              outputs.set(addr, { userId, balance: bal.value, vout: bal.vout });
+            }
+            if (isStake && bal.vout >= 2 && bal.vout <= 3) {
+              let knV: number = Number(this.parseFromIntString(bal.value, 8));;
+              if (knV <= 6) {
+                //this.logger.info("Stake Located for \'" + userId + "\' ... from TxID \'" + json.txid + "\' Vout \'" + bal.vout + "\'");
+                knValue = knV;
+              }
             }
           }
 
-          // Iterate over matched vouts to users..
-          for (var usr of users.keys()) {
-            let user = users.get(usr);
-            if (!user) {
+          if (isStake && knValue > 0) {
+            // Adjust fee value, remove masternode/karmanode reward.
+            feeValue = feeValue - knValue;
+          }
+
+          // Iterate over matched vouts to outputs..
+          for (var usr of outputs.keys()) {
+            let output = outputs.get(usr);
+            if (!output) {
               continue;
             }
-            let bal = Number(this.parseFromIntString(user.balance, 8));
-            let uid = user.userId;
-            let vout = user.vout;
+            let bal = Number(this.parseFromIntString(output.balance, 8));
+            let uid = output.userId;
+            let vout = output.vout;
             var t = 3;
             if (usr in inputs.keys()) {
               t = 13;
+            }
+            if (isStake) {
+              t = 5;
             }
             var txl = await getConnection()
               .createQueryBuilder()
@@ -318,7 +339,7 @@ export default class IntercomBroker {
                   txtype: t,
                   confirms: json.confirmations,
                   processed: json.confirmations >= 5 ? 2 : 1,
-                  amount: bal,
+                  amount: isStake ? feeValue : bal,
                 })
                 .execute();
               txl = await getConnection()
@@ -328,13 +349,13 @@ export default class IntercomBroker {
                 .where("user_wallet_tx.txid = :txid", { txid: json.txid })
                 .andWhere("user_wallet_tx.address = :addr", { addr: usr })
                 .getOne();
-              this.logger.debug("Added Record for TxID: \'" + json.txid + "::" + vout + "\' with \'" + json.confirmations + "\' confirmations and bal \'" + bal + "\' to user \'" + uid + "\'");
+              this.logger.debug("Added Record for TxID: \'" + json.txid + "::" + vout + "\' with \'" + json.confirmations + "\' confirmations and bal \'" + (isStake ? feeValue : bal) + "\' to user \'" + uid + "\'");
             }
             if (txl === undefined) {
               continue;
             }
             if (txl.confirms >= 1 && !txl.complete) {
-              this.logger.debug("Updated Record for TxID: \'" + json.txid + "::" + vout + "\' with \'" + json.confirmations + "\' confirmations and bal " + bal);
+              this.logger.debug("Updated Record for TxID: \'" + json.txid + "::" + vout + "\' with \'" + json.confirmations + "\' confirmations and bal " + (isStake ? feeValue : bal));
               if (txl.txtype < 10 || txl.txtype === 13) {
                 // Update Tx Entry...
                 await getConnection()
@@ -345,7 +366,7 @@ export default class IntercomBroker {
                     vout: vout,
                     processed: json.confirmations >= 5 ? 3 : 2,
                     complete: json.confirmations >= 5,
-                    amount: bal,
+                    amount: isStake ? feeValue : bal,
                   })
                   .where("user_wallet_tx.txid = :txid", { txid: json.txid })
                   .andWhere("user_wallet_tx.address = :addr", { addr: usr })
@@ -373,6 +394,35 @@ export default class IntercomBroker {
             }
             if (txl.txtype === 11 || txl.txtype === 13 || txl.txtype === 21) {
               //this.logger.debug("Internal Transfer to site: " + json.txid);
+              continue;
+            }
+            if (txl.txtype === 5 || txl.txtype === 15) {
+              if (!txl.complete && json.confirmations >= 1) {
+                this.logger.debug("Internal Stake from wallet: " + json.txid + " ... Balance Updated for \'" + uid + "\'");
+                // Get current Balance..
+                const userBalance: UserWalletAddress = await getConnection()
+                  .createQueryBuilder()
+                  .select("user_wallet_address")
+                  .from(UserWalletAddress, 'user_wallet_address')
+                  .where('user_wallet_address."userId" = :uid', { uid: uid })
+                  .getOne() as UserWalletAddress;
+                // Update Balance..
+                let ibal: number = Number(userBalance.balance);
+                let nbal: number = ibal + feeValue;
+                await getConnection()
+                  .createQueryBuilder()
+                  .update('user_wallet_address')
+                  .set({ balance: nbal })
+                  .where('user_wallet_address."userId" = :uid', { uid: uid })
+                  .execute();
+                // Update Tx Entry Status...
+                await getConnection()
+                  .createQueryBuilder()
+                  .update('user_wallet_tx')
+                  .set({ complete: true })
+                  .where("user_wallet_tx.txid = :txid", { txid: json.txid })
+                  .execute();
+              }
               continue;
             }
             if (!txl.complete && json.confirmations >= 5) {
@@ -406,7 +456,7 @@ export default class IntercomBroker {
           }
         }
 
-        if (json.confirmations >= 6) {
+        if (json.confirmations >= 6 || (isStake && json.confirmations >= 1)) {
           var syncs: Map<string, { userId: string; balance: string; }> = new Map<string, { userId: string; balance: string; }>();
           for (var bal of json.balances) {
             // Get Address if Exists..
