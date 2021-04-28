@@ -74,6 +74,9 @@ export default define(meta, async (ps, me) => {
 		} else if (h.txtype === 2 || h.txtype === 4) {
 			t = "WITHDRAW";
 			a = "OUT";
+		} else if (h.txtype === 5) {
+			t = "STAKE";
+			a = "GAIN";
 		} else if (h.txtype === 10) {
 			t = "LOCAL-Tx";
 			a = "IN+";
@@ -87,6 +90,8 @@ export default define(meta, async (ps, me) => {
 			t = "TxCHANGE";
 			a = "SYNC";
 			amt = '~' + h.amount;
+		} else if (h.txtype === 15) {
+			continue;
 		} else if (h.txtype === 20) {
 			continue;
 		} else if (h.txtype === 21) {

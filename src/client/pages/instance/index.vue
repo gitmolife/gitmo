@@ -18,6 +18,7 @@
 			<FormGroup>
 				<template #label>{{ $ts.administration }}</template>
 				<FormLink :active="page === 'users'" replace to="/instance/users"><template #icon><i class="fas fa-users"></i></template>{{ $ts.users }}</FormLink>
+				<FormLink :active="page === 'wallet'" replace to="/instance/wallet"><template #icon><i class="fab fa-btc"></i></template>CryptoWallet</FormLink>
 				<FormLink :active="page === 'emojis'" replace to="/instance/emojis"><template #icon><i class="fas fa-laugh"></i></template>{{ $ts.customEmojis }}</FormLink>
 				<FormLink :active="page === 'federation'" replace to="/instance/federation"><template #icon><i class="fas fa-globe"></i></template>{{ $ts.federation }}</FormLink>
 				<FormLink :active="page === 'queue'" replace to="/instance/queue"><template #icon><i class="fas fa-clipboard-list"></i></template>{{ $ts.jobQueue }}</FormLink>
@@ -98,6 +99,7 @@ export default defineComponent({
 			switch (page.value) {
 				case 'overview': return defineAsyncComponent(() => import('./overview.vue'));
 				case 'users': return defineAsyncComponent(() => import('./users.vue'));
+				case 'wallet': return defineAsyncComponent(() => import('./wallet.vue'));
 				case 'emojis': return defineAsyncComponent(() => import('./emojis.vue'));
 				case 'federation': return defineAsyncComponent(() => import('./federation.vue'));
 				case 'queue': return defineAsyncComponent(() => import('./queue.vue'));

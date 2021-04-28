@@ -24,6 +24,9 @@
 				<td v-if="table[1] === 'TIP'" style="width: 8%; padding: 1px 6px 2px 8px; opacity: 0.77; text-align: center; font-size: 12px;" class="monospace">
 					<span title="Internal Transfer"><i class="fas fa-check-circle"></i></span>
 				</td>
+				<td v-else-if="table[1] === 'GAIN'" style="width: 9%; padding: 1px 6px 2px 8px; opacity: 0.73; text-align: center; font-size: 12.5px;" class="monospace" title="Network Confirmations Count">
+					<span class="confirms-seventh">{{ table[6] }}</span><span style="font-weight: 700; font-size: 9px;">&nbsp;/&nbsp;</span><span class="confirms-complete">1</span>
+				</td>
 				<td v-else style="width: 9%; padding: 1px 6px 2px 8px; opacity: 0.73; text-align: center; font-size: 12.5px;" class="monospace" title="Network Confirmations Count">
 					<span :class="prefixConf(table[6])">{{ table[6] }}</span><span style="font-weight: 700; font-size: 9px;">&nbsp;/&nbsp;</span><span :class="suffixConf(table[6], confRequire)">{{ confRequire }}</span>
 				</td>

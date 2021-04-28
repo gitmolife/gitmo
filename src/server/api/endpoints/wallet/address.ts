@@ -8,7 +8,7 @@ import { ID } from '@/misc/cafy-id';
 export const meta = {
 	tags: ['wallet'],
 
-	requireCredential: false as const,
+	requireCredential: true as const,
 
 	params: {
 		userId: {

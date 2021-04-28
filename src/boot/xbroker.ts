@@ -2,7 +2,7 @@ import { initDb } from '../db/postgre';
 import { getConnection } from 'typeorm';
 import IntercomBroker from '../services/intercom/intercom-broker';
 import MessageIPC from '../services/intercom/message-ipc-cmd';
-import { isJson, initBroker, newAddress, withdraw, transfer } from '../services/intercom/intercom-functions';
+import { isJson, initBroker, newAddress, withdraw, transfer, crawlBlocks } from '../services/intercom/intercom-functions';
 import Logger from '../services/logger';
 
 const daemonLogger = new Logger('broker', 'green', false);
@@ -86,6 +86,9 @@ process.on('message', async (msg) => {
 		} else if (res.prc === 'relay' && res.cmd === 'doTransfer') {
 			// Perform Internal Transfer
 			await transfer(brokerLogger, intercomBroker, res);
+		} else if (res.prc === 'relay' && res.cmd === 'crawl') {
+			// Trigger Crawler (ADMIN)
+			await crawlBlocks(brokerLogger, intercomBroker, res);
 		}
 	}
 });
