@@ -1028,13 +1028,13 @@ export default class IntercomBroker {
           try {
             json = JSON.parse(rxData);
             if (json != undefined && json.isError === true) {
-              this.logger.error(new Error(json.message));
+              throw new Error(json.message);
             } else {
               this.logger.info(rxData);
             }
           } catch (e) {
             if (e instanceof SyntaxError) {
-              this.logger.error(rxData);
+              this.logger.warn(rxData);
             } else {
               this.logger.error(e);
             }
