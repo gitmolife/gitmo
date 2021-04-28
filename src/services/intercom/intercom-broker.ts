@@ -58,6 +58,9 @@ import {
 } from './intercom2/src/intercom2';
 import Logger from '../logger';
 import { getConnection } from 'typeorm';
+import { UserWalletTx } from '@/models/entities/user-wallet-tx';
+import { UserWalletAddress } from '@/models/entities/user-wallet-address';
+import { UserWalletStatus } from '@/models/entities/user-wallet-status';
 
 let CA_CERTIFICATE_FILE: string;
 let SERVER_PRIVATE_KEY_FILE: string;
@@ -202,7 +205,7 @@ export default class IntercomBroker {
         const txe = await getConnection()
           .createQueryBuilder()
           .select("user_wallet_tx")
-          .from('user_wallet_tx')
+          .from(UserWalletTx, 'user_wallet_tx')
           .where("user_wallet_tx.txid = :txid", { txid: json.txid })
           .getCount() > 0;
 
@@ -237,7 +240,7 @@ export default class IntercomBroker {
         const tx = await getConnection()
           .createQueryBuilder()
           .select("user_wallet_tx")
-          .from('user_wallet_tx')
+          .from(UserWalletTx, 'user_wallet_tx')
           .where("user_wallet_tx.txid = :txid", { txid: json.txid })
           .getOne();
         if (tx === undefined) {
@@ -247,30 +250,30 @@ export default class IntercomBroker {
 
         // Check Job
         if (tx !== undefined && json.confirmations >= 1) {
-          var inputs: Map<string, { userId: string; balance: string; }> = new Map<string, { userId: string; balance: string; }>();
+          var inputs: Map<string, { userId: string; balance: string; vout: number }> = new Map<string, { userId: string; balance: string; vout: number }>();
           for (var bal of json.inputs) {
             // Get Address if Exists..
-            const address = await getConnection()
+            const address: UserWalletAddress = await getConnection()
               .createQueryBuilder()
               .select("user_wallet_address")
-              .from('user_wallet_address')
+              .from(UserWalletAddress, 'user_wallet_address')
               .where("user_wallet_address.address = :addr", { addr: bal.address })
-              .getOne();
+              .getOne() as UserWalletAddress;
             let userId = address != undefined ? address.userId : null;
             if (userId != null) {
               let addr: string = address.address;
               inputs.set(addr, { userId, balance: bal.value, vout: bal.vout });
             }
           }
-          var users: Map<string, { userId: string; balance: string; }> = new Map<string, { userId: string; balance: string; }>();
+          var users: Map<string, { userId: string; balance: string; vout: number; }> = new Map<string, { userId: string; balance: string; vout: number; }>();
           for (var bal of json.outputs) {
             // Get Address if Exists..
-            const address = await getConnection()
+            const address: UserWalletAddress = await getConnection()
               .createQueryBuilder()
               .select("user_wallet_address")
-              .from('user_wallet_address')
+              .from(UserWalletAddress, 'user_wallet_address')
               .where("user_wallet_address.address = :addr", { addr: bal.address })
-              .getOne();
+              .getOne() as UserWalletAddress;
             //console.log(JSON.stringify(address));
             let userId = address != undefined ? address.userId : null;
             if (userId != null) {
@@ -282,9 +285,13 @@ export default class IntercomBroker {
 
           // Iterate over matched vouts to users..
           for (var usr of users.keys()) {
-            let bal = parseFloat(this.parseFromIntString(users.get(usr).balance, 8));
-            let uid = users.get(usr).userId;
-            let vout = users.get(usr).vout;
+            let user = users.get(usr);
+            if (!user) {
+              continue;
+            }
+            let bal = Number(this.parseFromIntString(user.balance, 8));
+            let uid = user.userId;
+            let vout = user.vout;
             var t = 3;
             if (usr in inputs.keys()) {
               t = 13;
@@ -292,7 +299,7 @@ export default class IntercomBroker {
             var txl = await getConnection()
               .createQueryBuilder()
               .select("user_wallet_tx")
-              .from('user_wallet_tx')
+              .from(UserWalletTx, 'user_wallet_tx')
               .where("user_wallet_tx.txid = :txid", { txid: json.txid })
               .andWhere("user_wallet_tx.address = :addr", { addr: usr })
               .getOne();
@@ -317,7 +324,7 @@ export default class IntercomBroker {
               txl = await getConnection()
                 .createQueryBuilder()
                 .select("user_wallet_tx")
-                .from('user_wallet_tx')
+                .from(UserWalletTx, 'user_wallet_tx')
                 .where("user_wallet_tx.txid = :txid", { txid: json.txid })
                 .andWhere("user_wallet_tx.address = :addr", { addr: usr })
                 .getOne();
@@ -370,14 +377,14 @@ export default class IntercomBroker {
             }
             if (!txl.complete && json.confirmations >= 5) {
               // Get current Balance..
-              const userBalance = await getConnection()
+              const userBalance: UserWalletAddress = await getConnection()
                 .createQueryBuilder()
                 .select("user_wallet_address")
-                .from('user_wallet_address')
+                .from(UserWalletAddress, 'user_wallet_address')
                 .where('user_wallet_address."userId" = :uid', { uid: uid })
-                .getOne();
+                .getOne() as UserWalletAddress;
               // Update Balance..
-              let ibal: number = parseFloat(userBalance.balance);
+              let ibal: number = Number(userBalance.balance);
               let nbal: number = bal + ibal;
               await getConnection()
                 .createQueryBuilder()
@@ -403,12 +410,12 @@ export default class IntercomBroker {
           var syncs: Map<string, { userId: string; balance: string; }> = new Map<string, { userId: string; balance: string; }>();
           for (var bal of json.balances) {
             // Get Address if Exists..
-            const address = await getConnection()
+            const address: UserWalletAddress = await getConnection()
               .createQueryBuilder()
               .select("user_wallet_address")
-              .from('user_wallet_address')
+              .from(UserWalletAddress, 'user_wallet_address')
               .where("user_wallet_address.address = :addr", { addr: bal.address })
-              .getOne();
+              .getOne() as UserWalletAddress;
             //console.log(JSON.stringify(address));
             let userId = address != undefined ? address.userId : null;
             if (userId != null) {
@@ -417,25 +424,29 @@ export default class IntercomBroker {
             }
           }
           for (var usr of syncs.keys()) {
-            let bal = parseFloat(this.parseFromIntString(syncs.get(usr).balance, 8));
-            let uid = syncs.get(usr).userId;
-            const txl = await getConnection()
+            let sync = syncs.get(usr);
+            if (!sync) {
+              continue;
+            }
+            let bal = Number(this.parseFromIntString(sync.balance, 8));
+            let uid = sync.userId;
+            const txl: UserWalletTx = await getConnection()
               .createQueryBuilder()
               .select("user_wallet_tx")
-              .from('user_wallet_tx')
+              .from(UserWalletTx, 'user_wallet_tx')
               .where("user_wallet_tx.txid = :txid", { txid: json.txid })
               .andWhere("user_wallet_tx.address = :addr", { addr: usr })
-              .getOne();
+              .getOne() as UserWalletTx;
             if (json.confirmations >= 6 && txl.complete) {
               // Get current Balance..
-              const userBalance = await getConnection()
+              const userBalance: UserWalletAddress = await getConnection()
                 .createQueryBuilder()
                 .select("user_wallet_address")
-                .from('user_wallet_address')
+                .from(UserWalletAddress, 'user_wallet_address')
                 .where('user_wallet_address."userId" = :uid', { uid: uid })
-                .getOne();
+                .getOne() as UserWalletAddress;
               // Audit Balance..
-              let ibal: number = parseFloat(userBalance.balance);
+              let ibal: number = Number(userBalance.balance);
               let dbal: number = ibal - bal;
               if (dbal !== 0) {
                 await getConnection()
@@ -450,7 +461,7 @@ export default class IntercomBroker {
           }
           await getConnection()
             .createQueryBuilder()
-            .delete("user_wallet_tx")
+            .delete()
             .from('user_wallet_tx')
             .where("user_wallet_tx.txid = :txid", { txid: json.txid })
             .andWhere("user_wallet_tx.txtype = :type", { type: 1 })
@@ -481,7 +492,7 @@ export default class IntercomBroker {
         const status = await getConnection()
           .createQueryBuilder()
           .select("type")
-          .from('user_wallet_status')
+          .from(UserWalletStatus, 'user_wallet_status')
           .where("user_wallet_status.type = :type", { type: json.coin })
           .getCount() > 0;
         if (status) {
