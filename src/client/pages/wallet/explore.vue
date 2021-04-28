@@ -39,11 +39,14 @@
 								<div class="_valueItem" v-for="vout in tx.vouts" :key="vout.n">
 									<div class="_keyValue"><b>Index</b><span class="monospace" style="font-size: 0.94em;">{{ vout.n }}</span></div>
 									<div class="_keyValue"><b>Value</b><span class="monospace" style="font-size: 0.92em;">+{{ vout.value }}</span></div>
+									<div v-if="vout.scriptPubKey" class="_keyValue"><b>Type</b><span class="monospace" style="font-size: 0.92em;">{{ vout.scriptPubKey.type }}</span></div>
 									<div v-if="vout.scriptPubKey" class="_keyValue">
 										<b>Address</b>
 										<span v-if="vout.site" class="monospace" style="font-size: 0.88em;">{{ vout.scriptPubKey.addresses[0] }} (Site)</span>
 										<span v-else-if="vout.mine" class="monospace" style="font-size: 0.88em;">{{ vout.scriptPubKey.addresses[0] }} (You)</span>
-										<span v-else class="monospace" style="font-size: 0.88em;">{{ vout.scriptPubKey.addresses[0] }}</span>
+										<span v-else-if="'addresses' in vout.scriptPubKey" class="monospace" style="font-size: 0.88em;">{{ vout.scriptPubKey.addresses[0] }}</span>
+										<span v-else-if="vout.scriptPubKey.type === 'nonstandard'" class="monospace" style="font-size: 0.88em;">COINBASE</span>
+										<span v-else class="monospace" style="font-size: 0.88em;">N/A</span>
 									</div>
 								</div>
 							</div>
