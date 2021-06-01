@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Application Name
-projName="gitmo"
+projName="misskey"
 
 # Script to execute
 srcScr="yarn.lock"
@@ -14,7 +14,7 @@ srcCmd="npm start"
 
 # Tmux instance variables
 tmuxFile="/tmp/worker"
-tmuxName="mk_gitmo"
+tmuxName="misskey"
 
 checkCmd="git checkout gitmo-develop"
 fetchCmd="git pull origin gitmo-develop"
@@ -152,7 +152,7 @@ function setup {
   # User to run application as
   user=`getUsr`
   if [[ $user = '' ]]; then
-    user="gitmo"
+    user="misskey"
   fi
 
   # Directory to run application from
@@ -223,12 +223,12 @@ if [ -z "$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')" ]; then
   sleep 1
   if [ -n "$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')" ]; then
     stat=$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')
-    msgc "Gitmo Started! ${stat}" $green
+    msgc "Misskey Started! ${stat}" $green
   else
-    msgc "Gitmo Start Fail!" $dark_red
+    msgc "Misskey Start Fail!" $dark_red
   fi
 else
-  msgc "Gitmo Start Aborted! ${red}Already Running." $yellow
+  msgc "Misskey Start Aborted! ${red}Already Running." $yellow
 fi
 ;;
 
@@ -240,16 +240,16 @@ if [ -n "$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')" ]; then
     else
       stat=$(sudo -u $user ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')
     fi
-    msgc "Gitmo Daemon Stopping.. $stat" $yellow && sleep 1
+    msgc "Misskey Daemon Stopping.. $stat" $yellow && sleep 1
     if [ $user == $curUsr ]; then
       ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}' | xargs kill
     else
       sudo -u $user ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}' | sudo -u $user xargs kill
     fi
     sleep 1
-    msgc "Gitmo Daemon Stopped." $gold
+    msgc "Misskey Daemon Stopped." $gold
 else
-    msgc "Gitmo Daemon not running." $red
+    msgc "Misskey Daemon not running." $red
 fi
 ;;
 
@@ -265,7 +265,7 @@ if [ -n "$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')" ]; then
     sudo -u $user tmux -S $tmuxFile attach -t $tmuxName
   fi
 else
-  msgc "Gitmo Daemon not running." $red
+  msgc "Misskey Daemon not running." $red
 fi
 ;;
 
@@ -283,7 +283,7 @@ else
 fi
 
 # Do Update Process..
-msgc ">>> ${red}Warden will now update Gitmo ${dark_red}<<<" $dark_red
+msgc ">>> ${red}Warden will now update Misskey ${dark_red}<<<" $dark_red
 sleep 1
 cd ${srvDir}
 $checkCmd
@@ -303,10 +303,10 @@ sleep 1
 $migraCmd
 sleep 1
 
-msgc "Gitmo Upgrade Complete!" $green
+msgc "Misskey Upgrade Complete!" $green
 sleep 1
-msgc ">>> ${green}Warden has completed upgrade to Gitmo ${gold}<<<" $gold
-msgc "You may now start MissKey-Gitmo" $dark_green
+msgc ">>> ${green}Warden has completed upgrade to Misskey ${gold}<<<" $gold
+msgc "You may now start MissKey-Misskey" $dark_green
 ;;
 
 upgrade-live)
@@ -333,21 +333,21 @@ if [ -n "$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')" ]; then
     else
       stat=$(sudo -u $user ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')
     fi
-    msgc "Gitmo Stopping.. $stat" $yellow && sleep 1
+    msgc "Misskey Stopping.. $stat" $yellow && sleep 1
     if [ $user == $curUsr ]; then
       ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}' | xargs kill
     else
       sudo -u $user ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}' | sudo -u $user xargs kill
     fi
     sleep 1
-    msgc "Gitmo Daemon Stopped." $gold
+    msgc "Misskey Daemon Stopped." $gold
 else
-    msgc "Gitmo Daemon not running." $red
+    msgc "Misskey Daemon not running." $red
     exit 0
 fi
 
 # Do Update Process..
-msgc ">>> ${red}Warden will now update Gitmo ${dark_red}<<<" $dark_red
+msgc ">>> ${red}Warden will now update Misskey ${dark_red}<<<" $dark_red
 sleep 1
 cd ${srvDir}
 $checkCmd
@@ -367,16 +367,16 @@ sleep 1
 $migraCmd
 sleep 1
 
-msgc "Gitmo Upgrade Complete!" $green
+msgc "Misskey Upgrade Complete!" $green
 sleep 1
-msgc "Starting Gitmo daemon.." $dark_green
+msgc "Starting Misskey daemon.." $dark_green
 sleep 1
 
 # Start New Instance..
 if [ $user == $curUsr ]; then
   tmux -S $tmuxFile new-session -s $tmuxName -d "cd $srvDir; $srcCmd"
 elif [ `getPlt` == 1 ]; then
-  msgc "Booting MissKey-Gitmo as local..." $green
+  msgc "Booting MissKey-Misskey as local..." $green
   sleep 1
   eval "cd ${srvDir} && $argCmd ${srcCmd}"
   msgc "\nExited." $dark_red
@@ -387,13 +387,13 @@ fi
 sleep 1
 if [ -n "$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')" ]; then
   stat=$(ps -ef | grep "$srcCmd" | grep -v grep | awk '{print $2}')
-  msgc "Gitmo Started! ${stat}" $green
+  msgc "Misskey Started! ${stat}" $green
 else
-  msgc "Gitmo Start Fail!" $dark_red
+  msgc "Misskey Start Fail!" $dark_red
 fi
 
 sleep 1
-msgc ">>> ${green}Warden has completed upgrade to Gitmo ${gold}<<<" $gold
+msgc ">>> ${green}Warden has completed upgrade to Misskey ${gold}<<<" $gold
 ;;
 
 fixpermissions)
@@ -406,7 +406,7 @@ else
   chown $user:$user $tmuxFile
   chmod -R g+rw $srvDir
   sleep 1
-  msgc "Gitmo Permissions update complete." $green
+  msgc "Misskey Permissions update complete." $green
 fi
 ;;
 
