@@ -82,8 +82,8 @@ import MkInput from '@client/components/ui/input.vue';
 import MkContainer from '@client/components/ui/container.vue';
 import MkFolder from '@client/components/ui/folder.vue';
 import { version, url } from '@client/config';
-import bytes from '../../filters/bytes';
-import number from '../../filters/number';
+import bytes from '@client/filters/bytes';
+import number from '@client/filters/number';
 import MkInstanceInfo from './instance.vue';
 import XMetrics from './metrics.vue';
 import * as os from '@client/os';
@@ -113,6 +113,7 @@ export default defineComponent({
 			version,
 			url,
 			stats: null,
+			meta: null,
 			fetchStats: () => os.api('stats', {}),
 			fetchServerInfo: () => os.api('admin/server-info', {}),
 			fetchJobs: () => os.api('admin/queue/deliver-delayed', {}),

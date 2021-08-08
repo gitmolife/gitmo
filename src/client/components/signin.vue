@@ -3,14 +3,13 @@
 	<div class="auth _section">
 		<div class="avatar" :style="{ backgroundImage: user ? `url('${ user.avatarUrl }')` : null }" v-show="withAvatar"></div>
 		<div class="normal-signin" v-if="!totpLogin">
-			<MkInput v-model:value="username" type="text" pattern="^[a-zA-Z0-9_]+$" spellcheck="false" autofocus required @update:value="onUsernameChange">
-				<span>{{ $ts.username }}</span>
+			<MkInput v-model="username" :placeholder="$ts.username" type="text" pattern="^[a-zA-Z0-9_]+$" spellcheck="false" autofocus required @update:modelValue="onUsernameChange">
 				<template #prefix>@</template>
 				<template #suffix>@{{ host }}</template>
 			</MkInput>
-			<MkInput v-model:value="password" type="password" :with-password-toggle="true" v-if="!user || user && !user.usePasswordLessLogin" required>
-				<span>{{ $ts.password }}</span>
+			<MkInput v-model="password" :placeholder="$ts.password" type="password" :with-password-toggle="true" v-if="!user || user && !user.usePasswordLessLogin" required>
 				<template #prefix><i class="fas fa-lock"></i></template>
+				<template #caption><button class="_textButton" @click="resetPassword" type="button">{{ $ts.forgotPassword }}</button></template>
 			</MkInput>
 			<MkButton type="submit" primary :disabled="signing" style="margin: 0 auto;">{{ signing ? $ts.loggingIn : $ts.login }}</MkButton>
 		</div>
@@ -26,12 +25,12 @@
 			</div>
 			<div class="twofa-group totp-group">
 				<p style="margin-bottom:0;">{{ $ts.twoStepAuthentication }}</p>
-				<MkInput v-model:value="password" type="password" :with-password-toggle="true" v-if="user && user.usePasswordLessLogin" required>
-					<span>{{ $ts.password }}</span>
+				<MkInput v-model="password" type="password" :with-password-toggle="true" v-if="user && user.usePasswordLessLogin" required>
+					<template #label>{{ $ts.password }}</template>
 					<template #prefix><i class="fas fa-lock"></i></template>
 				</MkInput>
-				<MkInput v-model:value="token" type="text" pattern="^[0-9]{6}$" autocomplete="off" spellcheck="false" required>
-					<span>{{ $ts.token }}</span>
+				<MkInput v-model="token" type="text" pattern="^[0-9]{6}$" autocomplete="off" spellcheck="false" required>
+					<template #label>{{ $ts.token }}</template>
 					<template #prefix><i class="fas fa-gavel"></i></template>
 				</MkInput>
 				<MkButton type="submit" :disabled="signing" primary style="margin: 0 auto;">{{ signing ? $ts.loggingIn : $ts.login }}</MkButton>
@@ -49,8 +48,8 @@
 <script lang="ts">
 import { defineComponent } from 'vue';
 import { toUnicode } from 'punycode/';
-import MkButton from './ui/button.vue';
-import MkInput from './ui/input.vue';
+import MkButton from '@client/components/ui/button.vue';
+import MkInput from '@client/components/ui/input.vue';
 import { apiUrl, host } from '@client/config';
 import { byteify, hexify } from '@client/scripts/2fa';
 import * as os from '@client/os';
@@ -197,6 +196,11 @@ export default defineComponent({
 					this.signing = false;
 				});
 			}
+		},
+
+		resetPassword() {
+			os.popup(import('@client/components/forgot-password.vue'), {}, {
+			}, 'closed');
 		}
 	}
 });

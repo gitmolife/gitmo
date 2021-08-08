@@ -200,8 +200,6 @@ export class NoteRepository extends Repository<Note> {
 			mentions: note.mentions.length > 0 ? note.mentions : undefined,
 			uri: note.uri || undefined,
 			url: note.url || undefined,
-			_featuredId_: (note as any)._featuredId_ || undefined,
-			_prId_: (note as any)._prId_ || undefined,
 
 			...(opts.detail ? {
 				reply: note.replyId ? this.pack(note.reply || note.replyId, me, {
@@ -283,14 +281,12 @@ export const packedNoteSchema = {
 			type: 'string' as const,
 			optional: false as const, nullable: false as const,
 			format: 'id',
-			description: 'The unique identifier for this Note.',
 			example: 'xxxxxxxxxx',
 		},
 		createdAt: {
 			type: 'string' as const,
 			optional: false as const, nullable: false as const,
 			format: 'date-time',
-			description: 'The date that the Note was created on Misskey.'
 		},
 		text: {
 			type: 'string' as const,
@@ -428,7 +424,6 @@ export const packedNoteSchema = {
 		reactions: {
 			type: 'object' as const,
 			optional: false as const, nullable: false as const,
-			description: 'Key is either Unicode emoji or custom emoji, value is count of that emoji reaction.',
 		},
 		renoteCount: {
 			type: 'number' as const,
@@ -441,25 +436,15 @@ export const packedNoteSchema = {
 		uri: {
 			type: 'string' as const,
 			optional: false as const, nullable: true as const,
-			description: 'The URI of a note. it will be null when the note is local.',
 		},
 		url: {
 			type: 'string' as const,
 			optional: false as const, nullable: true as const,
-			description: 'The human readable url of a note. it will be null when the note is local.',
 		},
-		_featuredId_: {
-			type: 'string' as const,
-			optional: false as const, nullable: true as const,
-		},
-		_prId_: {
-			type: 'string' as const,
-			optional: false as const, nullable: true as const,
-		},
+
 		myReaction: {
 			type: 'object' as const,
 			optional: true as const, nullable: true as const,
-			description: 'Key is either Unicode emoji or custom emoji, value is count of that emoji reaction.',
 		},
 	},
 };

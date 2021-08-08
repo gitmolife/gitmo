@@ -64,11 +64,8 @@ export default defineComponent({
 <style lang="scss" scoped>
 .wtdtxvec {
 	--margin: 8px;
+	--panelBorder: none;
 
 	padding: 0 var(--margin);
-
-	::v-deep(._panel) {
-		box-shadow: none;
-	}
 }
 </style>

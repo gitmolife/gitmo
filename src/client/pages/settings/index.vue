@@ -10,6 +10,7 @@
 				</div>
 				<FormLink :active="page === 'accounts'" replace to="/settings/accounts"><template #icon><i class="fas fa-users"></i></template>{{ $ts.accounts }}</FormLink>
 			</FormGroup>
+			<FormInfo v-if="emailNotConfigured" warn>{{ $ts.emailNotConfiguredWarning }} <MkA to="/settings/email" class="_link">{{ $ts.configure }}</MkA></FormInfo>
 			<FormGroup>
 				<template #label>{{ $ts.basicSettings }}</template>
 				<FormLink :active="page === 'profile'" replace to="/settings/profile"><template #icon><i class="fas fa-user"></i></template>{{ $ts.profile }}</FormLink>
@@ -25,7 +26,7 @@
 				<template #label>{{ $ts.clientSettings }}</template>
 				<FormLink :active="page === 'general'" replace to="/settings/general"><template #icon><i class="fas fa-cogs"></i></template>{{ $ts.general }}</FormLink>
 				<FormLink :active="page === 'theme'" replace to="/settings/theme"><template #icon><i class="fas fa-palette"></i></template>{{ $ts.theme }}</FormLink>
-				<FormLink :active="page === 'sidebar'" replace to="/settings/sidebar"><template #icon><i class="fas fa-list-ul"></i></template>{{ $ts.sidebar }}</FormLink>
+				<FormLink :active="page === 'menu'" replace to="/settings/menu"><template #icon><i class="fas fa-list-ul"></i></template>{{ $ts.menu }}</FormLink>
 				<FormLink :active="page === 'sounds'" replace to="/settings/sounds"><template #icon><i class="fas fa-music"></i></template>{{ $ts.sounds }}</FormLink>
 				<FormLink :active="page === 'plugin'" replace to="/settings/plugin"><template #icon><i class="fas fa-plug"></i></template>{{ $ts.plugins }}</FormLink>
 			</FormGroup>
@@ -58,10 +59,13 @@ import FormLink from '@client/components/form/link.vue';
 import FormGroup from '@client/components/form/group.vue';
 import FormBase from '@client/components/form/base.vue';
 import FormButton from '@client/components/form/button.vue';
+import FormInfo from '@client/components/form/info.vue';
 import { scroll } from '@client/scripts/scroll';
 import { signout } from '@client/account';
 import { unisonReload } from '@client/scripts/unison-reload';
 import * as symbols from '@client/symbols';
+import { instance } from '@client/instance';
+import { $i } from '@client/account';
 
 export default defineComponent({
 	components: {
@@ -69,6 +73,7 @@ export default defineComponent({
 		FormLink,
 		FormGroup,
 		FormButton,
+		FormInfo,
 	},
 
 	props: {
@@ -116,8 +121,9 @@ export default defineComponent({
 				case 'theme': return defineAsyncComponent(() => import('./theme.vue'));
 				case 'theme/install': return defineAsyncComponent(() => import('./theme.install.vue'));
 				case 'theme/manage': return defineAsyncComponent(() => import('./theme.manage.vue'));
-				case 'sidebar': return defineAsyncComponent(() => import('./sidebar.vue'));
+				case 'menu': return defineAsyncComponent(() => import('./menu.vue'));
 				case 'sounds': return defineAsyncComponent(() => import('./sounds.vue'));
+				case 'custom-css': return defineAsyncComponent(() => import('./custom-css.vue'));
 				case 'deck': return defineAsyncComponent(() => import('./deck.vue'));
 				case 'plugin': return defineAsyncComponent(() => import('./plugin.vue'));
 				case 'plugin/install': return defineAsyncComponent(() => import('./plugin.install.vue'));
@@ -173,6 +179,8 @@ export default defineComponent({
 			}
 		});
 
+		const emailNotConfigured = computed(() => instance.enableEmail && ($i.email == null || !$i.emailVerified));
+
 		return {
 			[symbols.PAGE_INFO]: INFO,
 			page,
@@ -182,6 +190,7 @@ export default defineComponent({
 			onInfo,
 			pageProps,
 			component,
+			emailNotConfigured,
 			logout: () => {
 				signout();
 			},

@@ -79,12 +79,12 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
+import { defineComponent, markRaw } from 'vue';
 import { getNoteSummary } from '@/misc/get-note-summary';
 import XReactionIcon from './reaction-icon.vue';
 import MkFollowButton from './follow-button.vue';
-import notePage from '../filters/note';
-import { userPage } from '../filters/user';
+import notePage from '@client/filters/note';
+import { userPage } from '@client/filters/user';
 import { i18n } from '@client/i18n';
 import * as os from '@client/os';
 
@@ -130,7 +130,7 @@ export default defineComponent({
 
 			this.readObserver.observe(this.$el);
 
-			this.connection = os.stream.useSharedConnection('main');
+			this.connection = markRaw(os.stream.useChannel('main'));
 			this.connection.on('readAllNotifications', () => this.readObserver.unobserve(this.$el));
 		}
 	},

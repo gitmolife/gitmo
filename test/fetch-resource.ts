@@ -12,7 +12,8 @@ process.env.NODE_ENV = 'test';
 
 import * as assert from 'assert';
 import * as childProcess from 'child_process';
-import { async, launchServer, signup, post, request, simpleGet } from './utils';
+import { async, startServer, signup, post, request, simpleGet, port, shutdownServer } from './utils';
+import * as openapi from '@redocly/openapi-core';
 
 // Request Accept
 const ONLY_AP = 'application/activity+json';
@@ -31,15 +32,16 @@ describe('Fetch resource', () => {
 	let alice: any;
 	let alicesPost: any;
 
-	before(launchServer(g => p = g, async () => {
+	before(async () => {
+		p = await startServer();
 		alice = await signup({ username: 'alice' });
 		alicesPost = await post(alice, {
 			text: 'test'
 		});
-	}));
+	});
 
-	after(() => {
-		p.kill();
+	after(async () => {
+		await shutdownServer(p);
 	});
 
 	describe('Common', () => {
@@ -72,6 +74,20 @@ describe('Fetch resource', () => {
 			const res = await simpleGet('/api.json');
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(res.type, JSON);
+		}));
+
+		it('Validate api.json', async(async () => {
+			const config = await openapi.loadConfig();
+			const result = await openapi.bundle({
+				config,
+				ref: `http://localhost:${port}/api.json`
+			});
+
+			for (const problem of result.problems) {
+				console.log(`${problem.message} - ${problem.location[0]?.pointer}`);
+			}
+
+			assert.strictEqual(result.problems.length, 0);
 		}));
 
 		it('GET favicon.ico', async(async () => {

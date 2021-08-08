@@ -1,7 +1,7 @@
 <template>
 <XColumn v-if="deckStore.state.alwaysShowMainColumn || $route.name !== 'index'" :column="column" :is-stacked="isStacked">
 	<template #header>
-		<XHeader :info="pageInfo"/>
+		<XHeader :info="pageInfo" :back-button="true" @back="back()"/>
 	</template>
 
 	<router-view v-slot="{ Component }" class="_flat_">
@@ -56,6 +56,10 @@ export default defineComponent({
 			}
 		},
 
+		back() {
+			history.back();
+		},
+
 		onContextmenu(e) {
 			const isLink = (el: HTMLElement) => {
 				if (el.tagName === 'A') return true;
@@ -64,7 +68,7 @@ export default defineComponent({
 				}
 			};
 			if (isLink(e.target)) return;
-			if (['INPUT', 'TEXTAREA', 'IMG', 'VIDEO'].includes(e.target.tagName) || e.target.attributes['contenteditable']) return;
+			if (['INPUT', 'TEXTAREA', 'IMG', 'VIDEO', 'CANVAS'].includes(e.target.tagName) || e.target.attributes['contenteditable']) return;
 			if (window.getSelection().toString() !== '') return;
 			const path = this.$route.path;
 			os.contextMenu([{

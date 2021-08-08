@@ -12,28 +12,30 @@
 			<XNotification v-else :notification="notification" :with-time="true" :full="true" class="_panel notification" :key="notification.id"/>
 		</XList>
 
-		<button class="_buttonPrimary" v-appear="$store.state.enableInfiniteScroll ? fetchMore : null" @click="fetchMore" v-show="more" :disabled="moreFetching" :style="{ cursor: moreFetching ? 'wait' : 'pointer' }">
+		<MkButton primary style="margin: var(--margin) auto;" v-appear="$store.state.enableInfiniteScroll ? fetchMore : null" @click="fetchMore" v-show="more" :disabled="moreFetching" :style="{ cursor: moreFetching ? 'wait' : 'pointer' }">
 			<template v-if="!moreFetching">{{ $ts.loadMore }}</template>
 			<template v-if="moreFetching"><MkLoading inline/></template>
-		</button>
+		</MkButton>
 	</div>
 </transition>
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType } from 'vue';
+import { defineComponent, PropType, markRaw } from 'vue';
 import paging from '@client/scripts/paging';
 import XNotification from './notification.vue';
 import XList from './date-separated-list.vue';
 import XNote from './note.vue';
 import { notificationTypes } from '../../types';
 import * as os from '@client/os';
+import MkButton from '@client/components/ui/button.vue';
 
 export default defineComponent({
 	components: {
 		XNotification,
 		XList,
 		XNote,
+		MkButton,
 	},
 
 	mixins: [
@@ -87,7 +89,7 @@ export default defineComponent({
 	},
 
 	mounted() {
-		this.connection = os.stream.useSharedConnection('main');
+		this.connection = markRaw(os.stream.useChannel('main'));
 		this.connection.on('notification', this.onNotification);
 	},
 

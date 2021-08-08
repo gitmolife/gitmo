@@ -24,6 +24,7 @@
 				<FormLink :active="page === 'queue'" replace to="/instance/queue"><template #icon><i class="fas fa-clipboard-list"></i></template>{{ $ts.jobQueue }}</FormLink>
 				<FormLink :active="page === 'files'" replace to="/instance/files"><template #icon><i class="fas fa-cloud"></i></template>{{ $ts.files }}</FormLink>
 				<FormLink :active="page === 'announcements'" replace to="/instance/announcements"><template #icon><i class="fas fa-broadcast-tower"></i></template>{{ $ts.announcements }}</FormLink>
+				<FormLink :active="page === 'ads'" replace to="/instance/ads"><template #icon><i class="fas fa-audio-description"></i></template>{{ $ts.ads }}</FormLink>
 				<FormLink :active="page === 'abuses'" replace to="/instance/abuses"><template #icon><i class="fas fa-exclamation-circle"></i></template>{{ $ts.abuseReports }}</FormLink>
 			</FormGroup>
 			<FormGroup>
@@ -43,6 +44,7 @@
 			<FormGroup>
 				<template #label>{{ $ts.info }}</template>
 				<FormLink :active="page === 'database'" replace to="/instance/database"><template #icon><i class="fas fa-database"></i></template>{{ $ts.database }}</FormLink>
+				<FormLink :active="page === 'logs'" replace to="/instance/logs"><template #icon><i class="fas fa-stream"></i></template>{{ $ts.logs }}</FormLink>
 			</FormGroup>
 		</FormBase>
 	</div>
@@ -101,11 +103,13 @@ export default defineComponent({
 				case 'users': return defineAsyncComponent(() => import('./users.vue'));
 				case 'wallet': return defineAsyncComponent(() => import('./wallet.vue'));
 				case 'emojis': return defineAsyncComponent(() => import('./emojis.vue'));
-				case 'federation': return defineAsyncComponent(() => import('./federation.vue'));
+				case 'federation': return defineAsyncComponent(() => import('../federation.vue'));
 				case 'queue': return defineAsyncComponent(() => import('./queue.vue'));
 				case 'files': return defineAsyncComponent(() => import('./files.vue'));
 				case 'announcements': return defineAsyncComponent(() => import('./announcements.vue'));
+				case 'ads': return defineAsyncComponent(() => import('./ads.vue'));
 				case 'database': return defineAsyncComponent(() => import('./database.vue'));
+				case 'logs': return defineAsyncComponent(() => import('./logs.vue'));
 				case 'abuses': return defineAsyncComponent(() => import('./abuses.vue'));
 				case 'settings': return defineAsyncComponent(() => import('./settings.vue'));
 				case 'files-settings': return defineAsyncComponent(() => import('./files-settings.vue'));
@@ -166,7 +170,7 @@ export default defineComponent({
 		};
 
 		const lookup = (ev) => {
-			os.modalMenu([{
+			os.popupMenu([{
 				text: i18n.locale.user,
 				icon: 'fas fa-user',
 				action: () => {

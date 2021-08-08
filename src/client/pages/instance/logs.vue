@@ -1,17 +1,17 @@
 <template>
 <div class="_section">
 	<div class="_inputs">
-		<MkInput v-model:value="logDomain" :debounce="true">
-			<span>{{ $ts.domain }}</span>
+		<MkInput v-model="logDomain" :debounce="true">
+			<template #label>{{ $ts.domain }}</template>
 		</MkInput>
-		<MkSelect v-model:value="logLevel">
-			<template #label>{{ $ts.level }}</template>
-			<option value="all">{{ $ts.levels.all }}</option>
-			<option value="info">{{ $ts.levels.info }}</option>
-			<option value="success">{{ $ts.levels.success }}</option>
-			<option value="warning">{{ $ts.levels.warning }}</option>
-			<option value="error">{{ $ts.levels.error }}</option>
-			<option value="debug">{{ $ts.levels.debug }}</option>
+		<MkSelect v-model="logLevel">
+			<template #label>Level</template>
+			<option value="all">All</option>
+			<option value="info">Info</option>
+			<option value="success">Success</option>
+			<option value="warning">Warning</option>
+			<option value="error">Error</option>
+			<option value="debug">Debug</option>
 		</MkSelect>
 	</div>
 
@@ -45,6 +45,8 @@ export default defineComponent({
 		MkTextarea,
 	},
 
+	emits: ['info'],
+
 	data() {
 		return {
 			[symbols.PAGE_INFO]: {
@@ -70,6 +72,10 @@ export default defineComponent({
 
 	created() {
 		this.fetchLogs();
+	},
+
+	mounted() {
+		this.$emit('info', this[symbols.PAGE_INFO]);
 	},
 
 	methods: {

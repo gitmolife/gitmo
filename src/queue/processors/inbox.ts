@@ -10,7 +10,7 @@ import { fetchMeta } from '@/misc/fetch-meta';
 import { toPuny, extractDbHost } from '@/misc/convert-host';
 import { getApId } from '../../remote/activitypub/type';
 import { fetchInstanceMetadata } from '../../services/fetch-instance-metadata';
-import { InboxJobData } from '..';
+import { InboxJobData } from '../types';
 import DbResolver from '../../remote/activitypub/db-resolver';
 import { resolvePerson } from '../../remote/activitypub/models/person';
 import { LdSignature } from '../../remote/activitypub/misc/ld-signature';
@@ -23,7 +23,7 @@ export default async (job: Bull.Job<InboxJobData>): Promise<string> => {
 	const activity = job.data.activity;
 
 	//#region Log
-	const info = Object.assign({}, activity);
+	const info = Object.assign({}, activity) as any;
 	delete info['@context'];
 	logger.debug(JSON.stringify(info, null, 2));
 	//#endregion
@@ -65,6 +65,11 @@ export default async (job: Bull.Job<InboxJobData>): Promise<string> => {
 		return `skip: failed to resolve user`;
 	}
 
+	// publicKey がなくても終了
+	if (authUser.key == null) {
+		return `skip: failed to resolve user publicKey`;
+	}
+
 	// HTTP-Signatureの検証
 	const httpSignatureValidated = httpSignature.verifySignature(signature, authUser.key.keyPem);
 
@@ -87,6 +92,10 @@ export default async (job: Bull.Job<InboxJobData>): Promise<string> => {
 			authUser = await dbResolver.getAuthUserFromKeyId(activity.signature.creator);
 			if (authUser == null) {
 				return `skip: LD-Signatureのユーザーが取得できませんでした`;
+			}
+
+			if (authUser.key == null) {
+				return `skip: LD-SignatureのユーザーはpublicKeyを持っていませんでした`;
 			}
 
 			// LD-Signature検証
