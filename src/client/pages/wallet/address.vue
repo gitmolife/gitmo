@@ -9,7 +9,7 @@
 
 <script lang="ts">
 import { computed, defineComponent } from 'vue';
-import parseAcct from '@/misc/acct/parse';
+import { parseAcct } from '@/misc/acct';
 import Progress from '@client/scripts/loading';
 import { query as urlQuery } from '../../../prelude/url';
 import { acct as getAcct } from '../../filters/user';
