@@ -36,6 +36,7 @@ selectList: "Fren tabdart"
 youHaveNoLists: "Ulac ɣur-k·m ula d yiwet n tabdart"
 security: "Taɣellist"
 remove: "Kkes"
+connectService: "Qqen"
 userList: "Tibdarin"
 securityKey: "Tasarutt n tɣellist"
 securityKeyName: "Isem n tsarutt"
@@ -54,6 +55,9 @@ accountInfo: "Talɣut n umiḍan"
 emailNotification: "Ilɣa imayl"
 selectAccount: "Fren amiḍan"
 accounts: "Imiḍan"
+searchByGoogle: "Nadi"
+file: "Ifuyla"
+account: "Imiḍan"
 _email:
   _follow:
     title: "Yeṭṭafaṛ-ik·em-id"
@@ -114,6 +118,8 @@ _notification:
   _types:
     follow: "Ig ṭṭafaṛ"
     mention: "Bder"
+  _actions:
+    reply: "Err"
 _deck:
   _columns:
     notifications: "Ilɣuyen"

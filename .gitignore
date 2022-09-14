@@ -6,8 +6,15 @@
 /.idea
 
 # Node.js
-/node_modules
+node_modules
 report.*.json
+
+# Cypress
+cypress/screenshots
+cypress/videos
+
+# Coverage
+coverage
 
 # config
 /.config/*
@@ -17,7 +24,7 @@ report.*.json
 
 # misskey
 /build
-/built
+built
 /data
 /.cache-loader
 /db

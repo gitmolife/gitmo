@@ -16,13 +16,16 @@ First, in order to avoid duplicate Issues, please search to see if the problem y
 
 <!-- Tell us what the bug is -->
 
-## 🙂 Expected Behavior
+## 🥰 Expected Behavior
 
 <!--- Tell us what should happen -->
 
-## ☹️ Actual Behavior
+## 🤬 Actual Behavior
 
-<!--- Tell us what happens instead of the expected behavior -->
+<!--
+Tell us what happens instead of the expected behavior.
+Please include errors from the developer console and/or server log files if you have access to them.
+-->
 
 ## 📝 Steps to Reproduce
 
@@ -33,3 +36,7 @@ First, in order to avoid duplicate Issues, please search to see if the problem y
 ## 📌 Environment
 
 <!-- Tell us where on the platform it happens -->
+
+Misskey version:
+Your OS:
+Your browser:

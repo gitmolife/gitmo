@@ -1,43 +1,32 @@
-FROM node:16.2.0-alpine3.13 AS base
+FROM node:16.15.1-bullseye AS builder
 
-ENV NODE_ENV=production
+ARG NODE_ENV=production
 
 WORKDIR /misskey
 
-FROM base AS builder
-
-RUN apk add --no-cache \
-    autoconf \
-    automake \
-    file \
-    g++ \
-    gcc \
-    libc-dev \
-    libtool \
-    make \
-    nasm \
-    pkgconfig \
-    python3 \
-    zlib-dev \
-    vips-dev \
-    vips
-
-COPY package.json yarn.lock .yarnrc ./
-RUN yarn install
 COPY . ./
+
+RUN apt-get update
+RUN apt-get install -y build-essential
+RUN git submodule update --init
+RUN yarn install
 RUN yarn build
+RUN rm -rf .git
 
-FROM base AS runner
+FROM node:16.15.1-bullseye-slim AS runner
 
-RUN apk add --no-cache \
-    ffmpeg \
-    tini \
-    vips
+WORKDIR /misskey
 
-ENTRYPOINT ["/sbin/tini", "--"]
+RUN apt-get update
+RUN apt-get install -y ffmpeg tini
 
 COPY --from=builder /misskey/node_modules ./node_modules
 COPY --from=builder /misskey/built ./built
+COPY --from=builder /misskey/packages/backend/node_modules ./packages/backend/node_modules
+COPY --from=builder /misskey/packages/backend/built ./packages/backend/built
+COPY --from=builder /misskey/packages/client/node_modules ./packages/client/node_modules
 COPY . ./
 
+ENV NODE_ENV=production
+ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["npm", "run", "migrateandstart"]
