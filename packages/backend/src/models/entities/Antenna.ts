@@ -1,11 +1,15 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { PrimaryColumn, Entity, Index, JoinColumn, Column, ManyToOne } from 'typeorm';
 import { id } from '../id.js';
-import { User } from './User.js';
-import { UserList } from './UserList.js';
-import { UserGroupJoining } from './UserGroupJoining.js';
+import { MiUser } from './User.js';
+import { MiUserList } from './UserList.js';
 
-@Entity()
-export class Antenna {
+@Entity('antenna')
+export class MiAntenna {
 	@PrimaryColumn(id())
 	public id: string;
 
@@ -15,17 +19,21 @@ export class Antenna {
 	public createdAt: Date;
 
 	@Index()
+	@Column('timestamp with time zone')
+	public lastUsedAt: Date;
+
+	@Index()
 	@Column({
 		...id(),
 		comment: 'The owner ID.',
 	})
-	public userId: User['id'];
+	public userId: MiUser['id'];
 
-	@ManyToOne(type => User, {
+	@ManyToOne(type => MiUser, {
 		onDelete: 'CASCADE',
 	})
 	@JoinColumn()
-	public user: User | null;
+	public user: MiUser | null;
 
 	@Column('varchar', {
 		length: 128,
@@ -33,32 +41,20 @@ export class Antenna {
 	})
 	public name: string;
 
-	@Column('enum', { enum: ['home', 'all', 'users', 'list', 'group'] })
-	public src: 'home' | 'all' | 'users' | 'list' | 'group';
+	@Column('enum', { enum: ['home', 'all', 'users', 'list'] })
+	public src: 'home' | 'all' | 'users' | 'list';
 
 	@Column({
 		...id(),
 		nullable: true,
 	})
-	public userListId: UserList['id'] | null;
+	public userListId: MiUserList['id'] | null;
 
-	@ManyToOne(type => UserList, {
+	@ManyToOne(type => MiUserList, {
 		onDelete: 'CASCADE',
 	})
 	@JoinColumn()
-	public userList: UserList | null;
-
-	@Column({
-		...id(),
-		nullable: true,
-	})
-	public userGroupJoiningId: UserGroupJoining['id'] | null;
-
-	@ManyToOne(type => UserGroupJoining, {
-		onDelete: 'CASCADE',
-	})
-	@JoinColumn()
-	public userGroupJoining: UserGroupJoining | null;
+	public userList: MiUserList | null;
 
 	@Column('varchar', {
 		length: 1024, array: true,
@@ -96,4 +92,10 @@ export class Antenna {
 
 	@Column('boolean')
 	public notify: boolean;
+
+	@Index()
+	@Column('boolean', {
+		default: true,
+	})
+	public isActive: boolean;
 }

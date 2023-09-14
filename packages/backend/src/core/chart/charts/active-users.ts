@@ -1,8 +1,14 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Injectable, Inject } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { AppLockService } from '@/core/AppLockService.js';
-import type { User } from '@/models/entities/User.js';
+import type { MiUser } from '@/models/entities/User.js';
 import { DI } from '@/di-symbols.js';
+import { bindThis } from '@/decorators.js';
 import Chart from '../core.js';
 import { ChartLoggerService } from '../ChartLoggerService.js';
 import { name, schema } from './entities/active-users.js';
@@ -15,9 +21,8 @@ const year = 1000 * 60 * 60 * 24 * 365;
 /**
  * アクティブユーザーに関するチャート
  */
-// eslint-disable-next-line import/no-default-export
 @Injectable()
-export default class ActiveUsersChart extends Chart<typeof schema> {
+export default class ActiveUsersChart extends Chart<typeof schema> { // eslint-disable-line import/no-default-export
 	constructor(
 		@Inject(DI.db)
 		private db: DataSource,
@@ -36,7 +41,8 @@ export default class ActiveUsersChart extends Chart<typeof schema> {
 		return {};
 	}
 
-	public async read(user: { id: User['id'], host: null, createdAt: User['createdAt'] }): Promise<void> {
+	@bindThis
+	public async read(user: { id: MiUser['id'], host: null, createdAt: MiUser['createdAt'] }): Promise<void> {
 		await this.commit({
 			'read': [user.id],
 			'registeredWithinWeek': (Date.now() - user.createdAt.getTime() < week) ? [user.id] : [],
@@ -48,7 +54,8 @@ export default class ActiveUsersChart extends Chart<typeof schema> {
 		});
 	}
 
-	public async write(user: { id: User['id'], host: null, createdAt: User['createdAt'] }): Promise<void> {
+	@bindThis
+	public async write(user: { id: MiUser['id'], host: null, createdAt: MiUser['createdAt'] }): Promise<void> {
 		await this.commit({
 			'write': [user.id],
 		});

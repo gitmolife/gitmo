@@ -15,7 +15,7 @@ Before creating an issue, please check the following:
 - To avoid duplication, please search for similar issues before creating a new issue.
 - Do not use Issues to ask questions or troubleshooting.
 	- Issues should only be used to feature requests, suggestions, and bug tracking.
-	- Please ask questions or troubleshooting in the [Misskey Forum](https://forum.misskey.io/) or [Discord](https://discord.gg/Wp8gVStHW3).
+	- Please ask questions or troubleshooting in ~~the [Misskey Forum](https://forum.misskey.io/)~~ [GitHub Discussions](https://github.com/misskey-dev/misskey/discussions) or [Discord](https://discord.gg/Wp8gVStHW3).
 
 > **Warning**
 > Do not close issues that are about to be resolved. It should remain open until a commit that actually resolves it is merged.
@@ -44,7 +44,7 @@ Thank you for your PR! Before creating a PR, please check the following:
 - Check if there are any documents that need to be created or updated due to this change.
 - If you have added a feature or fixed a bug, please add a test case if possible.
 - Please make sure that tests and Lint are passed in advance.
-  - You can run it with `npm run test` and `npm run lint`. [See more info](#testing)
+  - You can run it with `pnpm test` and `pnpm lint`. [See more info](#testing)
 - If this PR includes UI changes, please attach a screenshot in the text.
 
 Thanks for your cooperation 🤗
@@ -83,10 +83,17 @@ An actual domain will be assigned so you can test the federation.
 	- The title must be in the format `Release: x.y.z`.
 		- `x.y.z` is the new version you are trying to release.
 3. Deploy and perform a simple QA check. Also verify that the tests passed.
-4. Merge it.
+4. Merge it. (Do not squash commit)
 5. Create a [release of GitHub](https://github.com/misskey-dev/misskey/releases)
 	- The target branch must be `master`
 	- The tag name must be the version
+
+> **Note**
+> Why this instruction is necessary:
+> - To perform final QA checks
+> - To distribute responsibility
+> - To check direct commits to develop
+> - To celebrate the release together 🎉
 
 ## Localization (l10n)
 Misskey uses [Crowdin](https://crowdin.com/project/misskey) for localization management.
@@ -99,36 +106,69 @@ If your language is not listed in Crowdin, please open an issue.
 ![Crowdin](https://d322cqt584bo4o.cloudfront.net/misskey/localized.svg)
 
 ## Development
-During development, it is useful to use the `npm run dev` command.
-This command monitors the server-side and client-side source files and automatically builds them if they are modified.
-In addition, it will also automatically start the Misskey server process.
+During development, it is useful to use the
+
+```
+pnpm dev
+```
+
+command.
+
+- Server-side source files and automatically builds them if they are modified. Automatically start the server process(es).
+- Vite HMR (just the `vite` command) is available. The behavior may be different from production.
+- Service Worker is watched by esbuild.
+
+### Dev Container
+Instead of running `pnpm` locally, you can use Dev Container to set up your development environment.
+To use Dev Container, open the project directory on VSCode with Dev Containers installed.  
+**Note:** If you are using Windows, please clone the repository with WSL. Using Git for Windows will result in broken files due to the difference in how newlines are handled.
+
+It will run the following command automatically inside the container.
+``` bash
+git submodule update --init
+pnpm install --frozen-lockfile
+cp .devcontainer/devcontainer.yml .config/default.yml
+pnpm build
+pnpm migrate
+```
+
+After finishing the migration, run the `pnpm dev` command to start the development server.
+
+``` bash
+pnpm dev
+```
 
 ## Testing
-- Test codes are located in [`/test`](/test).
+- Test codes are located in [`/packages/backend/test`](/packages/backend/test).
 
 ### Run test
 Create a config file.
 ```
-cp test/test.yml .config/
+cp .github/misskey/test.yml .config/
 ```
 Prepare DB/Redis for testing.
 ```
-docker-compose -f test/docker-compose.yml up
+docker compose -f packages/backend/test/docker-compose.yml up
 ```
-Alternatively, prepare an empty (data can be erased) DB and edit `.config/test.yml`. 
+Alternatively, prepare an empty (data can be erased) DB and edit `.config/test.yml`.
 
 Run all test.
 ```
-npm run test
+pnpm test
 ```
 
 #### Run specify test
 ```
-npm run jest -- foo.ts
+pnpm jest -- foo.ts
 ```
 
 ### e2e tests
 TODO
+
+## Environment Variable
+
+- `MISSKEY_CONFIG_YML`: Specify the file path of config.yml instead of default.yml (e.g. `2nd.yml`).
+- `MISSKEY_WEBFINGER_USE_HTTP`: If it's set true, WebFinger requests will be http instead of https, useful for testing federation between servers in localhost. NEVER USE IN PRODUCTION.
 
 ## Continuous integration
 Misskey uses GitHub Actions for executing automated tests.
@@ -168,10 +208,108 @@ niraxは、Misskeyで使用しているオリジナルのフロントエンド�
 vue-routerとの最大の違いは、niraxは複数のルーターが存在することを許可している点です。
 これにより、アプリ内ウィンドウでブラウザとは個別にルーティングすることなどが可能になります。
 
-## Notes
-### How to resolve conflictions occurred at yarn.lock?
+## Storybook
 
-Just execute `yarn` to fix it.
+Misskey uses [Storybook](https://storybook.js.org/) for UI development.
+
+### Setup & Run
+
+#### Setup
+
+```bash
+pnpm --filter misskey-js build
+```
+
+#### Run
+
+```bash
+pnpm --filter frontend storybook-dev
+```
+
+### Usage
+
+When you create a new component (in this example, `MyComponent.vue`), the story file (`MyComponent.stories.ts`) will be automatically generated by the `.storybook/generate.js` script.
+You can override the default story by creating a impl story file (`MyComponent.stories.impl.ts`).
+
+```ts
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
+import { StoryObj } from '@storybook/vue3';
+import MyComponent from './MyComponent.vue';
+export const Default = {
+	render(args) {
+		return {
+			components: {
+				MyComponent,
+			},
+			setup() {
+				return {
+					args,
+				};
+			},
+			computed: {
+				props() {
+					return {
+						...this.args,
+					};
+				},
+			},
+			template: '<MyComponent v-bind="props" />',
+		};
+	},
+	args: {
+		foo: 'bar',
+	},
+	parameters: {
+		layout: 'centered',
+	},
+} satisfies StoryObj<typeof MkAvatar>;
+```
+
+If you want to opt-out from the automatic generation, create a `MyComponent.stories.impl.ts` file and add the following line to the file.
+
+```ts
+import MyComponent from './MyComponent.vue';
+void MyComponent;
+```
+
+You can override the component meta by creating a meta story file (`MyComponent.stories.meta.ts`).
+
+```ts
+export const argTypes = {
+	scale: {
+		control: {
+			type: 'range',
+			min: 1,
+			max: 4,
+		},
+};
+```
+
+Also, you can use msw to mock API requests in the storybook. Creating a `MyComponent.stories.msw.ts` file to define the mock handlers.
+
+```ts
+import { rest } from 'msw';
+export const handlers = [
+	rest.post('/api/notes/timeline', (req, res, ctx) => {
+		return res(
+			ctx.json([]),
+		);
+	}),
+];
+```
+
+Don't forget to re-run the `.storybook/generate.js` script after adding, editing, or removing the above files.
+
+## Notes
+
+### Misskeyのドメイン固有の概念は`Mi`をprefixする
+例えばGoogleが自社サービスをMap、Earth、DriveではなくGoogle Map、Google Earth、Google Driveのように命名するのと同じ
+コード上でMisskeyのドメイン固有の概念には`Mi`をprefixすることで、他のドメインの同様の概念と区別できるほか、名前の衝突を防ぐ。
+ただし、文脈上Misskeyのものを指すことが明らかであり、名前の衝突の恐れがない場合は、一時的なローカル変数に限って`Mi`を省略してもよい。
+
+### How to resolve conflictions occurred at pnpm-lock.yaml?
+
+Just execute `pnpm` to fix it.
 
 ### INSERTするときにはsaveではなくinsertを使用する
 #6441
@@ -250,18 +388,40 @@ SQLでは配列のインデックスは**1始まり**。
 ### null IN
 nullが含まれる可能性のあるカラムにINするときは、そのままだとおかしくなるのでORなどでnullのハンドリングをしよう。
 
-### `undefined`にご用心
-MongoDBの時とは違い、findOneでレコードを取得する時に対象レコードが存在しない場合 **`undefined`** が返ってくるので注意。
-MongoDBは`null`で返してきてたので、その感覚で`if (x === null)`とか書くとバグる。代わりに`if (x == null)`と書いてください
+### enumの削除は気をつける
+enumの列挙の内容の削除は、その値をもつレコードを全て削除しないといけない
+
+削除が重たかったり不可能だったりする場合は、削除しないでおく
 
 ### Migration作成方法
 packages/backendで:
 ```sh
-npx typeorm migration:generate -d ormconfig.js -o <migration name>
+pnpm dlx typeorm migration:generate -d ormconfig.js -o <migration name>
 ```
 
 - 生成後、ファイルをmigration下に移してください
 - 作成されたスクリプトは不必要な変更を含むため除去してください
+
+### JSON SchemaのobjectでanyOfを使うとき
+JSON Schemaで、objectに対してanyOfを使う場合、anyOfの中でpropertiesを定義しないこと。  
+バリデーションが効かないため。（SchemaTypeもそのように作られており、objectのanyOf内のpropertiesは捨てられます）  
+https://github.com/misskey-dev/misskey/pull/10082
+
+テキストhogeおよびfugaについて、片方を必須としつつ両方の指定もありうる場合:
+
+```
+export const paramDef = {
+	type: 'object',
+	properties: {
+		hoge: { type: 'string', minLength: 1 },
+		fuga: { type: 'string', minLength: 1 },
+	},
+	anyOf: [
+		{ required: ['hoge'] },
+		{ required: ['fuga'] },
+	],
+} as const;
+```
 
 ### コネクションには`markRaw`せよ
 **Vueのコンポーネントのdataオプションとして**misskey.jsのコネクションを設定するとき、必ず`markRaw`でラップしてください。インスタンスが不必要にリアクティブ化されることで、misskey.js内の処理で不具合が発生するとともに、パフォーマンス上の問題にも繋がる。なお、Composition APIを使う場合はこの限りではない(リアクティブ化はマニュアルなため)。

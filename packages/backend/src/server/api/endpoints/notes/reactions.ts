@@ -1,11 +1,14 @@
-import { DeepPartial } from 'typeorm';
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Inject, Injectable } from '@nestjs/common';
 import type { NoteReactionsRepository } from '@/models/index.js';
-import type { NoteReaction } from '@/models/entities/NoteReaction.js';
+import type { MiNoteReaction } from '@/models/entities/NoteReaction.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { NoteReactionEntityService } from '@/core/entities/NoteReactionEntityService.js';
 import { DI } from '@/di-symbols.js';
-import { ApiError } from '../../error.js';
 import type { FindOptionsWhere } from 'typeorm';
 
 export const meta = {
@@ -48,9 +51,8 @@ export const paramDef = {
 	required: ['noteId'],
 } as const;
 
-// eslint-disable-next-line import/no-default-export
 @Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> {
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
 		@Inject(DI.noteReactionsRepository)
 		private noteReactionsRepository: NoteReactionsRepository,
@@ -60,7 +62,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 		super(meta, paramDef, async (ps, me) => {
 			const query = {
 				noteId: ps.noteId,
-			} as FindOptionsWhere<NoteReaction>;
+			} as FindOptionsWhere<MiNoteReaction>;
 
 			if (ps.type) {
 				// ローカルリアクションはホスト名が . とされているが
@@ -77,7 +79,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 				order: {
 					id: -1,
 				},
-				relations: ['user', 'user.avatar', 'user.banner', 'note'],
+				relations: ['user', 'note'],
 			});
 
 			return await Promise.all(reactions.map(reaction => this.noteReactionEntityService.pack(reaction, me)));

@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Inject, Injectable } from '@nestjs/common';
 import type { PagesRepository, PageLikesRepository } from '@/models/index.js';
 import { IdService } from '@/core/IdService.js';
@@ -9,6 +14,8 @@ export const meta = {
 	tags: ['pages'],
 
 	requireCredential: true,
+
+	prohibitMoved: true,
 
 	kind: 'write:page-likes',
 
@@ -28,7 +35,7 @@ export const meta = {
 		alreadyLiked: {
 			message: 'The page has already been liked.',
 			code: 'ALREADY_LIKED',
-			id: 'cc98a8a2-0dc3-4123-b198-62c71df18ed3',
+			id: 'd4c1edbe-7da2-4eae-8714-1acfd2d63941',
 		},
 	},
 } as const;
@@ -41,9 +48,8 @@ export const paramDef = {
 	required: ['pageId'],
 } as const;
 
-// eslint-disable-next-line import/no-default-export
 @Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> {
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
 		@Inject(DI.pagesRepository)
 		private pagesRepository: PagesRepository,
@@ -64,12 +70,14 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 			}
 
 			// if already liked
-			const exist = await this.pageLikesRepository.findOneBy({
-				pageId: page.id,
-				userId: me.id,
+			const exist = await this.pageLikesRepository.exist({
+				where: {
+					pageId: page.id,
+					userId: me.id,
+				},
 			});
 
-			if (exist != null) {
+			if (exist) {
 				throw new ApiError(meta.errors.alreadyLiked);
 			}
 

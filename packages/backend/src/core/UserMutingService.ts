@@ -1,32 +1,52 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Inject, Injectable } from '@nestjs/common';
-import type { UsersRepository, MutingsRepository } from '@/models/index.js';
+import { In } from 'typeorm';
+import type { MutingsRepository, MiMuting } from '@/models/index.js';
 import { IdService } from '@/core/IdService.js';
-import { QueueService } from '@/core/QueueService.js';
-import { GlobalEventService } from '@/core/GlobalEventService.js';
-import type { User } from '@/models/entities/User.js';
+import type { MiUser } from '@/models/entities/User.js';
 import { DI } from '@/di-symbols.js';
+import { bindThis } from '@/decorators.js';
+import { CacheService } from '@/core/CacheService.js';
 
 @Injectable()
 export class UserMutingService {
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
 		@Inject(DI.mutingsRepository)
 		private mutingsRepository: MutingsRepository,
 
 		private idService: IdService,
-		private queueService: QueueService,
-		private globalEventServie: GlobalEventService,
+		private cacheService: CacheService,
 	) {
 	}
 
-	public async mute(user: User, target: User): Promise<void> {
+	@bindThis
+	public async mute(user: MiUser, target: MiUser, expiresAt: Date | null = null): Promise<void> {
 		await this.mutingsRepository.insert({
 			id: this.idService.genId(),
 			createdAt: new Date(),
+			expiresAt: expiresAt ?? null,
 			muterId: user.id,
 			muteeId: target.id,
 		});
+
+		this.cacheService.userMutingsCache.refresh(user.id);
+	}
+
+	@bindThis
+	public async unmute(mutings: MiMuting[]): Promise<void> {
+		if (mutings.length === 0) return;
+
+		await this.mutingsRepository.delete({
+			id: In(mutings.map(m => m.id)),
+		});
+
+		const muterIds = [...new Set(mutings.map(m => m.muterId))];
+		for (const muterId of muterIds) {
+			this.cacheService.userMutingsCache.refresh(muterId);
+		}
 	}
 }

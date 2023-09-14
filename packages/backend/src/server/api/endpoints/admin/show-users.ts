@@ -1,8 +1,15 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Inject, Injectable } from '@nestjs/common';
 import type { UsersRepository } from '@/models/index.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
+import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
+import { RoleService } from '@/core/RoleService.js';
 
 export const meta = {
 	tags: ['admin'],
@@ -26,8 +33,8 @@ export const paramDef = {
 	properties: {
 		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
 		offset: { type: 'integer', default: 0 },
-		sort: { type: 'string', enum: ['+follower', '-follower', '+createdAt', '-createdAt', '+updatedAt', '-updatedAt'] },
-		state: { type: 'string', enum: ['all', 'alive', 'available', 'admin', 'moderator', 'adminOrModerator', 'silenced', 'suspended'], default: 'all' },
+		sort: { type: 'string', enum: ['+follower', '-follower', '+createdAt', '-createdAt', '+updatedAt', '-updatedAt', '+lastActiveDate', '-lastActiveDate'] },
+		state: { type: 'string', enum: ['all', 'alive', 'available', 'admin', 'moderator', 'adminOrModerator', 'suspended'], default: 'all' },
 		origin: { type: 'string', enum: ['combined', 'local', 'remote'], default: 'combined' },
 		username: { type: 'string', nullable: true, default: null },
 		hostname: {
@@ -40,26 +47,40 @@ export const paramDef = {
 	required: [],
 } as const;
 
-// eslint-disable-next-line import/no-default-export
 @Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> {
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
 		@Inject(DI.usersRepository)
 		private usersRepository: UsersRepository,
 
 		private userEntityService: UserEntityService,
+		private roleService: RoleService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const query = this.usersRepository.createQueryBuilder('user');
 
 			switch (ps.state) {
 				case 'available': query.where('user.isSuspended = FALSE'); break;
-				case 'admin': query.where('user.isAdmin = TRUE'); break;
-				case 'moderator': query.where('user.isModerator = TRUE'); break;
-				case 'adminOrModerator': query.where('user.isAdmin = TRUE OR user.isModerator = TRUE'); break;
 				case 'alive': query.where('user.updatedAt > :date', { date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5) }); break;
-				case 'silenced': query.where('user.isSilenced = TRUE'); break;
 				case 'suspended': query.where('user.isSuspended = TRUE'); break;
+				case 'admin': {
+					const adminIds = await this.roleService.getAdministratorIds();
+					if (adminIds.length === 0) return [];
+					query.where('user.id IN (:...adminIds)', { adminIds: adminIds });
+					break;
+				}
+				case 'moderator': {
+					const moderatorIds = await this.roleService.getModeratorIds(false);
+					if (moderatorIds.length === 0) return [];
+					query.where('user.id IN (:...moderatorIds)', { moderatorIds: moderatorIds });
+					break;
+				}
+				case 'adminOrModerator': {
+					const adminOrModeratorIds = await this.roleService.getModeratorIds();
+					if (adminOrModeratorIds.length === 0) return [];
+					query.where('user.id IN (:...adminOrModeratorIds)', { adminOrModeratorIds: adminOrModeratorIds });
+					break;
+				}
 			}
 
 			switch (ps.origin) {
@@ -68,7 +89,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 			}
 
 			if (ps.username) {
-				query.andWhere('user.usernameLower like :username', { username: ps.username.toLowerCase() + '%' });
+				query.andWhere('user.usernameLower like :username', { username: sqlLikeEscape(ps.username.toLowerCase()) + '%' });
 			}
 
 			if (ps.hostname) {
@@ -82,11 +103,13 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 				case '-createdAt': query.orderBy('user.createdAt', 'ASC'); break;
 				case '+updatedAt': query.orderBy('user.updatedAt', 'DESC', 'NULLS LAST'); break;
 				case '-updatedAt': query.orderBy('user.updatedAt', 'ASC', 'NULLS FIRST'); break;
+				case '+lastActiveDate': query.orderBy('user.lastActiveDate', 'DESC', 'NULLS LAST'); break;
+				case '-lastActiveDate': query.orderBy('user.lastActiveDate', 'ASC', 'NULLS FIRST'); break;
 				default: query.orderBy('user.id', 'ASC'); break;
 			}
 
-			query.take(ps.limit);
-			query.skip(ps.offset);
+			query.limit(ps.limit);
+			query.offset(ps.offset);
 
 			const users = await query.getMany();
 

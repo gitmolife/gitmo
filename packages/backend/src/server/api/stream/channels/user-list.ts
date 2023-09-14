@@ -1,11 +1,16 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Inject, Injectable } from '@nestjs/common';
 import type { UserListJoiningsRepository, UserListsRepository } from '@/models/index.js';
-import type { NotesRepository } from '@/models/index.js';
-import type { User } from '@/models/entities/User.js';
+import type { MiUser } from '@/models/entities/User.js';
 import { isUserRelated } from '@/misc/is-user-related.js';
-import type { Packed } from '@/misc/schema.js';
+import type { Packed } from '@/misc/json-schema.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { DI } from '@/di-symbols.js';
+import { bindThis } from '@/decorators.js';
 import Channel from '../channel.js';
 
 class UserListChannel extends Channel {
@@ -13,31 +18,34 @@ class UserListChannel extends Channel {
 	public static shouldShare = false;
 	public static requireCredential = false;
 	private listId: string;
-	public listUsers: User['id'][] = [];
-	private listUsersClock: NodeJS.Timer;
+	public listUsers: MiUser['id'][] = [];
+	private listUsersClock: NodeJS.Timeout;
 
 	constructor(
 		private userListsRepository: UserListsRepository,
 		private userListJoiningsRepository: UserListJoiningsRepository,
 		private noteEntityService: NoteEntityService,
-		
+
 		id: string,
 		connection: Channel['connection'],
 	) {
 		super(id, connection);
-		this.updateListUsers = this.updateListUsers.bind(this);
-		this.onNote = this.onNote.bind(this);
+		//this.updateListUsers = this.updateListUsers.bind(this);
+		//this.onNote = this.onNote.bind(this);
 	}
 
+	@bindThis
 	public async init(params: any) {
 		this.listId = params.listId as string;
 
 		// Check existence and owner
-		const list = await this.userListsRepository.findOneBy({
-			id: this.listId,
-			userId: this.user!.id,
+		const listExist = await this.userListsRepository.exist({
+			where: {
+				id: this.listId,
+				userId: this.user!.id,
+			},
 		});
-		if (!list) return;
+		if (!listExist) return;
 
 		// Subscribe stream
 		this.subscriber.on(`userListStream:${this.listId}`, this.send);
@@ -48,6 +56,7 @@ class UserListChannel extends Channel {
 		this.listUsersClock = setInterval(this.updateListUsers, 5000);
 	}
 
+	@bindThis
 	private async updateListUsers() {
 		const users = await this.userListJoiningsRepository.find({
 			where: {
@@ -59,6 +68,7 @@ class UserListChannel extends Channel {
 		this.listUsers = users.map(x => x.userId);
 	}
 
+	@bindThis
 	private async onNote(note: Packed<'Note'>) {
 		if (!this.listUsers.includes(note.userId)) return;
 
@@ -86,13 +96,16 @@ class UserListChannel extends Channel {
 		}
 
 		// 流れてきたNoteがミュートしているユーザーが関わるものだったら無視する
-		if (isUserRelated(note, this.muting)) return;
+		if (isUserRelated(note, this.userIdsWhoMeMuting)) return;
 		// 流れてきたNoteがブロックされているユーザーが関わるものだったら無視する
-		if (isUserRelated(note, this.blocking)) return;
+		if (isUserRelated(note, this.userIdsWhoBlockingMe)) return;
+
+		if (note.renote && !note.text && isUserRelated(note, this.userIdsWhoMeMutingRenotes)) return;
 
 		this.send('note', note);
 	}
 
+	@bindThis
 	public dispose() {
 		// Unsubscribe events
 		this.subscriber.off(`userListStream:${this.listId}`, this.send);
@@ -118,6 +131,7 @@ export class UserListChannelService {
 	) {
 	}
 
+	@bindThis
 	public create(id: string, connection: Channel['connection']): UserListChannel {
 		return new UserListChannel(
 			this.userListsRepository,

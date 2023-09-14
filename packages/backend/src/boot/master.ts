@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import * as fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
@@ -5,18 +10,12 @@ import * as os from 'node:os';
 import cluster from 'node:cluster';
 import chalk from 'chalk';
 import chalkTemplate from 'chalk-template';
-import semver from 'semver';
-import { NestFactory } from '@nestjs/core';
 import Logger from '@/logger.js';
 import { loadConfig } from '@/config.js';
 import type { Config } from '@/config.js';
-import { lessThan } from '@/misc/prelude/array.js';
 import { showMachineInfo } from '@/misc/show-machine-info.js';
-import { DaemonModule } from '@/daemons/DaemonModule.js';
-import { JanitorService } from '@/daemons/JanitorService.js';
-import { QueueStatsService } from '@/daemons/QueueStatsService.js';
-import { ServerStatsService } from '@/daemons/ServerStatsService.js';
-import { envOption } from '../env.js';
+import { envOption } from '@/env.js';
+import { jobQueue, server } from './common.js';
 
 const _filename = fileURLToPath(import.meta.url);
 const _dirname = dirname(_filename);
@@ -36,7 +35,7 @@ function greet() {
 		console.log(themeColor(' |     |_|___ ___| |_ ___ _ _ '));
 		console.log(themeColor(' | | | | |_ -|_ -| \'_| -_| | |'));
 		console.log(themeColor(' |_|_|_|_|___|___|_,_|___|_  |'));
-		console.log(' ' + chalk.gray(v) + themeColor('                        |___|\n'.substr(v.length)));
+		console.log(' ' + chalk.gray(v) + themeColor('                        |___|\n'.substring(v.length)));
 		//#endregion
 
 		console.log(' Misskey is an open-source decentralized microblogging platform.');
@@ -69,21 +68,21 @@ export async function masterMain() {
 		process.exit(1);
 	}
 
+	if (envOption.onlyServer) {
+		await server();
+	} else if (envOption.onlyQueue) {
+		await jobQueue();
+	} else {
+		await server();
+	}
+
 	bootLogger.succ('Misskey initialized');
 
 	if (!envOption.disableClustering) {
 		await spawnWorkers(config.clusterLimit);
 	}
 
-	bootLogger.succ(`Now listening on port ${config.port} on ${config.url}`, null, true);
-
-	if (!envOption.noDaemons) {
-		const daemons = await NestFactory.createApplicationContext(DaemonModule);
-		daemons.enableShutdownHooks();
-		daemons.get(JanitorService).start();
-		daemons.get(QueueStatsService).start();
-		daemons.get(ServerStatsService).start();
-	}
+	bootLogger.succ(config.socket ? `Now listening on socket ${config.socket} on ${config.url}` : `Now listening on port ${config.port} on ${config.url}`, null, true);
 }
 
 function showEnvironment(): void {
@@ -101,12 +100,6 @@ function showNodejsVersion(): void {
 	const nodejsLogger = bootLogger.createSubLogger('nodejs');
 
 	nodejsLogger.info(`Version ${process.version} detected.`);
-
-	const minVersion = fs.readFileSync(`${_dirname}/../../../../.node-version`, 'utf-8').trim();
-	if (semver.lt(process.version, minVersion)) {
-		nodejsLogger.error(`At least Node.js ${minVersion} required!`);
-		process.exit(1);
-	}
 }
 
 function loadConfigBoot(): Config {

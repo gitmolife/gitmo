@@ -1,14 +1,20 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Inject, Injectable } from '@nestjs/common';
-import summaly from 'summaly';
+import { summaly } from 'summaly';
 import { DI } from '@/di-symbols.js';
-import type { UsersRepository } from '@/models/index.js';
 import type { Config } from '@/config.js';
 import { MetaService } from '@/core/MetaService.js';
 import { HttpRequestService } from '@/core/HttpRequestService.js';
 import type Logger from '@/logger.js';
 import { query } from '@/misc/prelude/url.js';
 import { LoggerService } from '@/core/LoggerService.js';
-import type Koa from 'koa';
+import { bindThis } from '@/decorators.js';
+import { ApiError } from '@/server/api/error.js';
+import type { FastifyRequest, FastifyReply } from 'fastify';
 
 @Injectable()
 export class UrlPreviewService {
@@ -18,9 +24,6 @@ export class UrlPreviewService {
 		@Inject(DI.config)
 		private config: Config,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
 		private metaService: MetaService,
 		private httpRequestService: HttpRequestService,
 		private loggerService: LoggerService,
@@ -28,10 +31,11 @@ export class UrlPreviewService {
 		this.logger = this.loggerService.getLogger('url-preview');
 	}
 
-	private wrap(url?: string): string | null {
+	@bindThis
+	private wrap(url?: string | null): string | null {
 		return url != null
 			? url.match(/^https?:\/\//)
-				? `${this.config.url}/proxy/preview.webp?${query({
+				? `${this.config.mediaProxy}/preview.webp?${query({
 					url,
 					preview: '1',
 				})}`
@@ -39,48 +43,72 @@ export class UrlPreviewService {
 			: null;
 	}
 
-	public async handle(ctx: Koa.Context) {
-		const url = ctx.query.url;
+	@bindThis
+	public async handle(
+		request: FastifyRequest<{ Querystring: { url: string; lang?: string; } }>,
+		reply: FastifyReply,
+	): Promise<object | undefined> {
+		const url = request.query.url;
 		if (typeof url !== 'string') {
-			ctx.status = 400;
+			reply.code(400);
 			return;
 		}
-	
-		const lang = ctx.query.lang;
+
+		const lang = request.query.lang;
 		if (Array.isArray(lang)) {
-			ctx.status = 400;
+			reply.code(400);
 			return;
 		}
-	
+
 		const meta = await this.metaService.fetch();
-	
+
 		this.logger.info(meta.summalyProxy
 			? `(Proxy) Getting preview of ${url}@${lang} ...`
 			: `Getting preview of ${url}@${lang} ...`);
-	
 		try {
-			const summary = meta.summalyProxy ? await this.httpRequestService.getJson(`${meta.summalyProxy}?${query({
-				url: url,
-				lang: lang ?? 'ja-JP',
-			})}`) : await summaly.default(url, {
-				followRedirects: false,
-				lang: lang ?? 'ja-JP',
-			});
-	
+			const summary = meta.summalyProxy ?
+				await this.httpRequestService.getJson<ReturnType<typeof summaly>>(`${meta.summalyProxy}?${query({
+					url: url,
+					lang: lang ?? 'ja-JP',
+				})}`)
+				:
+				await summaly(url, {
+					followRedirects: false,
+					lang: lang ?? 'ja-JP',
+					agent: this.config.proxy ? {
+						http: this.httpRequestService.httpAgent,
+						https: this.httpRequestService.httpsAgent,
+					} : undefined,
+				});
+
 			this.logger.succ(`Got preview of ${url}: ${summary.title}`);
-	
+
+			if (!(summary.url.startsWith('http://') || summary.url.startsWith('https://'))) {
+				throw new Error('unsupported schema included');
+			}
+
+			if (summary.player.url && !(summary.player.url.startsWith('http://') || summary.player.url.startsWith('https://'))) {
+				throw new Error('unsupported schema included');
+			}
+
 			summary.icon = this.wrap(summary.icon);
 			summary.thumbnail = this.wrap(summary.thumbnail);
-	
+
 			// Cache 7days
-			ctx.set('Cache-Control', 'max-age=604800, immutable');
-	
-			ctx.body = summary;
+			reply.header('Cache-Control', 'max-age=604800, immutable');
+
+			return summary;
 		} catch (err) {
 			this.logger.warn(`Failed to get preview of ${url}: ${err}`);
-			ctx.status = 200;
-			ctx.set('Cache-Control', 'max-age=86400, immutable');
-			ctx.body = '{}';
+			reply.code(422);
+			reply.header('Cache-Control', 'max-age=86400, immutable');
+			return {
+				error: new ApiError({
+					message: 'Failed to get preview',
+					code: 'URL_PREVIEW_FAILED',
+					id: '09d01cb5-53b9-4856-82e5-38a50c290a3b',
+				}),
+			};
 		}
 	}
 }

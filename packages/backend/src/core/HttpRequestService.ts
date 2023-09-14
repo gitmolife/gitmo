@@ -1,5 +1,11 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import * as http from 'node:http';
 import * as https from 'node:https';
+import * as net from 'node:net';
 import CacheableLookup from 'cacheable-lookup';
 import fetch from 'node-fetch';
 import { HttpProxyAgent, HttpsProxyAgent } from 'hpagent';
@@ -7,6 +13,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
 import type { Config } from '@/config.js';
 import { StatusError } from '@/misc/status-error.js';
+import { bindThis } from '@/decorators.js';
 import type { Response } from 'node-fetch';
 import type { URL } from 'node:url';
 
@@ -41,21 +48,23 @@ export class HttpRequestService {
 			errorTtl: 30,	// 30secs
 			lookup: false,	// nativeのdns.lookupにfallbackしない
 		});
-		
+
 		this.http = new http.Agent({
 			keepAlive: true,
 			keepAliveMsecs: 30 * 1000,
-			lookup: cache.lookup,
-		} as http.AgentOptions);
-		
+			lookup: cache.lookup as unknown as net.LookupFunction,
+			localAddress: config.outgoingAddress,
+		});
+
 		this.https = new https.Agent({
 			keepAlive: true,
 			keepAliveMsecs: 30 * 1000,
-			lookup: cache.lookup,
-		} as https.AgentOptions);
-		
+			lookup: cache.lookup as unknown as net.LookupFunction,
+			localAddress: config.outgoingAddress,
+		});
+
 		const maxSockets = Math.max(256, config.deliverJobConcurrency ?? 128);
-		
+
 		this.httpAgent = config.proxy
 			? new HttpProxyAgent({
 				keepAlive: true,
@@ -64,6 +73,7 @@ export class HttpRequestService {
 				maxFreeSockets: 256,
 				scheduling: 'lifo',
 				proxy: config.proxy,
+				localAddress: config.outgoingAddress,
 			})
 			: this.http;
 
@@ -75,6 +85,7 @@ export class HttpRequestService {
 				maxFreeSockets: 256,
 				scheduling: 'lifo',
 				proxy: config.proxy,
+				localAddress: config.outgoingAddress,
 			})
 			: this.https;
 	}
@@ -84,68 +95,74 @@ export class HttpRequestService {
 	 * @param url URL
 	 * @param bypassProxy Allways bypass proxy
 	 */
+	@bindThis
 	public getAgentByUrl(url: URL, bypassProxy = false): http.Agent | https.Agent {
-		if (bypassProxy || (this.config.proxyBypassHosts || []).includes(url.hostname)) {
+		if (bypassProxy || (this.config.proxyBypassHosts ?? []).includes(url.hostname)) {
 			return url.protocol === 'http:' ? this.http : this.https;
 		} else {
 			return url.protocol === 'http:' ? this.httpAgent : this.httpsAgent;
 		}
 	}
 
-	public async getJson(url: string, accept = 'application/json, */*', timeout = 10000, headers?: Record<string, string>): Promise<unknown> {
-		const res = await this.getResponse({
-			url,
+	@bindThis
+	public async getJson<T = unknown>(url: string, accept = 'application/json, */*', headers?: Record<string, string>): Promise<T> {
+		const res = await this.send(url, {
 			method: 'GET',
 			headers: Object.assign({
-				'User-Agent': this.config.userAgent,
 				Accept: accept,
 			}, headers ?? {}),
-			timeout,
+			timeout: 5000,
+			size: 1024 * 256,
 		});
 
-		return await res.json();
+		return await res.json() as T;
 	}
 
-	public async getHtml(url: string, accept = 'text/html, */*', timeout = 10000, headers?: Record<string, string>): Promise<string> {
-		const res = await this.getResponse({
-			url,
+	@bindThis
+	public async getHtml(url: string, accept = 'text/html, */*', headers?: Record<string, string>): Promise<string> {
+		const res = await this.send(url, {
 			method: 'GET',
 			headers: Object.assign({
-				'User-Agent': this.config.userAgent,
 				Accept: accept,
 			}, headers ?? {}),
-			timeout,
+			timeout: 5000,
 		});
 
 		return await res.text();
 	}
 
-	public async getResponse(args: {
-		url: string,
-		method: string,
+	@bindThis
+	public async send(url: string, args: {
+		method?: string,
 		body?: string,
-		headers: Record<string, string>,
+		headers?: Record<string, string>,
 		timeout?: number,
 		size?: number,
+	} = {}, extra: {
+		throwErrorWhenResponseNotOk: boolean;
+	} = {
+		throwErrorWhenResponseNotOk: true,
 	}): Promise<Response> {
-		const timeout = args.timeout ?? 10 * 1000;
+		const timeout = args.timeout ?? 5000;
 
 		const controller = new AbortController();
 		setTimeout(() => {
 			controller.abort();
-		}, timeout * 6);
+		}, timeout);
 
-		const res = await fetch(args.url, {
-			method: args.method,
-			headers: args.headers,
+		const res = await fetch(url, {
+			method: args.method ?? 'GET',
+			headers: {
+				'User-Agent': this.config.userAgent,
+				...(args.headers ?? {}),
+			},
 			body: args.body,
-			timeout,
 			size: args.size ?? 10 * 1024 * 1024,
 			agent: (url) => this.getAgentByUrl(url),
 			signal: controller.signal,
 		});
 
-		if (!res.ok) {
+		if (!res.ok && extra.throwErrorWhenResponseNotOk) {
 			throw new StatusError(`${res.status} ${res.statusText}`, res.status, res.statusText);
 		}
 

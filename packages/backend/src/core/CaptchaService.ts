@@ -1,8 +1,11 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { DI } from '@/di-symbols.js';
-import type { UsersRepository } from '@/models/index.js';
-import type { Config } from '@/config.js';
-import { HttpRequestService } from './HttpRequestService.js';
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { Injectable } from '@nestjs/common';
+import { HttpRequestService } from '@/core/HttpRequestService.js';
+import { bindThis } from '@/decorators.js';
 
 type CaptchaResponse = {
 	success: boolean;
@@ -12,69 +15,77 @@ type CaptchaResponse = {
 @Injectable()
 export class CaptchaService {
 	constructor(
-		@Inject(DI.config)
-		private config: Config,
-
 		private httpRequestService: HttpRequestService,
 	) {
 	}
 
+	@bindThis
 	private async getCaptchaResponse(url: string, secret: string, response: string): Promise<CaptchaResponse> {
 		const params = new URLSearchParams({
 			secret,
 			response,
 		});
-	
-		const res = await fetch(url, {
+
+		const res = await this.httpRequestService.send(url, {
 			method: 'POST',
-			body: params,
+			body: params.toString(),
 			headers: {
-				'User-Agent': this.config.userAgent,
+				'Content-Type': 'application/x-www-form-urlencoded',
 			},
-			// TODO
-			//timeout: 10 * 1000,
-			agent: (url, bypassProxy) => this.httpRequestService.getAgentByUrl(url, bypassProxy),
-		}).catch(err => {
-			throw `${err.message ?? err}`;
-		});
-	
+		}, { throwErrorWhenResponseNotOk: false });
+
 		if (!res.ok) {
-			throw `${res.status}`;
+			throw new Error(`${res.status}`);
 		}
-	
+
 		return await res.json() as CaptchaResponse;
-	}	
-	
-	public async verifyRecaptcha(secret: string, response: string): Promise<void> {
-		const result = await this.getCaptchaResponse('https://www.recaptcha.net/recaptcha/api/siteverify', secret, response).catch(e => {
-			throw `recaptcha-request-failed: ${e}`;
+	}
+
+	@bindThis
+	public async verifyRecaptcha(secret: string, response: string | null | undefined): Promise<void> {
+		if (response == null) {
+			throw new Error('recaptcha-failed: no response provided');
+		}
+
+		const result = await this.getCaptchaResponse('https://www.recaptcha.net/recaptcha/api/siteverify', secret, response).catch(err => {
+			throw new Error(`recaptcha-request-failed: ${err}`);
 		});
 
 		if (result.success !== true) {
 			const errorCodes = result['error-codes'] ? result['error-codes'].join(', ') : '';
-			throw `recaptcha-failed: ${errorCodes}`;
+			throw new Error(`recaptcha-failed: ${errorCodes}`);
 		}
 	}
 
-	public async verifyHcaptcha(secret: string, response: string): Promise<void> {
-		const result = await this.getCaptchaResponse('https://hcaptcha.com/siteverify', secret, response).catch(e => {
-			throw `hcaptcha-request-failed: ${e}`;
+	@bindThis
+	public async verifyHcaptcha(secret: string, response: string | null | undefined): Promise<void> {
+		if (response == null) {
+			throw new Error('hcaptcha-failed: no response provided');
+		}
+
+		const result = await this.getCaptchaResponse('https://hcaptcha.com/siteverify', secret, response).catch(err => {
+			throw new Error(`hcaptcha-request-failed: ${err}`);
 		});
 
 		if (result.success !== true) {
 			const errorCodes = result['error-codes'] ? result['error-codes'].join(', ') : '';
-			throw `hcaptcha-failed: ${errorCodes}`;
+			throw new Error(`hcaptcha-failed: ${errorCodes}`);
 		}
 	}
 
-	public async verifyTurnstile(secret: string, response: string): Promise<void> {
-		const result = await this.getCaptchaResponse('https://challenges.cloudflare.com/turnstile/v0/siteverify', secret, response).catch(e => {
-			throw `turnstile-request-failed: ${e}`;
+	@bindThis
+	public async verifyTurnstile(secret: string, response: string | null | undefined): Promise<void> {
+		if (response == null) {
+			throw new Error('turnstile-failed: no response provided');
+		}
+
+		const result = await this.getCaptchaResponse('https://challenges.cloudflare.com/turnstile/v0/siteverify', secret, response).catch(err => {
+			throw new Error(`turnstile-request-failed: ${err}`);
 		});
 
 		if (result.success !== true) {
 			const errorCodes = result['error-codes'] ? result['error-codes'].join(', ') : '';
-			throw `turnstile-failed: ${errorCodes}`;
+			throw new Error(`turnstile-failed: ${errorCodes}`);
 		}
 	}
 }

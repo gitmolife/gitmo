@@ -1,8 +1,12 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import type { UsersRepository } from '@/models/index.js';
 import { QueueService } from '@/core/QueueService.js';
-import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { UserSuspendService } from '@/core/UserSuspendService.js';
 import { DI } from '@/di-symbols.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
@@ -11,7 +15,7 @@ export const meta = {
 	tags: ['admin'],
 
 	requireCredential: true,
-	requireModerator: true,
+	requireAdmin: true,
 } as const;
 
 export const paramDef = {
@@ -22,16 +26,14 @@ export const paramDef = {
 	required: ['userId'],
 } as const;
 
-// eslint-disable-next-line import/no-default-export
 @Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> {
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
 		@Inject(DI.usersRepository)
 		private usersRepository: UsersRepository,
 
 		private userEntityService: UserEntityService,
 		private queueService: QueueService,
-		private globalEventService: GlobalEventService,
 		private userSuspendService: UserSuspendService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
@@ -41,12 +43,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 				throw new Error('user not found');
 			}
 
-			if (user.isAdmin) {
-				throw new Error('cannot suspend admin');
-			}
-
-			if (user.isModerator) {
-				throw new Error('cannot suspend moderator');
+			if (user.isRoot) {
+				throw new Error('cannot delete a root account');
 			}
 
 			if (this.userEntityService.isLocalUser(user)) {
@@ -65,11 +63,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 			await this.usersRepository.update(user.id, {
 				isDeleted: true,
 			});
-
-			if (this.userEntityService.isLocalUser(user)) {
-				// Terminate streaming
-				this.globalEventService.publishUserEvent(user.id, 'terminate', {});
-			}
 		});
 	}
 }

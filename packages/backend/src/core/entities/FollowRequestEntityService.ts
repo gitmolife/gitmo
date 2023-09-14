@@ -1,11 +1,15 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
 import type { FollowRequestsRepository } from '@/models/index.js';
-import { awaitAll } from '@/misc/prelude/await-all.js';
-import type { Packed } from '@/misc/schema.js';
 import type { } from '@/models/entities/Blocking.js';
-import type { User } from '@/models/entities/User.js';
-import type { FollowRequest } from '@/models/entities/FollowRequest.js';
+import type { MiUser } from '@/models/entities/User.js';
+import type { MiFollowRequest } from '@/models/entities/FollowRequest.js';
+import { bindThis } from '@/decorators.js';
 import { UserEntityService } from './UserEntityService.js';
 
 @Injectable()
@@ -18,9 +22,10 @@ export class FollowRequestEntityService {
 	) {
 	}
 
+	@bindThis
 	public async pack(
-		src: FollowRequest['id'] | FollowRequest,
-		me?: { id: User['id'] } | null | undefined,
+		src: MiFollowRequest['id'] | MiFollowRequest,
+		me?: { id: MiUser['id'] } | null | undefined,
 	) {
 		const request = typeof src === 'object' ? src : await this.followRequestsRepository.findOneByOrFail({ id: src });
 

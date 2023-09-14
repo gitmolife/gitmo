@@ -1,39 +1,37 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Inject, Injectable } from '@nestjs/common';
-import { MoreThan } from 'typeorm';
+import * as Bull from 'bullmq';
 import { DI } from '@/di-symbols.js';
-import type { DriveFilesRepository, InstancesRepository } from '@/models/index.js';
-import type { Config } from '@/config.js';
+import type { InstancesRepository } from '@/models/index.js';
 import type Logger from '@/logger.js';
 import { MetaService } from '@/core/MetaService.js';
-import { ApRequestService } from '@/core/remote/activitypub/ApRequestService.js';
+import { ApRequestService } from '@/core/activitypub/ApRequestService.js';
 import { FederatedInstanceService } from '@/core/FederatedInstanceService.js';
 import { FetchInstanceMetadataService } from '@/core/FetchInstanceMetadataService.js';
-import { Cache } from '@/misc/cache.js';
-import type { Instance } from '@/models/entities/Instance.js';
+import { MemorySingleCache } from '@/misc/cache.js';
+import type { MiInstance } from '@/models/entities/Instance.js';
 import InstanceChart from '@/core/chart/charts/instance.js';
 import ApRequestChart from '@/core/chart/charts/ap-request.js';
 import FederationChart from '@/core/chart/charts/federation.js';
 import { StatusError } from '@/misc/status-error.js';
 import { UtilityService } from '@/core/UtilityService.js';
+import { bindThis } from '@/decorators.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
-import type Bull from 'bull';
 import type { DeliverJobData } from '../types.js';
 
 @Injectable()
 export class DeliverProcessorService {
 	private logger: Logger;
-	private suspendedHostsCache: Cache<Instance[]>;
+	private suspendedHostsCache: MemorySingleCache<MiInstance[]>;
 	private latest: string | null;
 
 	constructor(
-		@Inject(DI.config)
-		private config: Config,
-
 		@Inject(DI.instancesRepository)
 		private instancesRepository: InstancesRepository,
-
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
 
 		private metaService: MetaService,
 		private utilityService: UtilityService,
@@ -46,83 +44,90 @@ export class DeliverProcessorService {
 		private queueLoggerService: QueueLoggerService,
 	) {
 		this.logger = this.queueLoggerService.logger.createSubLogger('deliver');
-		this.suspendedHostsCache = new Cache<Instance[]>(1000 * 60 * 60);
-		this.latest = null;
+		this.suspendedHostsCache = new MemorySingleCache<MiInstance[]>(1000 * 60 * 60);
 	}
 
+	@bindThis
 	public async process(job: Bull.Job<DeliverJobData>): Promise<string> {
 		const { host } = new URL(job.data.to);
 
 		// ブロックしてたら中断
 		const meta = await this.metaService.fetch();
-		if (meta.blockedHosts.includes(this.utilityService.toPuny(host))) {
+		if (this.utilityService.isBlockedHost(meta.blockedHosts, this.utilityService.toPuny(host))) {
 			return 'skip (blocked)';
 		}
 
 		// isSuspendedなら中断
-		let suspendedHosts = this.suspendedHostsCache.get(null);
+		let suspendedHosts = this.suspendedHostsCache.get();
 		if (suspendedHosts == null) {
 			suspendedHosts = await this.instancesRepository.find({
 				where: {
 					isSuspended: true,
 				},
 			});
-			this.suspendedHostsCache.set(null, suspendedHosts);
+			this.suspendedHostsCache.set(suspendedHosts);
 		}
 		if (suspendedHosts.map(x => x.host).includes(this.utilityService.toPuny(host))) {
 			return 'skip (suspended)';
 		}
 
 		try {
-			if (this.latest !== (this.latest = JSON.stringify(job.data.content, null, 2))) {
-				this.logger.debug(`delivering ${this.latest}`);
-			}
-
 			await this.apRequestService.signedPost(job.data.user, job.data.to, job.data.content);
 
 			// Update stats
-			this.federatedInstanceService.registerOrFetchInstanceDoc(host).then(i => {
-				this.instancesRepository.update(i.id, {
-					latestRequestSentAt: new Date(),
-					latestStatus: 200,
-					lastCommunicatedAt: new Date(),
-					isNotResponding: false,
-				});
+			this.federatedInstanceService.fetch(host).then(i => {
+				if (i.isNotResponding) {
+					this.federatedInstanceService.update(i.id, {
+						isNotResponding: false,
+					});
+				}
 
 				this.fetchInstanceMetadataService.fetchInstanceMetadata(i);
-
-				this.instanceChart.requestSent(i.host, true);
 				this.apRequestChart.deliverSucc();
 				this.federationChart.deliverd(i.host, true);
+
+				if (meta.enableChartsForFederatedInstances) {
+					this.instanceChart.requestSent(i.host, true);
+				}
 			});
 
 			return 'Success';
 		} catch (res) {
-		// Update stats
-			this.federatedInstanceService.registerOrFetchInstanceDoc(host).then(i => {
-				this.instancesRepository.update(i.id, {
-					latestRequestSentAt: new Date(),
-					latestStatus: res instanceof StatusError ? res.statusCode : null,
-					isNotResponding: true,
-				});
+			// Update stats
+			this.federatedInstanceService.fetch(host).then(i => {
+				if (!i.isNotResponding) {
+					this.federatedInstanceService.update(i.id, {
+						isNotResponding: true,
+					});
+				}
 
-				this.instanceChart.requestSent(i.host, false);
 				this.apRequestChart.deliverFail();
 				this.federationChart.deliverd(i.host, false);
+
+				if (meta.enableChartsForFederatedInstances) {
+					this.instanceChart.requestSent(i.host, false);
+				}
 			});
 
 			if (res instanceof StatusError) {
-			// 4xx
+				// 4xx
 				if (res.isClientError) {
-				// HTTPステータスコード4xxはクライアントエラーであり、それはつまり
-				// 何回再送しても成功することはないということなのでエラーにはしないでおく
-					return `${res.statusCode} ${res.statusMessage}`;
+					// 相手が閉鎖していることを明示しているため、配送停止する
+					if (job.data.isSharedInbox && res.statusCode === 410) {
+						this.federatedInstanceService.fetch(host).then(i => {
+							this.federatedInstanceService.update(i.id, {
+								isSuspended: true,
+							});
+						});
+						throw new Bull.UnrecoverableError(`${host} is gone`);
+					}
+					throw new Bull.UnrecoverableError(`${res.statusCode} ${res.statusMessage}`);
 				}
 
 				// 5xx etc.
-				throw `${res.statusCode} ${res.statusMessage}`;
+				throw new Error(`${res.statusCode} ${res.statusMessage}`);
 			} else {
-			// DNS error, socket error, timeout ...
+				// DNS error, socket error, timeout ...
 				throw res;
 			}
 		}

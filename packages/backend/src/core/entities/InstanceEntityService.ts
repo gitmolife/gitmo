@@ -1,41 +1,41 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { DI } from '@/di-symbols.js';
-import type { InstancesRepository } from '@/models/index.js';
-import { awaitAll } from '@/misc/prelude/await-all.js';
-import type { Packed } from '@/misc/schema.js';
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { Injectable } from '@nestjs/common';
+import type { Packed } from '@/misc/json-schema.js';
 import type { } from '@/models/entities/Blocking.js';
-import type { User } from '@/models/entities/User.js';
-import type { Instance } from '@/models/entities/Instance.js';
-import { MetaService } from '../MetaService.js';
-import { UserEntityService } from './UserEntityService.js';
+import type { MiInstance } from '@/models/entities/Instance.js';
+import { MetaService } from '@/core/MetaService.js';
+import { bindThis } from '@/decorators.js';
+import { UtilityService } from '../UtilityService.js';
 
 @Injectable()
 export class InstanceEntityService {
 	constructor(
-		@Inject(DI.instancesRepository)
-		private instancesRepository: InstancesRepository,
-
 		private metaService: MetaService,
+
+		private utilityService: UtilityService,
 	) {
 	}
 
+	@bindThis
 	public async pack(
-		instance: Instance,
+		instance: MiInstance,
 	): Promise<Packed<'FederationInstance'>> {
 		const meta = await this.metaService.fetch();
 		return {
 			id: instance.id,
-			caughtAt: instance.caughtAt.toISOString(),
+			firstRetrievedAt: instance.firstRetrievedAt.toISOString(),
 			host: instance.host,
 			usersCount: instance.usersCount,
 			notesCount: instance.notesCount,
 			followingCount: instance.followingCount,
 			followersCount: instance.followersCount,
-			latestRequestSentAt: instance.latestRequestSentAt ? instance.latestRequestSentAt.toISOString() : null,
-			lastCommunicatedAt: instance.lastCommunicatedAt.toISOString(),
 			isNotResponding: instance.isNotResponding,
 			isSuspended: instance.isSuspended,
-			isBlocked: meta.blockedHosts.includes(instance.host),
+			isBlocked: this.utilityService.isBlockedHost(meta.blockedHosts, instance.host),
 			softwareName: instance.softwareName,
 			softwareVersion: instance.softwareVersion,
 			openRegistrations: instance.openRegistrations,
@@ -50,8 +50,9 @@ export class InstanceEntityService {
 		};
 	}
 
+	@bindThis
 	public packMany(
-		instances: Instance[],
+		instances: MiInstance[],
 	) {
 		return Promise.all(instances.map(x => this.pack(x)));
 	}

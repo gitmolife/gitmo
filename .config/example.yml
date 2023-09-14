@@ -30,6 +30,10 @@ url: https://example.tld/
 # The port that your Misskey server should listen on.
 port: 3000
 
+# You can also use UNIX domain socket. 
+# socket: /path/to/misskey.sock
+# chmodSocket: '777'
+
 #   ┌──────────────────────────┐
 #───┘ PostgreSQL configuration └────────────────────────────────
 
@@ -51,6 +55,23 @@ db:
   #extra:
   #  ssl: true
 
+dbReplications: false
+
+# You can configure any number of replicas here
+#dbSlaves:
+#  -
+#    host: 
+#    port: 
+#    db: 
+#    user: 
+#    pass: 
+#  -
+#    host: 
+#    port: 
+#    db: 
+#    user: 
+#    pass: 
+
 #   ┌─────────────────────┐
 #───┘ Redis configuration └─────────────────────────────────────
 
@@ -61,16 +82,39 @@ redis:
   #pass: example-pass
   #prefix: example-prefix
   #db: 1
+  # You can specify more ioredis options...
+  #username: example-username
 
-#   ┌─────────────────────────────┐
-#───┘ Elasticsearch configuration └─────────────────────────────
-
-#elasticsearch:
+#redisForPubsub:
 #  host: localhost
-#  port: 9200
-#  ssl: false
-#  user: 
-#  pass: 
+#  port: 6379
+#  #family: 0  # 0=Both, 4=IPv4, 6=IPv6
+#  #pass: example-pass
+#  #prefix: example-prefix
+#  #db: 1
+#  # You can specify more ioredis options...
+#  #username: example-username
+
+#redisForJobQueue:
+#  host: localhost
+#  port: 6379
+#  #family: 0  # 0=Both, 4=IPv4, 6=IPv6
+#  #pass: example-pass
+#  #prefix: example-prefix
+#  #db: 1
+#  # You can specify more ioredis options...
+#  #username: example-username
+
+#   ┌───────────────────────────┐
+#───┘ MeiliSearch configuration └─────────────────────────────
+
+#meilisearch:
+#  host: localhost
+#  port: 7700
+#  apiKey: ''
+#  ssl: true
+#  index: ''
+#  scope: local
 
 #   ┌───────────────┐
 #───┘ ID generation └───────────────────────────────────────────
@@ -81,6 +125,7 @@ redis:
 
 # Available methods:
 # aid ... Short, Millisecond accuracy
+# aidx ... Millisecond accuracy
 # meid ... Similar to ObjectID, Millisecond accuracy
 # ulid ... Millisecond accuracy
 # objectid ... This is left for backward compatibility
@@ -88,7 +133,7 @@ redis:
 # ONCE YOU HAVE STARTED THE INSTANCE, DO NOT CHANGE THE
 # ID SETTINGS AFTER THAT!
 
-id: 'aid'
+id: 'aidx'
 
 #   ┌─────────────────────┐
 #───┘ Other configuration └─────────────────────────────────────
@@ -100,32 +145,36 @@ id: 'aid'
 #clusterLimit: 1
 
 # Job concurrency per worker
-# deliverJobConcurrency: 128
-# inboxJobConcurrency: 16
+#deliverJobConcurrency: 128
+#inboxJobConcurrency: 16
+#relashionshipJobConcurrency: 16
+# What's relashionshipJob?:
+#  Follow, unfollow, block and unblock(ings) while following-imports, etc. or account migrations.
 
 # Job rate limiter
-# deliverJobPerSec: 128
-# inboxJobPerSec: 16
+#deliverJobPerSec: 128
+#inboxJobPerSec: 16
+#relashionshipJobPerSec: 64
 
 # Job attempts
-# deliverJobMaxAttempts: 12
-# inboxJobMaxAttempts: 8
+#deliverJobMaxAttempts: 12
+#inboxJobMaxAttempts: 8
+
+# Local address used for outgoing requests
+#outgoingAddress: 127.0.0.1
 
 # IP address family used for outgoing request (ipv4, ipv6 or dual)
 #outgoingAddressFamily: ipv4
 
-# Syslog option
-#syslog:
-#  host: localhost
-#  port: 514
-
 # Proxy for HTTP/HTTPS
 #proxy: http://127.0.0.1:3128
 
-#proxyBypassHosts: [
-#  'example.com',
-#  '192.0.2.8'
-#]
+proxyBypassHosts:
+  - api.deepl.com
+  - api-free.deepl.com
+  - www.recaptcha.net
+  - hcaptcha.com
+  - challenges.cloudflare.com
 
 # Proxy for SMTP/SMTPS
 #proxySmtp: http://127.0.0.1:3128   # use HTTP/1.1 CONNECT
@@ -133,13 +182,23 @@ id: 'aid'
 #proxySmtp: socks5://127.0.0.1:1080 # use SOCKS5
 
 # Media Proxy
+# Reference Implementation: https://github.com/misskey-dev/media-proxy
+# * Deliver a common cache between instances
+# * Perform image compression (on a different server resource than the main process)
 #mediaProxy: https://example.com/proxy
 
-# Proxy remote files (default: false)
-#proxyRemoteFiles: true
+# Proxy remote files (default: true)
+# Proxy remote files by this instance or mediaProxy to prevent remote files from running in remote domains.
+proxyRemoteFiles: true
 
-# Sign to ActivityPub GET request (default: false)
-#signToActivityPubGet: true
+# Movie Thumbnail Generation URL
+# There is no reference implementation.
+# For example, Misskey will point to the following URL:
+#   https://example.com/thumbnail.webp?thumbnail=1&url=https%3A%2F%2Fstorage.example.com%2Fpath%2Fto%2Fvideo.mp4
+#videoThumbnailGenerator: https://example.com
+
+# Sign to ActivityPub GET request (default: true)
+signToActivityPubGet: true
 
 #allowedPrivateNetworks: [
 #  '127.0.0.1/32'

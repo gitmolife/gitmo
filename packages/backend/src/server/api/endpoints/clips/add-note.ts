@@ -1,17 +1,31 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Inject, Injectable } from '@nestjs/common';
+import ms from 'ms';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { IdService } from '@/core/IdService.js';
 import { DI } from '@/di-symbols.js';
 import type { ClipNotesRepository, ClipsRepository } from '@/models/index.js';
-import { ApiError } from '../../error.js';
 import { GetterService } from '@/server/api/GetterService.js';
+import { RoleService } from '@/core/RoleService.js';
+import { ApiError } from '../../error.js';
 
 export const meta = {
 	tags: ['account', 'notes', 'clips'],
 
 	requireCredential: true,
 
+	prohibitMoved: true,
+
 	kind: 'write:account',
+
+	limit: {
+		duration: ms('1hour'),
+		max: 20,
+	},
 
 	errors: {
 		noSuchClip: {
@@ -31,6 +45,12 @@ export const meta = {
 			code: 'ALREADY_CLIPPED',
 			id: '734806c4-542c-463a-9311-15c512803965',
 		},
+
+		tooManyClipNotes: {
+			message: 'You cannot add notes to the clip any more.',
+			code: 'TOO_MANY_CLIP_NOTES',
+			id: 'f0dba960-ff73-4615-8df4-d6ac5d9dc118',
+		},
 	},
 } as const;
 
@@ -43,9 +63,8 @@ export const paramDef = {
 	required: ['clipId', 'noteId'],
 } as const;
 
-// eslint-disable-next-line import/no-default-export
 @Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> {
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
 		@Inject(DI.clipsRepository)
 		private clipsRepository: ClipsRepository,
@@ -54,6 +73,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 		private clipNotesRepository: ClipNotesRepository,
 
 		private idService: IdService,
+		private roleService: RoleService,
 		private getterService: GetterService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
@@ -71,19 +91,32 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 				throw e;
 			});
 
-			const exist = await this.clipNotesRepository.findOneBy({
-				noteId: note.id,
-				clipId: clip.id,
+			const exist = await this.clipNotesRepository.exist({
+				where: {
+					noteId: note.id,
+					clipId: clip.id,
+				},
 			});
 
-			if (exist != null) {
+			if (exist) {
 				throw new ApiError(meta.errors.alreadyClipped);
+			}
+
+			const currentCount = await this.clipNotesRepository.countBy({
+				clipId: clip.id,
+			});
+			if (currentCount > (await this.roleService.getUserPolicies(me.id)).noteEachClipsLimit) {
+				throw new ApiError(meta.errors.tooManyClipNotes);
 			}
 
 			await this.clipNotesRepository.insert({
 				id: this.idService.genId(),
 				noteId: note.id,
 				clipId: clip.id,
+			});
+
+			await this.clipsRepository.update(clip.id, {
+				lastClippedAt: new Date(),
 			});
 		});
 	}

@@ -1,9 +1,14 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import type { UsersRepository, AbuseUserReportsRepository } from '@/models/index.js';
 import { InstanceActorService } from '@/core/InstanceActorService.js';
 import { QueueService } from '@/core/QueueService.js';
-import { ApRendererService } from '@/core/remote/activitypub/ApRendererService.js';
+import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
 import { DI } from '@/di-symbols.js';
 
 export const meta = {
@@ -24,9 +29,8 @@ export const paramDef = {
 
 // TODO: ロジックをサービスに切り出す
 
-// eslint-disable-next-line import/no-default-export
 @Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> {
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
 		@Inject(DI.usersRepository)
 		private usersRepository: UsersRepository,
@@ -49,7 +53,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 				const actor = await this.instanceActorService.getInstanceActor();
 				const targetUser = await this.usersRepository.findOneByOrFail({ id: report.targetUserId });
 
-				this.queueService.deliver(actor, this.apRendererService.renderActivity(this.apRendererService.renderFlag(actor, [targetUser.uri!], report.comment)), targetUser.inbox);
+				this.queueService.deliver(actor, this.apRendererService.addContext(this.apRendererService.renderFlag(actor, targetUser.uri!, report.comment)), targetUser.inbox, false);
 			}
 
 			await this.abuseUserReportsRepository.update(report.id, {

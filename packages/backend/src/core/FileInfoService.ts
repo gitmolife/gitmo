@@ -1,11 +1,15 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import * as fs from 'node:fs';
 import * as crypto from 'node:crypto';
 import { join } from 'node:path';
-import * as stream from 'node:stream';
-import * as util from 'node:util';
-import { Inject, Injectable } from '@nestjs/common';
+import * as stream from 'node:stream/promises';
+import { Injectable } from '@nestjs/common';
 import { FSWatcher } from 'chokidar';
-import { fileTypeFromFile } from 'file-type';
+import * as fileType from 'file-type';
 import FFmpeg from 'fluent-ffmpeg';
 import isSvg from 'is-svg';
 import probeImageSize from 'probe-image-size';
@@ -14,8 +18,7 @@ import sharp from 'sharp';
 import { encode } from 'blurhash';
 import { createTempDir } from '@/misc/create-temp.js';
 import { AiService } from '@/core/AiService.js';
-
-const pipeline = util.promisify(stream.pipeline);
+import { bindThis } from '@/decorators.js';
 
 export type FileInfo = {
 	size: number;
@@ -42,6 +45,7 @@ const TYPE_SVG = {
 	mime: 'image/svg+xml',
 	ext: 'svg',
 };
+
 @Injectable()
 export class FileInfoService {
 	constructor(
@@ -52,6 +56,7 @@ export class FileInfoService {
 	/**
 	 * Get file information
 	 */
+	@bindThis
 	public async getFileInfo(path: string, opts: {
 		skipSensitiveDetection: boolean;
 		sensitiveThreshold?: number;
@@ -70,7 +75,18 @@ export class FileInfoService {
 		let height: number | undefined;
 		let orientation: number | undefined;
 
-		if (['image/jpeg', 'image/gif', 'image/png', 'image/apng', 'image/webp', 'image/bmp', 'image/tiff', 'image/svg+xml', 'image/vnd.adobe.photoshop'].includes(type.mime)) {
+		if ([
+			'image/png',
+			'image/gif',
+			'image/jpeg',
+			'image/webp',
+			'image/avif',
+			'image/apng',
+			'image/bmp',
+			'image/tiff',
+			'image/svg+xml',
+			'image/vnd.adobe.photoshop',
+		].includes(type.mime)) {
 			const imageSize = await this.detectImageSize(path).catch(e => {
 				warnings.push(`detectImageSize failed: ${e}`);
 				return undefined;
@@ -97,7 +113,15 @@ export class FileInfoService {
 
 		let blurhash: string | undefined;
 
-		if (['image/jpeg', 'image/gif', 'image/png', 'image/apng', 'image/webp', 'image/svg+xml'].includes(type.mime)) {
+		if ([
+			'image/jpeg',
+			'image/gif',
+			'image/png',
+			'image/apng',
+			'image/webp',
+			'image/avif',
+			'image/svg+xml',
+		].includes(type.mime)) {
 			blurhash = await this.getBlurhash(path).catch(e => {
 				warnings.push(`getBlurhash failed: ${e}`);
 				return undefined;
@@ -135,24 +159,29 @@ export class FileInfoService {
 		};
 	}
 
+	@bindThis
 	private async detectSensitivity(source: string, mime: string, sensitiveThreshold: number, sensitiveThresholdForPorn: number, analyzeVideo: boolean): Promise<[sensitive: boolean, porn: boolean]> {
 		let sensitive = false;
 		let porn = false;
-	
+
 		function judgePrediction(result: readonly predictionType[]): [sensitive: boolean, porn: boolean] {
 			let sensitive = false;
 			let porn = false;
-	
+
 			if ((result.find(x => x.className === 'Sexy')?.probability ?? 0) > sensitiveThreshold) sensitive = true;
 			if ((result.find(x => x.className === 'Hentai')?.probability ?? 0) > sensitiveThreshold) sensitive = true;
 			if ((result.find(x => x.className === 'Porn')?.probability ?? 0) > sensitiveThreshold) sensitive = true;
-	
+
 			if ((result.find(x => x.className === 'Porn')?.probability ?? 0) > sensitiveThresholdForPorn) porn = true;
-	
+
 			return [sensitive, porn];
 		}
-	
-		if (['image/jpeg', 'image/png', 'image/webp'].includes(mime)) {
+
+		if ([
+			'image/jpeg',
+			'image/png',
+			'image/webp',
+		].includes(mime)) {
 			const result = await this.aiService.detectSensitive(source);
 			if (result) {
 				[sensitive, porn] = judgePrediction(result);
@@ -226,10 +255,10 @@ export class FileInfoService {
 				disposeOutDir();
 			}
 		}
-	
+
 		return [sensitive, porn];
 	}
-	
+
 	private async *asyncIterateFrames(cwd: string, command: FFmpeg.FfmpegCommand): AsyncGenerator<string, void> {
 		const watcher = new FSWatcher({
 			cwd,
@@ -268,25 +297,40 @@ export class FileInfoService {
 			}
 		}
 	}
-	
+
+	@bindThis
 	private exists(path: string): Promise<boolean> {
 		return fs.promises.access(path).then(() => true, () => false);
+	}
+
+	@bindThis
+	public fixMime(mime: string | fileType.MimeType): string {
+		// see https://github.com/misskey-dev/misskey/pull/10686
+		if (mime === 'audio/x-flac') {
+			return 'audio/flac';
+		}
+		if (mime === 'audio/vnd.wave') {
+			return 'audio/wav';
+		}
+
+		return mime;
 	}
 
 	/**
 	 * Detect MIME Type and extension
 	 */
+	@bindThis
 	public async detectType(path: string): Promise<{
-	mime: string;
-	ext: string | null;
-}> {
+		mime: string;
+		ext: string | null;
+	}> {
 	// Check 0 byte
 		const fileSize = await this.getFileSize(path);
 		if (fileSize === 0) {
 			return TYPE_OCTET_STREAM;
 		}
 
-		const type = await fileTypeFromFile(path);
+		const type = await fileType.fileTypeFromFile(path);
 
 		if (type) {
 		// XMLはSVGかもしれない
@@ -295,7 +339,7 @@ export class FileInfoService {
 			}
 
 			return {
-				mime: type.mime,
+				mime: this.fixMime(type.mime),
 				ext: type.ext,
 			};
 		}
@@ -312,11 +356,13 @@ export class FileInfoService {
 	/**
 	 * Check the file is SVG or not
 	 */
-	public async checkSvg(path: string) {
+	@bindThis
+	public async checkSvg(path: string): Promise<boolean> {
 		try {
 			const size = await this.getFileSize(path);
 			if (size > 1 * 1024 * 1024) return false;
-			return isSvg(fs.readFileSync(path));
+			const buffer = await fs.promises.readFile(path);
+			return isSvg(buffer.toString());
 		} catch {
 			return false;
 		}
@@ -325,23 +371,25 @@ export class FileInfoService {
 	/**
 	 * Get file size
 	 */
+	@bindThis
 	public async getFileSize(path: string): Promise<number> {
-		const getStat = util.promisify(fs.stat);
-		return (await getStat(path)).size;
+		return (await fs.promises.stat(path)).size;
 	}
 
 	/**
 	 * Calculate MD5 hash
 	 */
+	@bindThis
 	private async calcHash(path: string): Promise<string> {
 		const hash = crypto.createHash('md5').setEncoding('hex');
-		await pipeline(fs.createReadStream(path), hash);
+		await stream.pipeline(fs.createReadStream(path), hash);
 		return hash.read();
 	}
 
 	/**
 	 * Detect dimensions of image
 	 */
+	@bindThis
 	private async detectImageSize(path: string): Promise<{
 	width: number;
 	height: number;
@@ -358,19 +406,20 @@ export class FileInfoService {
 	/**
 	 * Calculate average color of image
 	 */
+	@bindThis
 	private getBlurhash(path: string): Promise<string> {
 		return new Promise((resolve, reject) => {
 			sharp(path)
 				.raw()
 				.ensureAlpha()
 				.resize(64, 64, { fit: 'inside' })
-				.toBuffer((err, buffer, { width, height }) => {
+				.toBuffer((err, buffer, info) => {
 					if (err) return reject(err);
 
 					let hash;
 
 					try {
-						hash = encode(new Uint8ClampedArray(buffer), width, height, 7, 7);
+						hash = encode(new Uint8ClampedArray(buffer), info.width, info.height, 5, 5);
 					} catch (e) {
 						return reject(e);
 					}

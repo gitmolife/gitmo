@@ -1,14 +1,22 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import type { InstancesRepository } from '@/models/index.js';
 import { InstanceEntityService } from '@/core/entities/InstanceEntityService.js';
 import { MetaService } from '@/core/MetaService.js';
 import { DI } from '@/di-symbols.js';
+import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 
 export const meta = {
 	tags: ['federation'],
 
 	requireCredential: false,
+	allowGet: true,
+	cacheSec: 3600,
 
 	res: {
 		type: 'array',
@@ -38,9 +46,8 @@ export const paramDef = {
 	required: [],
 } as const;
 
-// eslint-disable-next-line import/no-default-export
 @Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> {
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
 		@Inject(DI.instancesRepository)
 		private instancesRepository: InstancesRepository,
@@ -62,10 +69,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 				case '-following': query.orderBy('instance.followingCount', 'ASC'); break;
 				case '+followers': query.orderBy('instance.followersCount', 'DESC'); break;
 				case '-followers': query.orderBy('instance.followersCount', 'ASC'); break;
-				case '+caughtAt': query.orderBy('instance.caughtAt', 'DESC'); break;
-				case '-caughtAt': query.orderBy('instance.caughtAt', 'ASC'); break;
-				case '+lastCommunicatedAt': query.orderBy('instance.lastCommunicatedAt', 'DESC'); break;
-				case '-lastCommunicatedAt': query.orderBy('instance.lastCommunicatedAt', 'ASC'); break;
+				case '+firstRetrievedAt': query.orderBy('instance.firstRetrievedAt', 'DESC'); break;
+				case '-firstRetrievedAt': query.orderBy('instance.firstRetrievedAt', 'ASC'); break;
+				case '+latestRequestReceivedAt': query.orderBy('instance.latestRequestReceivedAt', 'DESC', 'NULLS LAST'); break;
+				case '-latestRequestReceivedAt': query.orderBy('instance.latestRequestReceivedAt', 'ASC', 'NULLS FIRST'); break;
 
 				default: query.orderBy('instance.id', 'DESC'); break;
 			}
@@ -73,9 +80,9 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 			if (typeof ps.blocked === 'boolean') {
 				const meta = await this.metaService.fetch(true);
 				if (ps.blocked) {
-					query.andWhere('instance.host IN (:...blocks)', { blocks: meta.blockedHosts });
+					query.andWhere(meta.blockedHosts.length === 0 ? '1=0' : 'instance.host IN (:...blocks)', { blocks: meta.blockedHosts });
 				} else {
-					query.andWhere('instance.host NOT IN (:...blocks)', { blocks: meta.blockedHosts });
+					query.andWhere(meta.blockedHosts.length === 0 ? '1=1' : 'instance.host NOT IN (:...blocks)', { blocks: meta.blockedHosts });
 				}
 			}
 
@@ -120,10 +127,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 			}
 
 			if (ps.host) {
-				query.andWhere('instance.host like :host', { host: '%' + ps.host.toLowerCase() + '%' });
+				query.andWhere('instance.host like :host', { host: '%' + sqlLikeEscape(ps.host.toLowerCase()) + '%' });
 			}
 
-			const instances = await query.take(ps.limit).skip(ps.offset).getMany();
+			const instances = await query.limit(ps.limit).offset(ps.offset).getMany();
 
 			return await this.instanceEntityService.packMany(instances);
 		});

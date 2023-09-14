@@ -1,9 +1,13 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Inject, Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import type { EmojisRepository } from '@/models/index.js';
 import { IdService } from '@/core/IdService.js';
-import type { DriveFile } from '@/models/entities/DriveFile.js';
+import type { MiDriveFile } from '@/models/entities/DriveFile.js';
 import { DI } from '@/di-symbols.js';
 import { DriveService } from '@/core/DriveService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
@@ -14,7 +18,7 @@ export const meta = {
 	tags: ['admin'],
 
 	requireCredential: true,
-	requireModerator: true,
+	requireRolePolicy: 'canManageCustomEmojis',
 
 	errors: {
 		noSuchEmoji: {
@@ -47,13 +51,9 @@ export const paramDef = {
 
 // TODO: ロジックをサービスに切り出す
 
-// eslint-disable-next-line import/no-default-export
 @Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> {
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.db)
-		private db: DataSource,
-
 		@Inject(DI.emojisRepository)
 		private emojisRepository: EmojisRepository,
 
@@ -69,7 +69,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 				throw new ApiError(meta.errors.noSuchEmoji);
 			}
 
-			let driveFile: DriveFile;
+			let driveFile: MiDriveFile;
 
 			try {
 				// Create file
@@ -87,12 +87,11 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 				originalUrl: driveFile.url,
 				publicUrl: driveFile.webpublicUrl ?? driveFile.url,
 				type: driveFile.webpublicType ?? driveFile.type,
+				license: emoji.license,
 			}).then(x => this.emojisRepository.findOneByOrFail(x.identifiers[0]));
 
-			await this.db.queryResultCache!.remove(['meta_emojis']);
-
 			this.globalEventService.publishBroadcastStream('emojiAdded', {
-				emoji: await this.emojiEntityService.pack(copied.id),
+				emoji: await this.emojiEntityService.packDetailed(copied.id),
 			});
 
 			return {

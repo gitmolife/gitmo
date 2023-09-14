@@ -1,4 +1,10 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Inject, Injectable } from '@nestjs/common';
+import ms from 'ms';
 import type { UserListsRepository, UserListJoiningsRepository, BlockingsRepository } from '@/models/index.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { GetterService } from '@/server/api/GetterService.js';
@@ -11,9 +17,16 @@ export const meta = {
 
 	requireCredential: true,
 
+	prohibitMoved: true,
+
 	kind: 'write:account',
 
 	description: 'Add a user to an existing list.',
+
+	limit: {
+		duration: ms('1hour'),
+		max: 30,
+	},
 
 	errors: {
 		noSuchList: {
@@ -39,6 +52,12 @@ export const meta = {
 			code: 'YOU_HAVE_BEEN_BLOCKED',
 			id: '990232c5-3f9d-4d83-9f3f-ef27b6332a4b',
 		},
+
+		tooManyUsers: {
+			message: 'You can not push users any more.',
+			code: 'TOO_MANY_USERS',
+			id: '2dd9752e-a338-413d-8eec-41814430989b',
+		},
 	},
 } as const;
 
@@ -51,9 +70,8 @@ export const paramDef = {
 	required: ['listId', 'userId'],
 } as const;
 
-// eslint-disable-next-line import/no-default-export
 @Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> {
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
 		@Inject(DI.userListsRepository)
 		private userListsRepository: UserListsRepository,
@@ -86,26 +104,37 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 
 			// Check blocking
 			if (user.id !== me.id) {
-				const block = await this.blockingsRepository.findOneBy({
-					blockerId: user.id,
-					blockeeId: me.id,
+				const blockExist = await this.blockingsRepository.exist({
+					where: {
+						blockerId: user.id,
+						blockeeId: me.id,
+					},
 				});
-				if (block) {
+				if (blockExist) {
 					throw new ApiError(meta.errors.youHaveBeenBlocked);
 				}
 			}
 
-			const exist = await this.userListJoiningsRepository.findOneBy({
-				userListId: userList.id,
-				userId: user.id,
+			const exist = await this.userListJoiningsRepository.exist({
+				where: {
+					userListId: userList.id,
+					userId: user.id,
+				},
 			});
 
 			if (exist) {
 				throw new ApiError(meta.errors.alreadyAdded);
 			}
 
-			// Push the user
-			await this.userListService.push(user, userList);
+			try {
+				await this.userListService.push(user, userList, me);
+			} catch (err) {
+				if (err instanceof UserListService.TooManyUsersError) {
+					throw new ApiError(meta.errors.tooManyUsers);
+				}
+
+				throw err;
+			}
 		});
 	}
 }

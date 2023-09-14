@@ -24,11 +24,16 @@
 // -- This will overwrite an existing command --
 // Cypress.Commands.overwrite('visit', (originalFn, url, options) => { ... })
 
+Cypress.Commands.add('visitHome', () => {
+	cy.visit('/');
+	cy.get('button', { timeout: 30000 }).should('be.visible');
+})
+
 Cypress.Commands.add('resetState', () => {
 	cy.window(win => {
 		win.indexedDB.deleteDatabase('keyval-store');
 	});
-	cy.request('POST', '/api/reset-db').as('reset');
+	cy.request('POST', '/api/reset-db', {}).as('reset');
 	cy.get('@reset').its('status').should('equal', 204);
 	cy.reload(true);
 });
@@ -43,7 +48,7 @@ Cypress.Commands.add('registerUser', (username, password, isAdmin = false) => {
 });
 
 Cypress.Commands.add('login', (username, password) => {
-	cy.visit('/');
+	cy.visitHome();
 
 	cy.intercept('POST', '/api/signin').as('signin');
 

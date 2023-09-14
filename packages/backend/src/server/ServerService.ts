@@ -1,36 +1,43 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import cluster from 'node:cluster';
 import * as fs from 'node:fs';
-import * as http from 'node:http';
-import { Inject, Injectable } from '@nestjs/common';
-import Koa from 'koa';
-import Router from '@koa/router';
-import mount from 'koa-mount';
-import koaLogger from 'koa-logger';
-import * as slow from 'koa-slow';
+import { fileURLToPath } from 'node:url';
+import { Inject, Injectable, OnApplicationShutdown } from '@nestjs/common';
+import Fastify, { FastifyInstance } from 'fastify';
+import fastifyStatic from '@fastify/static';
 import { IsNull } from 'typeorm';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import type { Config } from '@/config.js';
-import type { UserProfilesRepository, UsersRepository } from '@/models/index.js';
+import type { EmojisRepository, UserProfilesRepository, UsersRepository } from '@/models/index.js';
 import { DI } from '@/di-symbols.js';
 import type Logger from '@/logger.js';
-import { envOption } from '@/env.js';
 import * as Acct from '@/misc/acct.js';
 import { genIdenticon } from '@/misc/gen-identicon.js';
 import { createTemp } from '@/misc/create-temp.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { LoggerService } from '@/core/LoggerService.js';
+import { bindThis } from '@/decorators.js';
+import { MetaService } from '@/core/MetaService.js';
 import { ActivityPubServerService } from './ActivityPubServerService.js';
 import { NodeinfoServerService } from './NodeinfoServerService.js';
 import { ApiServerService } from './api/ApiServerService.js';
 import { StreamingApiServerService } from './api/StreamingApiServerService.js';
 import { WellKnownServerService } from './WellKnownServerService.js';
-import { MediaProxyServerService } from './MediaProxyServerService.js';
 import { FileServerService } from './FileServerService.js';
 import { ClientServerService } from './web/ClientServerService.js';
+import { OpenApiServerService } from './api/openapi/OpenApiServerService.js';
+import { OAuth2ProviderService } from './oauth/OAuth2ProviderService.js';
+
+const _dirname = fileURLToPath(new URL('.', import.meta.url));
 
 @Injectable()
-export class ServerService {
+export class ServerService implements OnApplicationShutdown {
 	private logger: Logger;
+	#fastify: FastifyInstance;
 
 	constructor(
 		@Inject(DI.config)
@@ -42,95 +49,146 @@ export class ServerService {
 		@Inject(DI.userProfilesRepository)
 		private userProfilesRepository: UserProfilesRepository,
 
+		@Inject(DI.emojisRepository)
+		private emojisRepository: EmojisRepository,
+
+		private metaService: MetaService,
 		private userEntityService: UserEntityService,
 		private apiServerService: ApiServerService,
+		private openApiServerService: OpenApiServerService,
 		private streamingApiServerService: StreamingApiServerService,
 		private activityPubServerService: ActivityPubServerService,
 		private wellKnownServerService: WellKnownServerService,
 		private nodeinfoServerService: NodeinfoServerService,
 		private fileServerService: FileServerService,
-		private mediaProxyServerService: MediaProxyServerService,
 		private clientServerService: ClientServerService,
 		private globalEventService: GlobalEventService,
 		private loggerService: LoggerService,
+		private oauth2ProviderService: OAuth2ProviderService,
 	) {
 		this.logger = this.loggerService.getLogger('server', 'gray', false);
 	}
 
-	public launch() {
-		// Init app
-		const koa = new Koa();
-		koa.proxy = true;
-
-		if (!['production', 'test'].includes(process.env.NODE_ENV ?? '')) {
-		// Logger
-			koa.use(koaLogger(str => {
-				this.logger.info(str);
-			}));
-
-			// Delay
-			if (envOption.slow) {
-				koa.use(slow({
-					delay: 3000,
-				}));
-			}
-		}
+	@bindThis
+	public async launch(): Promise<void> {
+		const fastify = Fastify({
+			trustProxy: true,
+			logger: !['production', 'test'].includes(process.env.NODE_ENV ?? ''),
+		});
+		this.#fastify = fastify;
 
 		// HSTS
 		// 6months (15552000sec)
 		if (this.config.url.startsWith('https') && !this.config.disableHsts) {
-			koa.use(async (ctx, next) => {
-				ctx.set('strict-transport-security', 'max-age=15552000; preload');
-				await next();
+			fastify.addHook('onRequest', (request, reply, done) => {
+				reply.header('strict-transport-security', 'max-age=15552000; preload');
+				done();
 			});
 		}
 
-		koa.use(mount('/api', this.apiServerService.createApiServer(koa)));
-		koa.use(mount('/files', this.fileServerService.createServer()));
-		koa.use(mount('/proxy', this.mediaProxyServerService.createServer()));
+		// Register non-serving static server so that the child services can use reply.sendFile.
+		// `root` here is just a placeholder and each call must use its own `rootPath`.
+		fastify.register(fastifyStatic, {
+			root: _dirname,
+			serve: false,
+		});
 
-		// Init router
-		const router = new Router();
+		fastify.register(this.apiServerService.createServer, { prefix: '/api' });
+		fastify.register(this.openApiServerService.createServer);
+		fastify.register(this.fileServerService.createServer);
+		fastify.register(this.activityPubServerService.createServer);
+		fastify.register(this.nodeinfoServerService.createServer);
+		fastify.register(this.wellKnownServerService.createServer);
+		fastify.register(this.oauth2ProviderService.createServer);
 
-		// Routing
-		router.use(this.activityPubServerService.createRouter().routes());
-		router.use(this.nodeinfoServerService.createRouter().routes());
-		router.use(this.wellKnownServerService.createRouter().routes());
+		fastify.get<{ Params: { path: string }; Querystring: { static?: any; badge?: any; }; }>('/emoji/:path(.*)', async (request, reply) => {
+			const path = request.params.path;
 
-		router.get('/avatar/@:acct', async ctx => {
-			const { username, host } = Acct.parse(ctx.params.acct);
+			reply.header('Cache-Control', 'public, max-age=86400');
+
+			if (!path.match(/^[a-zA-Z0-9\-_@\.]+?\.webp$/)) {
+				reply.code(404);
+				return;
+			}
+
+			const name = path.split('@')[0].replace('.webp', '');
+			const host = path.split('@')[1]?.replace('.webp', '');
+
+			const emoji = await this.emojisRepository.findOneBy({
+				// `@.` is the spec of ReactionService.decodeReaction
+				host: (host == null || host === '.') ? IsNull() : host,
+				name: name,
+			});
+
+			reply.header('Content-Security-Policy', 'default-src \'none\'; style-src \'unsafe-inline\'');
+
+			if (emoji == null) {
+				if ('fallback' in request.query) {
+					return await reply.redirect('/static-assets/emoji-unknown.png');
+				} else {
+					reply.code(404);
+					return;
+				}
+			}
+
+			let url: URL;
+			if ('badge' in request.query) {
+				url = new URL(`${this.config.mediaProxy}/emoji.png`);
+				// || emoji.originalUrl してるのは後方互換性のため（publicUrlはstringなので??はだめ）
+				url.searchParams.set('url', emoji.publicUrl || emoji.originalUrl);
+				url.searchParams.set('badge', '1');
+			} else {
+				url = new URL(`${this.config.mediaProxy}/emoji.webp`);
+				// || emoji.originalUrl してるのは後方互換性のため（publicUrlはstringなので??はだめ）
+				url.searchParams.set('url', emoji.publicUrl || emoji.originalUrl);
+				url.searchParams.set('emoji', '1');
+				if ('static' in request.query) url.searchParams.set('static', '1');
+			}
+
+			return await reply.redirect(
+				301,
+				url.toString(),
+			);
+		});
+
+		fastify.get<{ Params: { acct: string } }>('/avatar/@:acct', async (request, reply) => {
+			const { username, host } = Acct.parse(request.params.acct);
 			const user = await this.usersRepository.findOne({
 				where: {
 					usernameLower: username.toLowerCase(),
 					host: (host == null) || (host === this.config.host) ? IsNull() : host,
 					isSuspended: false,
 				},
-				relations: ['avatar'],
 			});
 
+			reply.header('Cache-Control', 'public, max-age=86400');
+
 			if (user) {
-				ctx.redirect(this.userEntityService.getAvatarUrlSync(user));
+				reply.redirect(user.avatarUrl ?? this.userEntityService.getIdenticonUrl(user));
 			} else {
-				ctx.redirect('/static-assets/user-unknown.png');
+				reply.redirect('/static-assets/user-unknown.png');
 			}
 		});
 
-		router.get('/identicon/:x', async ctx => {
-			const [temp, cleanup] = await createTemp();
-			await genIdenticon(ctx.params.x, fs.createWriteStream(temp));
-			ctx.set('Content-Type', 'image/png');
-			ctx.body = fs.createReadStream(temp).on('close', () => cleanup());
+		fastify.get<{ Params: { x: string } }>('/identicon/:x', async (request, reply) => {
+			reply.header('Content-Type', 'image/png');
+			reply.header('Cache-Control', 'public, max-age=86400');
+
+			if ((await this.metaService.fetch()).enableIdenticonGeneration) {
+				const [temp, cleanup] = await createTemp();
+				await genIdenticon(request.params.x, fs.createWriteStream(temp));
+				return fs.createReadStream(temp).on('close', () => cleanup());
+			} else {
+				return reply.redirect('/static-assets/avatar.png');
+			}
 		});
 
-		router.get('/verify-email/:code', async ctx => {
+		fastify.get<{ Params: { code: string } }>('/verify-email/:code', async (request, reply) => {
 			const profile = await this.userProfilesRepository.findOneBy({
-				emailVerifyCode: ctx.params.code,
+				emailVerifyCode: request.params.code,
 			});
 
 			if (profile != null) {
-				ctx.body = 'Verify succeeded!';
-				ctx.status = 200;
-
 				await this.userProfilesRepository.update({ userId: profile.userId }, {
 					emailVerified: true,
 					emailVerifyCode: null,
@@ -140,21 +198,20 @@ export class ServerService {
 					detail: true,
 					includeSecrets: true,
 				}));
+
+				reply.code(200);
+				return 'Verify succeeded!';
 			} else {
-				ctx.status = 404;
+				reply.code(404);
+				return;
 			}
 		});
 
-		// Register router
-		koa.use(router.routes());
+		fastify.register(this.clientServerService.createServer);
 
-		koa.use(mount(this.clientServerService.createApp()));
+		this.streamingApiServerService.attach(fastify.server);
 
-		const server = http.createServer(koa.callback());
-
-		this.streamingApiServerService.attachStreamingApi(server);
-
-		server.on('error', err => {
+		fastify.server.on('error', err => {
 			switch ((err as any).code) {
 				case 'EACCES':
 					this.logger.error(`You do not have permission to listen on port ${this.config.port}.`);
@@ -168,13 +225,37 @@ export class ServerService {
 			}
 
 			if (cluster.isWorker) {
-			process.send!('listenFailed');
+				process.send!('listenFailed');
 			} else {
-			// disableClustering
+				// disableClustering
 				process.exit(1);
 			}
 		});
 
-		server.listen(this.config.port);
+		if (this.config.socket) {
+			if (fs.existsSync(this.config.socket)) {
+				fs.unlinkSync(this.config.socket);
+			}
+			fastify.listen({ path: this.config.socket }, (err, address) => {
+				if (this.config.chmodSocket) {
+					fs.chmodSync(this.config.socket!, this.config.chmodSocket);
+				}
+			});
+		} else {
+			fastify.listen({ port: this.config.port, host: '0.0.0.0' });
+		}
+
+		await fastify.ready();
+	}
+
+	@bindThis
+	public async dispose(): Promise<void> {
+		await this.streamingApiServerService.detach();
+		await this.#fastify.close();
+	}
+
+	@bindThis
+	async onApplicationShutdown(signal: string): Promise<void> {
+		await this.dispose();
 	}
 }

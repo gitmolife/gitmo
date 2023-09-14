@@ -1,0 +1,31 @@
+From 9b4f51ed1a0adc2679b2e5ca0272916534f281a0 Mon Sep 17 00:00:00 2001
+From: Squid <Squid@sqdmc.net>
+Date: Thu, 10 Nov 2022 09:17:04 -0800
+Subject: [PATCH] fix for pinned users
+
+---
+ packages/backend/src/server/api/endpoints/pinned-users.ts | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/packages/backend/src/server/api/endpoints/pinned-users.ts b/packages/backend/src/server/api/endpoints/pinned-users.ts
+index 6c941314e..f2c6e798e 100644
+--- a/packages/backend/src/server/api/endpoints/pinned-users.ts
++++ b/packages/backend/src/server/api/endpoints/pinned-users.ts
+@@ -43,12 +43,12 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
+ 		super(meta, paramDef, async (ps, me) => {
+ 			const meta = await this.metaService.fetch();
+ 
+-			const users = await Promise.all(meta.pinnedthis.usersRepository.map(acct => Acct.parse(acct)).map(acct => this.usersRepository.findOneBy({
++			const users = await Promise.all(meta.pinnedUsers.map(acct => Acct.parse(acct)).map(acct => this.usersRepository.findOneBy({
+ 				usernameLower: acct.username.toLowerCase(),
+ 				host: acct.host ?? IsNull(),
+ 			})));
+ 
+-			return await this.userEntityService.packMany(users.filter(x => x !== undefined) as User[], me, { detail: true });
++			return await this.userEntityService.packMany(users.filter(x => x !== null) as User[], me, { detail: true });
+ 		});
+ 	}
+ }
+-- 
+2.37.2.windows.2
+

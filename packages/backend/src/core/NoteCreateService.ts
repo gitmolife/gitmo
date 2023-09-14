@@ -1,25 +1,33 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { setImmediate } from 'node:timers/promises';
 import * as mfm from 'mfm-js';
-import { Not, In, DataSource } from 'typeorm';
-import { Inject, Injectable } from '@nestjs/common';
+import { In, DataSource } from 'typeorm';
+import * as Redis from 'ioredis';
+import { Inject, Injectable, OnApplicationShutdown } from '@nestjs/common';
+import RE2 from 're2';
 import { extractMentions } from '@/misc/extract-mentions.js';
 import { extractCustomEmojisFromMfm } from '@/misc/extract-custom-emojis-from-mfm.js';
 import { extractHashtags } from '@/misc/extract-hashtags.js';
 import type { IMentionedRemoteUsers } from '@/models/entities/Note.js';
-import { Note } from '@/models/entities/Note.js';
-import type { ChannelFollowingsRepository, ChannelsRepository, InstancesRepository, MutedNotesRepository, MutingsRepository, NotesRepository, NoteThreadMutingsRepository, UserProfilesRepository, UsersRepository } from '@/models/index.js';
-import type { DriveFile } from '@/models/entities/DriveFile.js';
-import type { App } from '@/models/entities/App.js';
+import { MiNote } from '@/models/entities/Note.js';
+import type { ChannelsRepository, InstancesRepository, MutedNotesRepository, MutingsRepository, NotesRepository, NoteThreadMutingsRepository, UserProfilesRepository, UsersRepository } from '@/models/index.js';
+import type { MiDriveFile } from '@/models/entities/DriveFile.js';
+import type { MiApp } from '@/models/entities/App.js';
 import { concat } from '@/misc/prelude/array.js';
 import { IdService } from '@/core/IdService.js';
-import type { User, ILocalUser, IRemoteUser } from '@/models/entities/User.js';
+import type { MiUser, MiLocalUser, MiRemoteUser } from '@/models/entities/User.js';
 import type { IPoll } from '@/models/entities/Poll.js';
-import { Poll } from '@/models/entities/Poll.js';
+import { MiPoll } from '@/models/entities/Poll.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
 import { checkWordMute } from '@/misc/check-word-mute.js';
-import type { Channel } from '@/models/entities/Channel.js';
+import type { MiChannel } from '@/models/entities/Channel.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
-import { Cache } from '@/misc/cache.js';
-import type { UserProfile } from '@/models/entities/UserProfile.js';
+import { MemorySingleCache } from '@/misc/cache.js';
+import type { MiUserProfile } from '@/models/entities/UserProfile.js';
 import { RelayService } from '@/core/RelayService.js';
 import { FederatedInstanceService } from '@/core/FederatedInstanceService.js';
 import { DI } from '@/di-symbols.js';
@@ -29,42 +37,48 @@ import PerUserNotesChart from '@/core/chart/charts/per-user-notes.js';
 import InstanceChart from '@/core/chart/charts/instance.js';
 import ActiveUsersChart from '@/core/chart/charts/active-users.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
-import { CreateNotificationService } from '@/core/CreateNotificationService.js';
+import { NotificationService } from '@/core/NotificationService.js';
 import { WebhookService } from '@/core/WebhookService.js';
 import { HashtagService } from '@/core/HashtagService.js';
 import { AntennaService } from '@/core/AntennaService.js';
 import { QueueService } from '@/core/QueueService.js';
-import { NoteEntityService } from './entities/NoteEntityService.js';
-import { UserEntityService } from './entities/UserEntityService.js';
-import { NoteReadService } from './NoteReadService.js';
-import { ApRendererService } from './remote/activitypub/ApRendererService.js';
-import { ResolveUserService } from './remote/ResolveUserService.js';
-import { ApDeliverManagerService } from './remote/activitypub/ApDeliverManagerService.js';
+import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
+import { UserEntityService } from '@/core/entities/UserEntityService.js';
+import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
+import { ApDeliverManagerService } from '@/core/activitypub/ApDeliverManagerService.js';
+import { NoteReadService } from '@/core/NoteReadService.js';
+import { RemoteUserResolveService } from '@/core/RemoteUserResolveService.js';
+import { bindThis } from '@/decorators.js';
+import { DB_MAX_NOTE_TEXT_LENGTH } from '@/const.js';
+import { RoleService } from '@/core/RoleService.js';
+import { MetaService } from '@/core/MetaService.js';
+import { SearchService } from '@/core/SearchService.js';
 
-const mutedWordsCache = new Cache<{ userId: UserProfile['userId']; mutedWords: UserProfile['mutedWords']; }[]>(1000 * 60 * 5);
+const mutedWordsCache = new MemorySingleCache<{ userId: MiUserProfile['userId']; mutedWords: MiUserProfile['mutedWords']; }[]>(1000 * 60 * 5);
 
 type NotificationType = 'reply' | 'renote' | 'quote' | 'mention';
 
 class NotificationManager {
-	private notifier: { id: User['id']; };
-	private note: Note;
+	private notifier: { id: MiUser['id']; };
+	private note: MiNote;
 	private queue: {
-		target: ILocalUser['id'];
+		target: MiLocalUser['id'];
 		reason: NotificationType;
 	}[];
 
 	constructor(
 		private mutingsRepository: MutingsRepository,
-		private createNotificationService: CreateNotificationService,
-		notifier: { id: User['id']; },
-		note: Note,
+		private notificationService: NotificationService,
+		notifier: { id: MiUser['id']; },
+		note: MiNote,
 	) {
 		this.notifier = notifier;
 		this.note = note;
 		this.queue = [];
 	}
 
-	public push(notifiee: ILocalUser['id'], reason: NotificationType) {
+	@bindThis
+	public push(notifiee: MiLocalUser['id'], reason: NotificationType) {
 		// 自分自身へは通知しない
 		if (this.notifier.id === notifiee) return;
 
@@ -83,6 +97,7 @@ class NotificationManager {
 		}
 	}
 
+	@bindThis
 	public async deliver() {
 		for (const x of this.queue) {
 			// ミュート情報を取得
@@ -94,7 +109,7 @@ class NotificationManager {
 
 			// 通知される側のユーザーが通知する側のユーザーをミュートしていない限りは通知する
 			if (!mentioneesMutedUserIds.includes(this.notifier.id)) {
-				this.createNotificationService.createNotification(x.target, x.reason, {
+				this.notificationService.createNotification(x.target, x.reason, {
 					notifierId: this.notifier.id,
 					noteId: this.note.id,
 				});
@@ -104,41 +119,47 @@ class NotificationManager {
 }
 
 type MinimumUser = {
-	id: User['id'];
-	host: User['host'];
-	username: User['username'];
-	uri: User['uri'];
+	id: MiUser['id'];
+	host: MiUser['host'];
+	username: MiUser['username'];
+	uri: MiUser['uri'];
 };
 
 type Option = {
 	createdAt?: Date | null;
 	name?: string | null;
 	text?: string | null;
-	reply?: Note | null;
-	renote?: Note | null;
-	files?: DriveFile[] | null;
+	reply?: MiNote | null;
+	renote?: MiNote | null;
+	files?: MiDriveFile[] | null;
 	poll?: IPoll | null;
 	localOnly?: boolean | null;
+	reactionAcceptance?: MiNote['reactionAcceptance'];
 	cw?: string | null;
 	visibility?: string;
 	visibleUsers?: MinimumUser[] | null;
-	channel?: Channel | null;
+	channel?: MiChannel | null;
 	apMentions?: MinimumUser[] | null;
 	apHashtags?: string[] | null;
 	apEmojis?: string[] | null;
 	uri?: string | null;
 	url?: string | null;
-	app?: App | null;
+	app?: MiApp | null;
 };
 
 @Injectable()
-export class NoteCreateService {
+export class NoteCreateService implements OnApplicationShutdown {
+	#shutdownController = new AbortController();
+
 	constructor(
 		@Inject(DI.config)
 		private config: Config,
 
 		@Inject(DI.db)
 		private db: DataSource,
+
+		@Inject(DI.redis)
+		private redisClient: Redis.Redis,
 
 		@Inject(DI.usersRepository)
 		private usersRepository: UsersRepository,
@@ -161,40 +182,41 @@ export class NoteCreateService {
 		@Inject(DI.channelsRepository)
 		private channelsRepository: ChannelsRepository,
 
-		@Inject(DI.channelFollowingsRepository)
-		private channelFollowingsRepository: ChannelFollowingsRepository,
-
 		@Inject(DI.noteThreadMutingsRepository)
 		private noteThreadMutingsRepository: NoteThreadMutingsRepository,
 
 		private userEntityService: UserEntityService,
 		private noteEntityService: NoteEntityService,
 		private idService: IdService,
-		private globalEventServie: GlobalEventService,
+		private globalEventService: GlobalEventService,
 		private queueService: QueueService,
 		private noteReadService: NoteReadService,
-		private createNotificationService: CreateNotificationService,
+		private notificationService: NotificationService,
 		private relayService: RelayService,
 		private federatedInstanceService: FederatedInstanceService,
 		private hashtagService: HashtagService,
 		private antennaService: AntennaService,
 		private webhookService: WebhookService,
-		private resolveUserService: ResolveUserService,
+		private remoteUserResolveService: RemoteUserResolveService,
 		private apDeliverManagerService: ApDeliverManagerService,
 		private apRendererService: ApRendererService,
+		private roleService: RoleService,
+		private metaService: MetaService,
+		private searchService: SearchService,
 		private notesChart: NotesChart,
 		private perUserNotesChart: PerUserNotesChart,
 		private activeUsersChart: ActiveUsersChart,
 		private instanceChart: InstanceChart,
-	) {}
+	) { }
 
+	@bindThis
 	public async create(user: {
-		id: User['id'];
-		username: User['username'];
-		host: User['host'];
-		isSilenced: User['isSilenced'];
-		createdAt: User['createdAt'];
-	}, data: Option, silent = false): Promise<Note> {
+		id: MiUser['id'];
+		username: MiUser['username'];
+		host: MiUser['host'];
+		createdAt: MiUser['createdAt'];
+		isBot: MiUser['isBot'];
+	}, data: Option, silent = false): Promise<MiNote> {
 		// チャンネル外にリプライしたら対象のスコープに合わせる
 		// (クライアントサイドでやっても良い処理だと思うけどとりあえずサーバーサイドで)
 		if (data.reply && data.channel && data.reply.channelId !== data.channel.id) {
@@ -218,9 +240,13 @@ export class NoteCreateService {
 		if (data.channel != null) data.visibleUsers = [];
 		if (data.channel != null) data.localOnly = true;
 
-		// サイレンス
-		if (user.isSilenced && data.visibility === 'public' && data.channel == null) {
-			data.visibility = 'home';
+		if (data.visibility === 'public' && data.channel == null) {
+			const sensitiveWords = (await this.metaService.fetch()).sensitiveWords;
+			if (this.isSensitive(data, sensitiveWords)) {
+				data.visibility = 'home';
+			} else if ((await this.roleService.getUserPolicies(user.id)).canPublicNote === false) {
+				data.visibility = 'home';
+			}
 		}
 
 		// Renote対象が「ホームまたは全体」以外の公開範囲ならreject
@@ -254,6 +280,9 @@ export class NoteCreateService {
 		}
 
 		if (data.text) {
+			if (data.text.length > DB_MAX_NOTE_TEXT_LENGTH) {
+				data.text = data.text.slice(0, DB_MAX_NOTE_TEXT_LENGTH);
+			}
 			data.text = data.text.trim();
 		} else {
 			data.text = null;
@@ -302,13 +331,25 @@ export class NoteCreateService {
 
 		const note = await this.insertNote(user, data, tags, emojis, mentionedUsers);
 
-		setImmediate(() => this.postNoteCreated(note, user, data, silent, tags!, mentionedUsers!));
+		if (data.channel) {
+			this.redisClient.xadd(
+				`channelTimeline:${data.channel.id}`,
+				'MAXLEN', '~', this.config.perChannelMaxNoteCacheCount.toString(),
+				'*',
+				'note', note.id);
+		}
+
+		setImmediate('post created', { signal: this.#shutdownController.signal }).then(
+			() => this.postNoteCreated(note, user, data, silent, tags!, mentionedUsers!),
+			() => { /* aborted, ignore this */ },
+		);
 
 		return note;
 	}
 
-	private async insertNote(user: { id: User['id']; host: User['host']; }, data: Option, tags: string[], emojis: string[], mentionedUsers: MinimumUser[]) {
-		const insert = new Note({
+	@bindThis
+	private async insertNote(user: { id: MiUser['id']; host: MiUser['host']; }, data: Option, tags: string[], emojis: string[], mentionedUsers: MinimumUser[]) {
+		const insert = new MiNote({
 			id: this.idService.genId(data.createdAt!),
 			createdAt: data.createdAt!,
 			fileIds: data.files ? data.files.map(file => file.id) : [],
@@ -323,11 +364,12 @@ export class NoteCreateService {
 			name: data.name,
 			text: data.text,
 			hasPoll: data.poll != null,
-			cw: data.cw == null ? null : data.cw,
+			cw: data.cw ?? null,
 			tags: tags.map(tag => normalizeForSearch(tag)),
 			emojis,
 			userId: user.id,
 			localOnly: data.localOnly!,
+			reactionAcceptance: data.reactionAcceptance,
 			visibility: data.visibility as any,
 			visibleUserIds: data.visibility === 'specified'
 				? data.visibleUsers
@@ -357,7 +399,7 @@ export class NoteCreateService {
 				const url = profile != null ? profile.url : null;
 				return {
 					uri: u.uri,
-					url: url == null ? undefined : url,
+					url: url ?? undefined,
 					username: u.username,
 					host: u.host,
 				} as IMentionedRemoteUsers[0];
@@ -367,11 +409,11 @@ export class NoteCreateService {
 		// 投稿を作成
 		try {
 			if (insert.hasPoll) {
-			// Start transaction
+				// Start transaction
 				await this.db.transaction(async transactionalEntityManager => {
-					await transactionalEntityManager.insert(Note, insert);
+					await transactionalEntityManager.insert(MiNote, insert);
 
-					const poll = new Poll({
+					const poll = new MiPoll({
 						noteId: insert.id,
 						choices: data.poll!.choices,
 						expiresAt: data.poll!.expiresAt,
@@ -382,7 +424,7 @@ export class NoteCreateService {
 						userHost: user.host,
 					});
 
-					await transactionalEntityManager.insert(Poll, poll);
+					await transactionalEntityManager.insert(MiPoll, poll);
 				});
 			} else {
 				await this.notesRepository.insert(insert);
@@ -390,7 +432,7 @@ export class NoteCreateService {
 
 			return insert;
 		} catch (e) {
-		// duplicate key error
+			// duplicate key error
 			if (isDuplicateKeyValueError(e)) {
 				const err = new Error('Duplicated note');
 				err.name = 'duplicated';
@@ -403,22 +445,28 @@ export class NoteCreateService {
 		}
 	}
 
-	private async postNoteCreated(note: Note, user: {
-		id: User['id'];
-		username: User['username'];
-		host: User['host'];
-		isSilenced: User['isSilenced'];
-		createdAt: User['createdAt'];
+	@bindThis
+	private async postNoteCreated(note: MiNote, user: {
+		id: MiUser['id'];
+		username: MiUser['username'];
+		host: MiUser['host'];
+		createdAt: MiUser['createdAt'];
+		isBot: MiUser['isBot'];
 	}, data: Option, silent: boolean, tags: string[], mentionedUsers: MinimumUser[]) {
-		// 統計を更新
+		const meta = await this.metaService.fetch();
+
 		this.notesChart.update(note, true);
-		this.perUserNotesChart.update(user, note, true);
+		if (meta.enableChartsForRemoteUser || (user.host == null)) {
+			this.perUserNotesChart.update(user, note, true);
+		}
 
 		// Register host
 		if (this.userEntityService.isRemoteUser(user)) {
-			this.federatedInstanceService.registerOrFetchInstanceDoc(user.host).then(i => {
+			this.federatedInstanceService.fetch(user.host).then(async i => {
 				this.instancesRepository.increment({ id: i.id }, 'notesCount', 1);
-				this.instanceChart.updateNote(i.host, note, true);
+				if ((await this.metaService.fetch()).enableChartsForFederatedInstances) {
+					this.instanceChart.updateNote(i.host, note, true);
+				}
 			});
 		}
 
@@ -431,7 +479,7 @@ export class NoteCreateService {
 		this.incNotesCountOfUser(user);
 
 		// Word mute
-		mutedWordsCache.fetch(null, () => this.userProfilesRepository.find({
+		mutedWordsCache.fetch(() => this.userProfilesRepository.find({
 			where: {
 				enableWordMute: true,
 			},
@@ -451,26 +499,7 @@ export class NoteCreateService {
 			}
 		});
 
-		// Antenna
-		for (const antenna of (await this.antennaService.getAntennas())) {
-			this.antennaService.checkHitAntenna(antenna, note, user).then(hit => {
-				if (hit) {
-					this.antennaService.addNoteToAntenna(antenna, note, user);
-				}
-			});
-		}
-
-		// Channel
-		if (note.channelId) {
-			this.channelFollowingsRepository.findBy({ followeeId: note.channelId }).then(followings => {
-				for (const following of followings) {
-					this.noteReadService.insertNoteUnread(following.followerId, note, {
-						isSpecified: false,
-						isMentioned: false,
-					});
-				}
-			});
-		}
+		this.antennaService.addNoteToAntennas(note, user);
 
 		if (data.reply) {
 			this.saveReply(data.reply, note);
@@ -478,12 +507,12 @@ export class NoteCreateService {
 
 		// この投稿を除く指定したユーザーによる指定したノートのリノートが存在しないとき
 		if (data.renote && (await this.noteEntityService.countSameRenotes(user.id, data.renote.id, note.id) === 0)) {
-			this.incRenoteCount(data.renote);
+			if (!user.isBot) this.incRenoteCount(data.renote);
 		}
 
 		if (data.poll && data.poll.expiresAt) {
 			const delay = data.poll.expiresAt.getTime() - Date.now();
-			this.queueService.endedPollNotificationQueue.add({
+			this.queueService.endedPollNotificationQueue.add(note.id, {
 				noteId: note.id,
 			}, {
 				delay,
@@ -522,7 +551,9 @@ export class NoteCreateService {
 			// Pack the note
 			const noteObj = await this.noteEntityService.pack(note);
 
-			this.globalEventServie.publishNotesStream(noteObj);
+			this.globalEventService.publishNotesStream(noteObj);
+
+			this.roleService.addNoteToRoleTimeline(noteObj);
 
 			this.webhookService.getActiveWebhooks().then(webhooks => {
 				webhooks = webhooks.filter(x => x.userId === user.id && x.on.includes('note'));
@@ -533,7 +564,7 @@ export class NoteCreateService {
 				}
 			});
 
-			const nm = new NotificationManager(this.mutingsRepository, this.createNotificationService, user, note);
+			const nm = new NotificationManager(this.mutingsRepository, this.notificationService, user, note);
 
 			await this.createMentionedEvents(mentionedUsers, note, nm);
 
@@ -541,14 +572,16 @@ export class NoteCreateService {
 			if (data.reply) {
 				// 通知
 				if (data.reply.userHost === null) {
-					const threadMuted = await this.noteThreadMutingsRepository.findOneBy({
-						userId: data.reply.userId,
-						threadId: data.reply.threadId ?? data.reply.id,
+					const isThreadMuted = await this.noteThreadMutingsRepository.exist({
+						where: {
+							userId: data.reply.userId,
+							threadId: data.reply.threadId ?? data.reply.id,
+						},
 					});
 
-					if (!threadMuted) {
+					if (!isThreadMuted) {
 						nm.push(data.reply.userId, 'reply');
-						this.globalEventServie.publishMainStream(data.reply.userId, 'reply', noteObj);
+						this.globalEventService.publishMainStream(data.reply.userId, 'reply', noteObj);
 
 						const webhooks = (await this.webhookService.getActiveWebhooks()).filter(x => x.userId === data.reply!.userId && x.on.includes('reply'));
 						for (const webhook of webhooks) {
@@ -571,7 +604,7 @@ export class NoteCreateService {
 
 				// Publish event
 				if ((user.id !== data.renote.userId) && data.renote.userHost === null) {
-					this.globalEventServie.publishMainStream(data.renote.userId, 'renote', noteObj);
+					this.globalEventService.publishMainStream(data.renote.userId, 'renote', noteObj);
 
 					const webhooks = (await this.webhookService.getActiveWebhooks()).filter(x => x.userId === data.renote!.userId && x.on.includes('renote'));
 					for (const webhook of webhooks) {
@@ -592,7 +625,7 @@ export class NoteCreateService {
 
 					// メンションされたリモートユーザーに配送
 					for (const u of mentionedUsers.filter(u => this.userEntityService.isRemoteUser(u))) {
-						dm.addDirectRecipe(u as IRemoteUser);
+						dm.addDirectRecipe(u as MiRemoteUser);
 					}
 
 					// 投稿がリプライかつ投稿者がローカルユーザーかつリプライ先の投稿の投稿者がリモートユーザーなら配送
@@ -644,7 +677,33 @@ export class NoteCreateService {
 		this.index(note);
 	}
 
-	private incRenoteCount(renote: Note) {
+	@bindThis
+	private isSensitive(note: Option, sensitiveWord: string[]): boolean {
+		if (sensitiveWord.length > 0) {
+			const text = note.cw ?? note.text ?? '';
+			if (text === '') return false;
+			const matched = sensitiveWord.some(filter => {
+				// represents RegExp
+				const regexp = filter.match(/^\/(.+)\/(.*)$/);
+				// This should never happen due to input sanitisation.
+				if (!regexp) {
+					const words = filter.split(' ');
+					return words.every(keyword => text.includes(keyword));
+				}
+				try {
+					return new RE2(regexp[1], regexp[2]).test(text);
+				} catch (err) {
+					// This should never happen due to input sanitisation.
+					return false;
+				}
+			});
+			if (matched) return true;
+		}
+		return false;
+	}
+
+	@bindThis
+	private incRenoteCount(renote: MiNote) {
 		this.notesRepository.createQueryBuilder().update()
 			.set({
 				renoteCount: () => '"renoteCount" + 1',
@@ -654,14 +713,17 @@ export class NoteCreateService {
 			.execute();
 	}
 
-	private async createMentionedEvents(mentionedUsers: MinimumUser[], note: Note, nm: NotificationManager) {
+	@bindThis
+	private async createMentionedEvents(mentionedUsers: MinimumUser[], note: MiNote, nm: NotificationManager) {
 		for (const u of mentionedUsers.filter(u => this.userEntityService.isLocalUser(u))) {
-			const threadMuted = await this.noteThreadMutingsRepository.findOneBy({
-				userId: u.id,
-				threadId: note.threadId ?? note.id,
+			const isThreadMuted = await this.noteThreadMutingsRepository.exist({
+				where: {
+					userId: u.id,
+					threadId: note.threadId ?? note.id,
+				},
 			});
 
-			if (threadMuted) {
+			if (isThreadMuted) {
 				continue;
 			}
 
@@ -669,7 +731,7 @@ export class NoteCreateService {
 				detail: true,
 			});
 
-			this.globalEventServie.publishMainStream(u.id, 'mention', detailPackedNote);
+			this.globalEventService.publishMainStream(u.id, 'mention', detailPackedNote);
 
 			const webhooks = (await this.webhookService.getActiveWebhooks()).filter(x => x.userId === u.id && x.on.includes('mention'));
 			for (const webhook of webhooks) {
@@ -683,35 +745,31 @@ export class NoteCreateService {
 		}
 	}
 
-	private saveReply(reply: Note, note: Note) {
+	@bindThis
+	private saveReply(reply: MiNote, note: MiNote) {
 		this.notesRepository.increment({ id: reply.id }, 'repliesCount', 1);
 	}
 
-	private async renderNoteOrRenoteActivity(data: Option, note: Note) {
+	@bindThis
+	private async renderNoteOrRenoteActivity(data: Option, note: MiNote) {
 		if (data.localOnly) return null;
 
 		const content = data.renote && data.text == null && data.poll == null && (data.files == null || data.files.length === 0)
 			? this.apRendererService.renderAnnounce(data.renote.uri ? data.renote.uri : `${this.config.url}/notes/${data.renote.id}`, note)
 			: this.apRendererService.renderCreate(await this.apRendererService.renderNote(note, false), note);
 
-		return this.apRendererService.renderActivity(content);
+		return this.apRendererService.addContext(content);
 	}
 
-	private index(note: Note) {
-		if (note.text == null || this.config.elasticsearch == null) return;
-		/*
-	es!.index({
-		index: this.config.elasticsearch.index ?? 'misskey_note',
-		id: note.id.toString(),
-		body: {
-			text: normalizeForSearch(note.text),
-			userId: note.userId,
-			userHost: note.userHost,
-		},
-	});*/
+	@bindThis
+	private index(note: MiNote) {
+		if (note.text == null && note.cw == null) return;
+
+		this.searchService.indexNote(note);
 	}
 
-	private incNotesCountOfUser(user: { id: User['id']; }) {
+	@bindThis
+	private incNotesCountOfUser(user: { id: MiUser['id']; }) {
 		this.usersRepository.createQueryBuilder().update()
 			.set({
 				updatedAt: new Date(),
@@ -721,13 +779,14 @@ export class NoteCreateService {
 			.execute();
 	}
 
-	private async extractMentionedUsers(user: { host: User['host']; }, tokens: mfm.MfmNode[]): Promise<User[]> {
+	@bindThis
+	private async extractMentionedUsers(user: { host: MiUser['host']; }, tokens: mfm.MfmNode[]): Promise<MiUser[]> {
 		if (tokens == null) return [];
 
 		const mentions = extractMentions(tokens);
 		let mentionedUsers = (await Promise.all(mentions.map(m =>
-			this.resolveUserService.resolveUser(m.username, m.host ?? user.host).catch(() => null),
-		))).filter(x => x != null) as User[];
+			this.remoteUserResolveService.resolveUser(m.username, m.host ?? user.host).catch(() => null),
+		))).filter(x => x != null) as MiUser[];
 
 		// Drop duplicate users
 		mentionedUsers = mentionedUsers.filter((u, i, self) =>
@@ -735,5 +794,15 @@ export class NoteCreateService {
 		);
 
 		return mentionedUsers;
+	}
+
+	@bindThis
+	public dispose(): void {
+		this.#shutdownController.abort();
+	}
+
+	@bindThis
+	public onApplicationShutdown(signal?: string | undefined): void {
+		this.dispose();
 	}
 }

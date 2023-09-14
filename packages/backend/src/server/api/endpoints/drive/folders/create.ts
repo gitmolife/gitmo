@@ -1,4 +1,10 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Inject, Injectable } from '@nestjs/common';
+import ms from 'ms';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import type { DriveFoldersRepository } from '@/models/index.js';
 import { IdService } from '@/core/IdService.js';
@@ -13,6 +19,11 @@ export const meta = {
 	requireCredential: true,
 
 	kind: 'write:drive',
+
+	limit: {
+		duration: ms('1hour'),
+		max: 10,
+	},
 
 	errors: {
 		noSuchFolder: {
@@ -38,9 +49,8 @@ export const paramDef = {
 	required: [],
 } as const;
 
-// eslint-disable-next-line import/no-default-export
 @Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> {
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
 		@Inject(DI.driveFoldersRepository)
 		private driveFoldersRepository: DriveFoldersRepository,

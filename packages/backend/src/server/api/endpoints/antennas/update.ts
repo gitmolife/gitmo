@@ -1,6 +1,11 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { AntennasRepository, UserListsRepository, UserGroupJoiningsRepository } from '@/models/index.js';
+import type { AntennasRepository, UserListsRepository } from '@/models/index.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { AntennaEntityService } from '@/core/entities/AntennaEntityService.js';
 import { DI } from '@/di-symbols.js';
@@ -10,6 +15,8 @@ export const meta = {
 	tags: ['antennas'],
 
 	requireCredential: true,
+
+	prohibitMoved: true,
 
 	kind: 'write:account',
 
@@ -25,12 +32,6 @@ export const meta = {
 			code: 'NO_SUCH_USER_LIST',
 			id: '1c6b35c9-943e-48c2-81e4-2844989407f7',
 		},
-
-		noSuchUserGroup: {
-			message: 'No such user group.',
-			code: 'NO_SUCH_USER_GROUP',
-			id: '109ed789-b6eb-456e-b8a9-6059d567d385',
-		},
 	},
 
 	res: {
@@ -45,9 +46,8 @@ export const paramDef = {
 	properties: {
 		antennaId: { type: 'string', format: 'misskey:id' },
 		name: { type: 'string', minLength: 1, maxLength: 100 },
-		src: { type: 'string', enum: ['home', 'all', 'users', 'list', 'group'] },
+		src: { type: 'string', enum: ['home', 'all', 'users', 'list'] },
 		userListId: { type: 'string', format: 'misskey:id', nullable: true },
-		userGroupId: { type: 'string', format: 'misskey:id', nullable: true },
 		keywords: { type: 'array', items: {
 			type: 'array', items: {
 				type: 'string',
@@ -69,9 +69,8 @@ export const paramDef = {
 	required: ['antennaId', 'name', 'src', 'keywords', 'excludeKeywords', 'users', 'caseSensitive', 'withReplies', 'withFile', 'notify'],
 } as const;
 
-// eslint-disable-next-line import/no-default-export
 @Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> {
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
 		@Inject(DI.antennasRepository)
 		private antennasRepository: AntennasRepository,
@@ -79,13 +78,13 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 		@Inject(DI.userListsRepository)
 		private userListsRepository: UserListsRepository,
 
-		@Inject(DI.userGroupJoiningsRepository)
-		private userGroupJoiningsRepository: UserGroupJoiningsRepository,
-		
 		private antennaEntityService: AntennaEntityService,
 		private globalEventService: GlobalEventService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
+			if (ps.keywords.flat().every(x => x === '') && ps.excludeKeywords.flat().every(x => x === '')) {
+				throw new Error('either keywords or excludeKeywords is required.');
+			}
 			// Fetch the antenna
 			const antenna = await this.antennasRepository.findOneBy({
 				id: ps.antennaId,
@@ -97,7 +96,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 			}
 
 			let userList;
-			let userGroupJoining;
 
 			if (ps.src === 'list' && ps.userListId) {
 				userList = await this.userListsRepository.findOneBy({
@@ -108,22 +106,12 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 				if (userList == null) {
 					throw new ApiError(meta.errors.noSuchUserList);
 				}
-			} else if (ps.src === 'group' && ps.userGroupId) {
-				userGroupJoining = await this.userGroupJoiningsRepository.findOneBy({
-					userGroupId: ps.userGroupId,
-					userId: me.id,
-				});
-
-				if (userGroupJoining == null) {
-					throw new ApiError(meta.errors.noSuchUserGroup);
-				}
 			}
 
 			await this.antennasRepository.update(antenna.id, {
 				name: ps.name,
 				src: ps.src,
 				userListId: userList ? userList.id : null,
-				userGroupJoiningId: userGroupJoining ? userGroupJoining.id : null,
 				keywords: ps.keywords,
 				excludeKeywords: ps.excludeKeywords,
 				users: ps.users,
@@ -131,6 +119,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 				withReplies: ps.withReplies,
 				withFile: ps.withFile,
 				notify: ps.notify,
+				isActive: true,
+				lastUsedAt: new Date(),
 			});
 
 			this.globalEventService.publishInternalEvent('antennaUpdated', await this.antennasRepository.findOneByOrFail({ id: antenna.id }));

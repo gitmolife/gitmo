@@ -1,44 +1,71 @@
-import { Global, Inject, Module } from '@nestjs/common';
-import Redis from 'ioredis';
-import { DataSource } from 'typeorm';
-import { createRedisConnection } from '@/redis.js';
-import { DI } from './di-symbols.js';
-import { loadConfig } from './config.js';
-import { createPostgreDataSource } from './postgre.js';
-import { RepositoryModule } from './RepositoryModule.js';
-import type { Provider, OnApplicationShutdown } from '@nestjs/common';
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
 
-const config = loadConfig();
+import { setTimeout } from 'node:timers/promises';
+import { Global, Inject, Module } from '@nestjs/common';
+import * as Redis from 'ioredis';
+import { DataSource } from 'typeorm';
+import { MeiliSearch } from 'meilisearch';
+import { DI } from './di-symbols.js';
+import { Config, loadConfig } from './config.js';
+import { createPostgresDataSource } from './postgres.js';
+import { RepositoryModule } from './models/RepositoryModule.js';
+import type { Provider, OnApplicationShutdown } from '@nestjs/common';
 
 const $config: Provider = {
 	provide: DI.config,
-	useValue: config,
+	useValue: loadConfig(),
 };
 
 const $db: Provider = {
 	provide: DI.db,
 	useFactory: async (config) => {
-		const db = createPostgreDataSource(config);
+		const db = createPostgresDataSource(config);
 		return await db.initialize();
+	},
+	inject: [DI.config],
+};
+
+const $meilisearch: Provider = {
+	provide: DI.meilisearch,
+	useFactory: (config: Config) => {
+		if (config.meilisearch) {
+			return new MeiliSearch({
+				host: `${config.meilisearch.ssl ? 'https' : 'http' }://${config.meilisearch.host}:${config.meilisearch.port}`,
+				apiKey: config.meilisearch.apiKey,
+			});
+		} else {
+			return null;
+		}
 	},
 	inject: [DI.config],
 };
 
 const $redis: Provider = {
 	provide: DI.redis,
-	useFactory: (config) => {
-		const redisClient = createRedisConnection(config);
-		return redisClient;
+	useFactory: (config: Config) => {
+		return new Redis.Redis(config.redis);
 	},
 	inject: [DI.config],
 };
 
-const $redisSubscriber: Provider = {
-	provide: DI.redisSubscriber,
-	useFactory: (config) => {
-		const redisSubscriber = createRedisConnection(config);
-		redisSubscriber.subscribe(config.host);
-		return redisSubscriber;
+const $redisForPub: Provider = {
+	provide: DI.redisForPub,
+	useFactory: (config: Config) => {
+		const redis = new Redis.Redis(config.redisForPubsub);
+		return redis;
+	},
+	inject: [DI.config],
+};
+
+const $redisForSub: Provider = {
+	provide: DI.redisForSub,
+	useFactory: (config: Config) => {
+		const redis = new Redis.Redis(config.redisForPubsub);
+		redis.subscribe(config.host);
+		return redis;
 	},
 	inject: [DI.config],
 };
@@ -46,21 +73,35 @@ const $redisSubscriber: Provider = {
 @Global()
 @Module({
 	imports: [RepositoryModule],
-	providers: [$config, $db, $redis, $redisSubscriber],
-	exports: [$config, $db, $redis, $redisSubscriber, RepositoryModule],
+	providers: [$config, $db, $meilisearch, $redis, $redisForPub, $redisForSub],
+	exports: [$config, $db, $meilisearch, $redis, $redisForPub, $redisForSub, RepositoryModule],
 })
 export class GlobalModule implements OnApplicationShutdown {
 	constructor(
 		@Inject(DI.db) private db: DataSource,
 		@Inject(DI.redis) private redisClient: Redis.Redis,
-		@Inject(DI.redisSubscriber) private redisSubscriber: Redis.Redis,
+		@Inject(DI.redisForPub) private redisForPub: Redis.Redis,
+		@Inject(DI.redisForSub) private redisForSub: Redis.Redis,
 	) {}
 
-	async onApplicationShutdown(signal: string): Promise<void> {
+	public async dispose(): Promise<void> {
+		if (process.env.NODE_ENV === 'test') {
+			// XXX:
+			// Shutting down the existing connections causes errors on Jest as
+			// Misskey has asynchronous postgres/redis connections that are not
+			// awaited.
+			// Let's wait for some random time for them to finish.
+			await setTimeout(5000);
+		}
 		await Promise.all([
 			this.db.destroy(),
 			this.redisClient.disconnect(),
-			this.redisSubscriber.disconnect(),
+			this.redisForPub.disconnect(),
+			this.redisForSub.disconnect(),
 		]);
+	}
+
+	async onApplicationShutdown(signal: string): Promise<void> {
+		await this.dispose();
 	}
 }

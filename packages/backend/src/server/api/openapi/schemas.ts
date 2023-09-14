@@ -1,5 +1,10 @@
-import type { Schema } from '@/misc/schema.js';
-import { refs } from '@/misc/schema.js';
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import type { Schema } from '@/misc/json-schema.js';
+import { refs } from '@/misc/json-schema.js';
 
 export function convertSchemaToOpenApiSchema(schema: Schema) {
 	const res: any = schema;

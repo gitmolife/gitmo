@@ -1,23 +1,29 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import ms from 'ms';
 import { In } from 'typeorm';
 import { Inject, Injectable } from '@nestjs/common';
-import type { User } from '@/models/entities/User.js';
+import type { MiUser } from '@/models/entities/User.js';
 import type { UsersRepository, NotesRepository, BlockingsRepository, DriveFilesRepository, ChannelsRepository } from '@/models/index.js';
-import type { DriveFile } from '@/models/entities/DriveFile.js';
-import type { Note } from '@/models/entities/Note.js';
-import type { Channel } from '@/models/entities/Channel.js';
+import type { MiDriveFile } from '@/models/entities/DriveFile.js';
+import type { MiNote } from '@/models/entities/Note.js';
+import type { MiChannel } from '@/models/entities/Channel.js';
 import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { NoteCreateService } from '@/core/NoteCreateService.js';
 import { DI } from '@/di-symbols.js';
-import { noteVisibilities } from '../../../../types.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
 	tags: ['notes'],
 
 	requireCredential: true,
+
+	prohibitMoved: true,
 
 	limit: {
 		duration: ms('1hour'),
@@ -80,6 +86,12 @@ export const meta = {
 			code: 'YOU_HAVE_BEEN_BLOCKED',
 			id: 'b390d7e1-8a5e-46ed-b625-06271cafd3d3',
 		},
+
+		noSuchFile: {
+			message: 'Some files are not found.',
+			code: 'NO_SUCH_FILE',
+			id: 'b6992544-63e7-67f0-fa7f-32444b1b5306',
+		},
 	},
 } as const;
 
@@ -90,12 +102,24 @@ export const paramDef = {
 		visibleUserIds: { type: 'array', uniqueItems: true, items: {
 			type: 'string', format: 'misskey:id',
 		} },
-		text: { type: 'string', maxLength: MAX_NOTE_TEXT_LENGTH, nullable: true },
 		cw: { type: 'string', nullable: true, maxLength: 100 },
 		localOnly: { type: 'boolean', default: false },
+		reactionAcceptance: { type: 'string', nullable: true, enum: [null, 'likeOnly', 'likeOnlyForRemote', 'nonSensitiveOnly', 'nonSensitiveOnlyForLocalLikeOnlyForRemote'], default: null },
 		noExtractMentions: { type: 'boolean', default: false },
 		noExtractHashtags: { type: 'boolean', default: false },
 		noExtractEmojis: { type: 'boolean', default: false },
+		replyId: { type: 'string', format: 'misskey:id', nullable: true },
+		renoteId: { type: 'string', format: 'misskey:id', nullable: true },
+		channelId: { type: 'string', format: 'misskey:id', nullable: true },
+
+		// anyOf内にバリデーションを書いても最初の一つしかチェックされない
+		// See https://github.com/misskey-dev/misskey/pull/10082
+		text: {
+			type: 'string',
+			minLength: 1,
+			maxLength: MAX_NOTE_TEXT_LENGTH,
+			nullable: false,
+		},
 		fileIds: {
 			type: 'array',
 			uniqueItems: true,
@@ -104,17 +128,12 @@ export const paramDef = {
 			items: { type: 'string', format: 'misskey:id' },
 		},
 		mediaIds: {
-			deprecated: true,
-			description: 'Use `fileIds` instead. If both are specified, this property is discarded.',
 			type: 'array',
 			uniqueItems: true,
 			minItems: 1,
 			maxItems: 16,
 			items: { type: 'string', format: 'misskey:id' },
 		},
-		replyId: { type: 'string', format: 'misskey:id', nullable: true },
-		renoteId: { type: 'string', format: 'misskey:id', nullable: true },
-		channelId: { type: 'string', format: 'misskey:id', nullable: true },
 		poll: {
 			type: 'object',
 			nullable: true,
@@ -126,46 +145,25 @@ export const paramDef = {
 					maxItems: 10,
 					items: { type: 'string', minLength: 1, maxLength: 50 },
 				},
-				multiple: { type: 'boolean', default: false },
+				multiple: { type: 'boolean' },
 				expiresAt: { type: 'integer', nullable: true },
 				expiredAfter: { type: 'integer', nullable: true, minimum: 1 },
 			},
 			required: ['choices'],
 		},
 	},
+	// (re)note with text, files and poll are optional
 	anyOf: [
-		{
-			// (re)note with text, files and poll are optional
-			properties: {
-				text: { type: 'string', minLength: 1, maxLength: MAX_NOTE_TEXT_LENGTH, nullable: false },
-			},
-			required: ['text'],
-		},
-		{
-			// (re)note with files, text and poll are optional
-			required: ['fileIds'],
-		},
-		{
-			// (re)note with files, text and poll are optional
-			required: ['mediaIds'],
-		},
-		{
-			// (re)note with poll, text and files are optional
-			properties: {
-				poll: { type: 'object', nullable: false },
-			},
-			required: ['poll'],
-		},
-		{
-			// pure renote
-			required: ['renoteId'],
-		},
+		{ required: ['text'] },
+		{ required: ['renoteId'] },
+		{ required: ['fileIds'] },
+		{ required: ['mediaIds'] },
+		{ required: ['poll'] },
 	],
 } as const;
 
-// eslint-disable-next-line import/no-default-export
 @Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> {
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
 		@Inject(DI.usersRepository)
 		private usersRepository: UsersRepository,
@@ -186,15 +184,15 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 		private noteCreateService: NoteCreateService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			let visibleUsers: User[] = [];
+			let visibleUsers: MiUser[] = [];
 			if (ps.visibleUserIds) {
 				visibleUsers = await this.usersRepository.findBy({
 					id: In(ps.visibleUserIds),
 				});
 			}
 
-			let files: DriveFile[] = [];
-			const fileIds = ps.fileIds != null ? ps.fileIds : ps.mediaIds != null ? ps.mediaIds : null;
+			let files: MiDriveFile[] = [];
+			const fileIds = ps.fileIds ?? ps.mediaIds ?? null;
 			if (fileIds != null) {
 				files = await this.driveFilesRepository.createQueryBuilder('file')
 					.where('file.userId = :userId AND file.id IN (:...fileIds)', {
@@ -204,9 +202,13 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 					.orderBy('array_position(ARRAY[:...fileIds], "id"::text)')
 					.setParameters({ fileIds })
 					.getMany();
+
+				if (files.length !== fileIds.length) {
+					throw new ApiError(meta.errors.noSuchFile);
+				}
 			}
 
-			let renote: Note | null = null;
+			let renote: MiNote | null = null;
 			if (ps.renoteId != null) {
 				// Fetch renote to note
 				renote = await this.notesRepository.findOneBy({ id: ps.renoteId });
@@ -219,17 +221,19 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 
 				// Check blocking
 				if (renote.userId !== me.id) {
-					const block = await this.blockingsRepository.findOneBy({
-						blockerId: renote.userId,
-						blockeeId: me.id,
+					const blockExist = await this.blockingsRepository.exist({
+						where: {
+							blockerId: renote.userId,
+							blockeeId: me.id,
+						},
 					});
-					if (block) {
+					if (blockExist) {
 						throw new ApiError(meta.errors.youHaveBeenBlocked);
 					}
 				}
 			}
 
-			let reply: Note | null = null;
+			let reply: MiNote | null = null;
 			if (ps.replyId != null) {
 				// Fetch reply
 				reply = await this.notesRepository.findOneBy({ id: ps.replyId });
@@ -242,11 +246,13 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 
 				// Check blocking
 				if (reply.userId !== me.id) {
-					const block = await this.blockingsRepository.findOneBy({
-						blockerId: reply.userId,
-						blockeeId: me.id,
+					const blockExist = await this.blockingsRepository.exist({
+						where: {
+							blockerId: reply.userId,
+							blockeeId: me.id,
+						},
 					});
-					if (block) {
+					if (blockExist) {
 						throw new ApiError(meta.errors.youHaveBeenBlocked);
 					}
 				}
@@ -262,9 +268,9 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 				}
 			}
 
-			let channel: Channel | null = null;
+			let channel: MiChannel | null = null;
 			if (ps.channelId != null) {
-				channel = await this.channelsRepository.findOneBy({ id: ps.channelId });
+				channel = await this.channelsRepository.findOneBy({ id: ps.channelId, isArchived: false });
 
 				if (channel == null) {
 					throw new ApiError(meta.errors.noSuchChannel);
@@ -277,7 +283,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 				files: files,
 				poll: ps.poll ? {
 					choices: ps.poll.choices,
-					multiple: ps.poll.multiple || false,
+					multiple: ps.poll.multiple ?? false,
 					expiresAt: ps.poll.expiresAt ? new Date(ps.poll.expiresAt) : null,
 				} : undefined,
 				text: ps.text ?? undefined,
@@ -285,6 +291,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 				renote,
 				cw: ps.cw,
 				localOnly: ps.localOnly,
+				reactionAcceptance: ps.reactionAcceptance,
 				visibility: ps.visibility,
 				visibleUsers,
 				channel,

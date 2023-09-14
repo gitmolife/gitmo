@@ -1,10 +1,15 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Entity, Column, Index, OneToOne, JoinColumn, PrimaryColumn } from 'typeorm';
 import { id } from '../id.js';
-import { DriveFile } from './DriveFile.js';
+import { MiDriveFile } from './DriveFile.js';
 
-@Entity()
+@Entity('user')
 @Index(['usernameLower', 'host'], { unique: true })
-export class User {
+export class MiUser {
 	@PrimaryColumn(id())
 	public id: string;
 
@@ -68,6 +73,25 @@ export class User {
 	})
 	public followingCount: number;
 
+	@Column('varchar', {
+		length: 512,
+		nullable: true,
+		comment: 'The URI of the new account of the User',
+	})
+	public movedToUri: string | null;
+
+	@Column('timestamp with time zone', {
+		nullable: true,
+		comment: 'When the user moved to another account',
+	})
+	public movedAt: Date | null;
+
+	@Column('simple-array', {
+		nullable: true,
+		comment: 'URIs the user is known as too',
+	})
+	public alsoKnownAs: string[] | null;
+
 	@Column('integer', {
 		default: 0,
 		comment: 'The count of notes.',
@@ -79,26 +103,46 @@ export class User {
 		nullable: true,
 		comment: 'The ID of avatar DriveFile.',
 	})
-	public avatarId: DriveFile['id'] | null;
+	public avatarId: MiDriveFile['id'] | null;
 
-	@OneToOne(type => DriveFile, {
+	@OneToOne(type => MiDriveFile, {
 		onDelete: 'SET NULL',
 	})
 	@JoinColumn()
-	public avatar: DriveFile | null;
+	public avatar: MiDriveFile | null;
 
 	@Column({
 		...id(),
 		nullable: true,
 		comment: 'The ID of banner DriveFile.',
 	})
-	public bannerId: DriveFile['id'] | null;
+	public bannerId: MiDriveFile['id'] | null;
 
-	@OneToOne(type => DriveFile, {
+	@OneToOne(type => MiDriveFile, {
 		onDelete: 'SET NULL',
 	})
 	@JoinColumn()
-	public banner: DriveFile | null;
+	public banner: MiDriveFile | null;
+
+	@Column('varchar', {
+		length: 512, nullable: true,
+	})
+	public avatarUrl: string | null;
+
+	@Column('varchar', {
+		length: 512, nullable: true,
+	})
+	public bannerUrl: string | null;
+
+	@Column('varchar', {
+		length: 128, nullable: true,
+	})
+	public avatarBlurhash: string | null;
+
+	@Column('varchar', {
+		length: 128, nullable: true,
+	})
+	public bannerBlurhash: string | null;
 
 	@Index()
 	@Column('varchar', {
@@ -111,12 +155,6 @@ export class User {
 		comment: 'Whether the User is suspended.',
 	})
 	public isSuspended: boolean;
-
-	@Column('boolean', {
-		default: false,
-		comment: 'Whether the User is silenced.',
-	})
-	public isSilenced: boolean;
 
 	@Column('boolean', {
 		default: false,
@@ -138,15 +176,9 @@ export class User {
 
 	@Column('boolean', {
 		default: false,
-		comment: 'Whether the User is the admin.',
+		comment: 'Whether the User is the root.',
 	})
-	public isAdmin: boolean;
-
-	@Column('boolean', {
-		default: false,
-		comment: 'Whether the User is a moderator.',
-	})
-	public isModerator: boolean;
+	public isRoot: boolean;
 
 	@Index()
 	@Column('boolean', {
@@ -205,12 +237,6 @@ export class User {
 	})
 	public followersUri: string | null;
 
-	@Column('boolean', {
-		default: false,
-		comment: 'Whether to show users replying to other users in the timeline.',
-	})
-	public showTimelineReplies: boolean;
-
 	@Index({ unique: true })
 	@Column('char', {
 		length: 16, nullable: true, unique: true,
@@ -218,13 +244,7 @@ export class User {
 	})
 	public token: string | null;
 
-	@Column('integer', {
-		nullable: true,
-		comment: 'Overrides user drive capacity limit',
-	})
-	public driveCapacityOverrideMb: number | null;
-
-	constructor(data: Partial<User>) {
+	constructor(data: Partial<MiUser>) {
 		if (data == null) return;
 
 		for (const [k, v] of Object.entries(data)) {
@@ -233,23 +253,31 @@ export class User {
 	}
 }
 
-export interface ILocalUser extends User {
+export type MiLocalUser = MiUser & {
 	host: null;
+	uri: null;
 }
 
-export interface IRemoteUser extends User {
+export type MiPartialLocalUser = Partial<MiUser> & {
+	id: MiUser['id'];
+	host: null;
+	uri: null;
+}
+
+export type MiRemoteUser = MiUser & {
 	host: string;
+	uri: string;
 }
 
-export type CacheableLocalUser = ILocalUser;
-
-export type CacheableRemoteUser = IRemoteUser;
-
-export type CacheableUser = CacheableLocalUser | CacheableRemoteUser;
+export type MiPartialRemoteUser = Partial<MiUser> & {
+	id: MiUser['id'];
+	host: string;
+	uri: string;
+}
 
 export const localUsernameSchema = { type: 'string', pattern: /^\w{1,20}$/.toString().slice(1, -1) } as const;
 export const passwordSchema = { type: 'string', minLength: 1 } as const;
 export const nameSchema = { type: 'string', minLength: 1, maxLength: 50 } as const;
-export const descriptionSchema = { type: 'string', minLength: 1, maxLength: 500 } as const;
+export const descriptionSchema = { type: 'string', minLength: 1, maxLength: 1500 } as const;
 export const locationSchema = { type: 'string', minLength: 1, maxLength: 50 } as const;
 export const birthdaySchema = { type: 'string', pattern: /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.toString().slice(1, -1) } as const;

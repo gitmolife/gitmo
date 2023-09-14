@@ -1,8 +1,15 @@
-import type Connection from '.';
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { bindThis } from '@/decorators.js';
+import type Connection from './index.js';
 
 /**
  * Stream channel
  */
+// eslint-disable-next-line import/no-default-export
 export default abstract class Channel {
 	protected connection: Connection;
 	public id: string;
@@ -22,12 +29,16 @@ export default abstract class Channel {
 		return this.connection.following;
 	}
 
-	protected get muting() {
-		return this.connection.muting;
+	protected get userIdsWhoMeMuting() {
+		return this.connection.userIdsWhoMeMuting;
 	}
 
-	protected get blocking() {
-		return this.connection.blocking;
+	protected get userIdsWhoMeMutingRenotes() {
+		return this.connection.userIdsWhoMeMutingRenotes;
+	}
+
+	protected get userIdsWhoBlockingMe() {
+		return this.connection.userIdsWhoBlockingMe;
 	}
 
 	protected get followingChannels() {
@@ -43,6 +54,7 @@ export default abstract class Channel {
 		this.connection = connection;
 	}
 
+	@bindThis
 	public send(typeOrPayload: any, payload?: any) {
 		const type = payload === undefined ? typeOrPayload.type : typeOrPayload;
 		const body = payload === undefined ? typeOrPayload.body : payload;

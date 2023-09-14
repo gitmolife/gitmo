@@ -1,11 +1,12 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
-import type { Meta } from '@/models/entities/Meta.js';
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { Injectable } from '@nestjs/common';
+import type { MiMeta } from '@/models/entities/Meta.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
-import { DB_MAX_NOTE_TEXT_LENGTH } from '@/misc/hard-limits.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import { DI } from '@/di-symbols.js';
-import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { MetaService } from '@/core/MetaService.js';
 
 export const meta = {
@@ -19,9 +20,6 @@ export const paramDef = {
 	type: 'object',
 	properties: {
 		disableRegistration: { type: 'boolean', nullable: true },
-		disableLocalTimeline: { type: 'boolean', nullable: true },
-		disableGlobalTimeline: { type: 'boolean', nullable: true },
-		useStarForReactionFallback: { type: 'boolean', nullable: true },
 		pinnedUsers: { type: 'array', nullable: true, items: {
 			type: 'string',
 		} },
@@ -31,10 +29,15 @@ export const paramDef = {
 		blockedHosts: { type: 'array', nullable: true, items: {
 			type: 'string',
 		} },
+		sensitiveWords: { type: 'array', nullable: true, items: {
+			type: 'string',
+		} },
 		themeColor: { type: 'string', nullable: true, pattern: '^#[0-9a-fA-F]{6}$' },
 		mascotImageUrl: { type: 'string', nullable: true },
 		bannerUrl: { type: 'string', nullable: true },
-		errorImageUrl: { type: 'string', nullable: true },
+		serverErrorImageUrl: { type: 'string', nullable: true },
+		infoImageUrl: { type: 'string', nullable: true },
+		notFoundImageUrl: { type: 'string', nullable: true },
 		iconUrl: { type: 'string', nullable: true },
 		backgroundImageUrl: { type: 'string', nullable: true },
 		logoImageUrl: { type: 'string', nullable: true },
@@ -42,9 +45,8 @@ export const paramDef = {
 		description: { type: 'string', nullable: true },
 		defaultLightTheme: { type: 'string', nullable: true },
 		defaultDarkTheme: { type: 'string', nullable: true },
-		localDriveCapacityMb: { type: 'integer' },
-		remoteDriveCapacityMb: { type: 'integer' },
 		cacheRemoteFiles: { type: 'boolean' },
+		cacheRemoteSensitiveFiles: { type: 'boolean' },
 		emailRequiredForSignup: { type: 'boolean' },
 		enableHcaptcha: { type: 'boolean' },
 		hcaptchaSiteKey: { type: 'string', nullable: true },
@@ -62,25 +64,12 @@ export const paramDef = {
 		proxyAccountId: { type: 'string', format: 'misskey:id', nullable: true },
 		maintainerName: { type: 'string', nullable: true },
 		maintainerEmail: { type: 'string', nullable: true },
-		pinnedPages: { type: 'array', items: {
-			type: 'string',
-		} },
-		pinnedClipId: { type: 'string', format: 'misskey:id', nullable: true },
 		langs: { type: 'array', items: {
 			type: 'string',
 		} },
 		summalyProxy: { type: 'string', nullable: true },
 		deeplAuthKey: { type: 'string', nullable: true },
 		deeplIsPro: { type: 'boolean' },
-		enableTwitterIntegration: { type: 'boolean' },
-		twitterConsumerKey: { type: 'string', nullable: true },
-		twitterConsumerSecret: { type: 'string', nullable: true },
-		enableGithubIntegration: { type: 'boolean' },
-		githubClientId: { type: 'string', nullable: true },
-		githubClientSecret: { type: 'string', nullable: true },
-		enableDiscordIntegration: { type: 'boolean' },
-		discordClientId: { type: 'string', nullable: true },
-		discordClientSecret: { type: 'string', nullable: true },
 		enableEmail: { type: 'boolean' },
 		email: { type: 'string', nullable: true },
 		smtpSecure: { type: 'boolean' },
@@ -109,37 +98,27 @@ export const paramDef = {
 		objectStorageS3ForcePathStyle: { type: 'boolean' },
 		enableIpLogging: { type: 'boolean' },
 		enableActiveEmailValidation: { type: 'boolean' },
+		enableChartsForRemoteUser: { type: 'boolean' },
+		enableChartsForFederatedInstances: { type: 'boolean' },
+		enableServerMachineStats: { type: 'boolean' },
+		enableIdenticonGeneration: { type: 'boolean' },
+		serverRules: { type: 'array', items: { type: 'string' } },
+		preservedUsernames: { type: 'array', items: { type: 'string' } },
 	},
 	required: [],
 } as const;
 
-// eslint-disable-next-line import/no-default-export
 @Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> {
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.db)
-		private db: DataSource,
-
 		private metaService: MetaService,
 		private moderationLogService: ModerationLogService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const set = {} as Partial<Meta>;
+			const set = {} as Partial<MiMeta>;
 
 			if (typeof ps.disableRegistration === 'boolean') {
 				set.disableRegistration = ps.disableRegistration;
-			}
-
-			if (typeof ps.disableLocalTimeline === 'boolean') {
-				set.disableLocalTimeline = ps.disableLocalTimeline;
-			}
-
-			if (typeof ps.disableGlobalTimeline === 'boolean') {
-				set.disableGlobalTimeline = ps.disableGlobalTimeline;
-			}
-
-			if (typeof ps.useStarForReactionFallback === 'boolean') {
-				set.useStarForReactionFallback = ps.useStarForReactionFallback;
 			}
 
 			if (Array.isArray(ps.pinnedUsers)) {
@@ -151,7 +130,11 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 			}
 
 			if (Array.isArray(ps.blockedHosts)) {
-				set.blockedHosts = ps.blockedHosts.filter(Boolean);
+				set.blockedHosts = ps.blockedHosts.filter(Boolean).map(x => x.toLowerCase());
+			}
+
+			if (Array.isArray(ps.sensitiveWords)) {
+				set.sensitiveWords = ps.sensitiveWords.filter(Boolean);
 			}
 
 			if (ps.themeColor !== undefined) {
@@ -168,6 +151,18 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 
 			if (ps.iconUrl !== undefined) {
 				set.iconUrl = ps.iconUrl;
+			}
+
+			if (ps.serverErrorImageUrl !== undefined) {
+				set.serverErrorImageUrl = ps.serverErrorImageUrl;
+			}
+
+			if (ps.infoImageUrl !== undefined) {
+				set.infoImageUrl = ps.infoImageUrl;
+			}
+
+			if (ps.notFoundImageUrl !== undefined) {
+				set.notFoundImageUrl = ps.notFoundImageUrl;
 			}
 
 			if (ps.backgroundImageUrl !== undefined) {
@@ -194,16 +189,12 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 				set.defaultDarkTheme = ps.defaultDarkTheme;
 			}
 
-			if (ps.localDriveCapacityMb !== undefined) {
-				set.localDriveCapacityMb = ps.localDriveCapacityMb;
-			}
-
-			if (ps.remoteDriveCapacityMb !== undefined) {
-				set.remoteDriveCapacityMb = ps.remoteDriveCapacityMb;
-			}
-
 			if (ps.cacheRemoteFiles !== undefined) {
 				set.cacheRemoteFiles = ps.cacheRemoteFiles;
+			}
+
+			if (ps.cacheRemoteSensitiveFiles !== undefined) {
+				set.cacheRemoteSensitiveFiles = ps.cacheRemoteSensitiveFiles;
 			}
 
 			if (ps.emailRequiredForSignup !== undefined) {
@@ -278,52 +269,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 				set.langs = ps.langs.filter(Boolean);
 			}
 
-			if (Array.isArray(ps.pinnedPages)) {
-				set.pinnedPages = ps.pinnedPages.filter(Boolean);
-			}
-
-			if (ps.pinnedClipId !== undefined) {
-				set.pinnedClipId = ps.pinnedClipId;
-			}
-
 			if (ps.summalyProxy !== undefined) {
 				set.summalyProxy = ps.summalyProxy;
-			}
-
-			if (ps.enableTwitterIntegration !== undefined) {
-				set.enableTwitterIntegration = ps.enableTwitterIntegration;
-			}
-
-			if (ps.twitterConsumerKey !== undefined) {
-				set.twitterConsumerKey = ps.twitterConsumerKey;
-			}
-
-			if (ps.twitterConsumerSecret !== undefined) {
-				set.twitterConsumerSecret = ps.twitterConsumerSecret;
-			}
-
-			if (ps.enableGithubIntegration !== undefined) {
-				set.enableGithubIntegration = ps.enableGithubIntegration;
-			}
-
-			if (ps.githubClientId !== undefined) {
-				set.githubClientId = ps.githubClientId;
-			}
-
-			if (ps.githubClientSecret !== undefined) {
-				set.githubClientSecret = ps.githubClientSecret;
-			}
-
-			if (ps.enableDiscordIntegration !== undefined) {
-				set.enableDiscordIntegration = ps.enableDiscordIntegration;
-			}
-
-			if (ps.discordClientId !== undefined) {
-				set.discordClientId = ps.discordClientId;
-			}
-
-			if (ps.discordClientSecret !== undefined) {
-				set.discordClientSecret = ps.discordClientSecret;
 			}
 
 			if (ps.enableEmail !== undefined) {
@@ -354,10 +301,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 				set.smtpPass = ps.smtpPass;
 			}
 
-			if (ps.errorImageUrl !== undefined) {
-				set.errorImageUrl = ps.errorImageUrl;
-			}
-
 			if (ps.enableServiceWorker !== undefined) {
 				set.enableServiceWorker = ps.enableServiceWorker;
 			}
@@ -371,7 +314,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 			}
 
 			if (ps.tosUrl !== undefined) {
-				set.ToSUrl = ps.tosUrl;
+				set.termsOfServiceUrl = ps.tosUrl;
 			}
 
 			if (ps.repositoryUrl !== undefined) {
@@ -452,6 +395,30 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 
 			if (ps.enableActiveEmailValidation !== undefined) {
 				set.enableActiveEmailValidation = ps.enableActiveEmailValidation;
+			}
+
+			if (ps.enableChartsForRemoteUser !== undefined) {
+				set.enableChartsForRemoteUser = ps.enableChartsForRemoteUser;
+			}
+
+			if (ps.enableChartsForFederatedInstances !== undefined) {
+				set.enableChartsForFederatedInstances = ps.enableChartsForFederatedInstances;
+			}
+
+			if (ps.enableServerMachineStats !== undefined) {
+				set.enableServerMachineStats = ps.enableServerMachineStats;
+			}
+
+			if (ps.enableIdenticonGeneration !== undefined) {
+				set.enableIdenticonGeneration = ps.enableIdenticonGeneration;
+			}
+
+			if (ps.serverRules !== undefined) {
+				set.serverRules = ps.serverRules;
+			}
+
+			if (ps.preservedUsernames !== undefined) {
+				set.preservedUsernames = ps.preservedUsernames;
 			}
 
 			await this.metaService.update(set);

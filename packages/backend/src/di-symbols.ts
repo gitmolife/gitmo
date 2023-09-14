@@ -1,8 +1,15 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 export const DI = {
 	config: Symbol('config'),
 	db: Symbol('db'),
+	meilisearch: Symbol('meilisearch'),
 	redis: Symbol('redis'),
-	redisSubscriber: Symbol('redisSubscriber'),
+	redisForPub: Symbol('redisForPub'),
+	redisForSub: Symbol('redisForSub'),
 
 	//#region Repositories
 	usersRepository: Symbol('usersRepository'),
@@ -19,14 +26,11 @@ export const DI = {
 	userProfilesRepository: Symbol('userProfilesRepository'),
 	userKeypairsRepository: Symbol('userKeypairsRepository'),
 	userPendingsRepository: Symbol('userPendingsRepository'),
-	attestationChallengesRepository: Symbol('attestationChallengesRepository'),
 	userSecurityKeysRepository: Symbol('userSecurityKeysRepository'),
 	userPublickeysRepository: Symbol('userPublickeysRepository'),
 	userListsRepository: Symbol('userListsRepository'),
+	userListFavoritesRepository: Symbol('userListFavoritesRepository'),
 	userListJoiningsRepository: Symbol('userListJoiningsRepository'),
-	userGroupsRepository: Symbol('userGroupsRepository'),
-	userGroupJoiningsRepository: Symbol('userGroupJoiningsRepository'),
-	userGroupInvitationsRepository: Symbol('userGroupInvitationsRepository'),
 	userNotePiningsRepository: Symbol('userNotePiningsRepository'),
 	userIpsRepository: Symbol('userIpsRepository'),
 	usedUsernamesRepository: Symbol('usedUsernamesRepository'),
@@ -36,9 +40,9 @@ export const DI = {
 	emojisRepository: Symbol('emojisRepository'),
 	driveFilesRepository: Symbol('driveFilesRepository'),
 	driveFoldersRepository: Symbol('driveFoldersRepository'),
-	notificationsRepository: Symbol('notificationsRepository'),
 	metasRepository: Symbol('metasRepository'),
 	mutingsRepository: Symbol('mutingsRepository'),
+	renoteMutingsRepository: Symbol('renoteMutingsRepository'),
 	blockingsRepository: Symbol('blockingsRepository'),
 	swSubscriptionsRepository: Symbol('swSubscriptionsRepository'),
 	hashtagsRepository: Symbol('hashtagsRepository'),
@@ -47,7 +51,6 @@ export const DI = {
 	authSessionsRepository: Symbol('authSessionsRepository'),
 	accessTokensRepository: Symbol('accessTokensRepository'),
 	signinsRepository: Symbol('signinsRepository'),
-	messagingMessagesRepository: Symbol('messagingMessagesRepository'),
 	pagesRepository: Symbol('pagesRepository'),
 	pageLikesRepository: Symbol('pageLikesRepository'),
 	galleryPostsRepository: Symbol('galleryPostsRepository'),
@@ -55,18 +58,24 @@ export const DI = {
 	moderationLogsRepository: Symbol('moderationLogsRepository'),
 	clipsRepository: Symbol('clipsRepository'),
 	clipNotesRepository: Symbol('clipNotesRepository'),
+	clipFavoritesRepository: Symbol('clipFavoritesRepository'),
 	antennasRepository: Symbol('antennasRepository'),
-	antennaNotesRepository: Symbol('antennaNotesRepository'),
 	promoNotesRepository: Symbol('promoNotesRepository'),
 	promoReadsRepository: Symbol('promoReadsRepository'),
 	relaysRepository: Symbol('relaysRepository'),
 	mutedNotesRepository: Symbol('mutedNotesRepository'),
 	channelsRepository: Symbol('channelsRepository'),
 	channelFollowingsRepository: Symbol('channelFollowingsRepository'),
-	channelNotePiningsRepository: Symbol('channelNotePiningsRepository'),
+	channelFavoritesRepository: Symbol('channelFavoritesRepository'),
 	registryItemsRepository: Symbol('registryItemsRepository'),
 	webhooksRepository: Symbol('webhooksRepository'),
 	adsRepository: Symbol('adsRepository'),
 	passwordResetRequestsRepository: Symbol('passwordResetRequestsRepository'),
+	retentionAggregationsRepository: Symbol('retentionAggregationsRepository'),
+	rolesRepository: Symbol('rolesRepository'),
+	roleAssignmentsRepository: Symbol('roleAssignmentsRepository'),
+	flashsRepository: Symbol('flashsRepository'),
+	flashLikesRepository: Symbol('flashLikesRepository'),
+	userMemosRepository: Symbol('userMemosRepository'),
 	//#endregion
 };

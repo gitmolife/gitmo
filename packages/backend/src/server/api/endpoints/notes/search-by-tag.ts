@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Brackets } from 'typeorm';
 import { Inject, Injectable } from '@nestjs/common';
 import type { NotesRepository } from '@/models/index.js';
@@ -36,38 +41,30 @@ export const paramDef = {
 		sinceId: { type: 'string', format: 'misskey:id' },
 		untilId: { type: 'string', format: 'misskey:id' },
 		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+
+		tag: { type: 'string', minLength: 1 },
+		query: {
+			type: 'array',
+			description: 'The outer arrays are chained with OR, the inner arrays are chained with AND.',
+			items: {
+				type: 'array',
+				items: {
+					type: 'string',
+					minLength: 1,
+				},
+				minItems: 1,
+			},
+			minItems: 1,
+		},
 	},
 	anyOf: [
-		{
-			properties: {
-				tag: { type: 'string', minLength: 1 },
-			},
-			required: ['tag'],
-		},
-		{
-			properties: {
-				query: {
-					type: 'array',
-					description: 'The outer arrays are chained with OR, the inner arrays are chained with AND.',
-					items: {
-						type: 'array',
-						items: {
-							type: 'string',
-							minLength: 1,
-						},
-						minItems: 1,
-					},
-					minItems: 1,
-				},
-			},
-			required: ['query'],
-		},
+		{ required: ['tag'] },
+		{ required: ['query'] },
 	],
 } as const;
 
-// eslint-disable-next-line import/no-default-export
 @Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> {
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
 		@Inject(DI.notesRepository)
 		private notesRepository: NotesRepository,
@@ -78,16 +75,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 		super(meta, paramDef, async (ps, me) => {
 			const query = this.queryService.makePaginationQuery(this.notesRepository.createQueryBuilder('note'), ps.sinceId, ps.untilId)
 				.innerJoinAndSelect('note.user', 'user')
-				.leftJoinAndSelect('user.avatar', 'avatar')
-				.leftJoinAndSelect('user.banner', 'banner')
 				.leftJoinAndSelect('note.reply', 'reply')
 				.leftJoinAndSelect('note.renote', 'renote')
 				.leftJoinAndSelect('reply.user', 'replyUser')
-				.leftJoinAndSelect('replyUser.avatar', 'replyUserAvatar')
-				.leftJoinAndSelect('replyUser.banner', 'replyUserBanner')
-				.leftJoinAndSelect('renote.user', 'renoteUser')
-				.leftJoinAndSelect('renoteUser.avatar', 'renoteUserAvatar')
-				.leftJoinAndSelect('renoteUser.banner', 'renoteUserBanner');
+				.leftJoinAndSelect('renote.user', 'renoteUser');
 
 			this.queryService.generateVisibilityQuery(query, me);
 			if (me) this.queryService.generateMutedUserQuery(query, me);
@@ -95,14 +86,14 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 
 			try {
 				if (ps.tag) {
-					if (!safeForSql(ps.tag)) throw 'Injection';
+					if (!safeForSql(normalizeForSearch(ps.tag))) throw new Error('Injection');
 					query.andWhere(`'{"${normalizeForSearch(ps.tag)}"}' <@ note.tags`);
 				} else {
 					query.andWhere(new Brackets(qb => {
 						for (const tags of ps.query!) {
 							qb.orWhere(new Brackets(qb => {
 								for (const tag of tags) {
-									if (!safeForSql(tag)) throw 'Injection';
+									if (!safeForSql(normalizeForSearch(tag))) throw new Error('Injection');
 									qb.andWhere(`'{"${normalizeForSearch(tag)}"}' <@ note.tags`);
 								}
 							}));
@@ -143,7 +134,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 			}
 
 			// Search notes
-			const notes = await query.take(ps.limit).getMany();
+			const notes = await query.limit(ps.limit).getMany();
 
 			return await this.noteEntityService.packMany(notes, me);
 		});

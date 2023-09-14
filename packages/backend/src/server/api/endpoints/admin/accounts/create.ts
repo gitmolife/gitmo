@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Inject, Injectable } from '@nestjs/common';
 import { IsNull } from 'typeorm';
 import { Endpoint } from '@/server/api/endpoint-base.js';
@@ -32,9 +37,8 @@ export const paramDef = {
 	required: ['username', 'password'],
 } as const;
 
-// eslint-disable-next-line import/no-default-export
 @Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> {
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
 		@Inject(DI.usersRepository)
 		private usersRepository: UsersRepository,
@@ -47,11 +51,12 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 			const noUsers = (await this.usersRepository.countBy({
 				host: IsNull(),
 			})) === 0;
-			if (!noUsers && !me?.isAdmin) throw new Error('access denied');
+			if (!noUsers && !me?.isRoot) throw new Error('access denied');
 
 			const { account, secret } = await this.signupService.signup({
 				username: ps.username,
 				password: ps.password,
+				ignorePreservedUsernames: true,
 			});
 
 			const res = await this.userEntityService.pack(account, account, {

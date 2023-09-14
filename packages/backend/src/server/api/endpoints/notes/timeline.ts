@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Brackets } from 'typeorm';
 import { Inject, Injectable } from '@nestjs/common';
 import type { NotesRepository, FollowingsRepository } from '@/models/index.js';
@@ -5,8 +10,8 @@ import { Endpoint } from '@/server/api/endpoint-base.js';
 import { QueryService } from '@/core/QueryService.js';
 import ActiveUsersChart from '@/core/chart/charts/active-users.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
-import { MetaService } from '@/core/MetaService.js';
 import { DI } from '@/di-symbols.js';
+import { IdService } from '@/core/IdService.js';
 
 export const meta = {
 	tags: ['notes'],
@@ -35,18 +40,14 @@ export const paramDef = {
 		includeMyRenotes: { type: 'boolean', default: true },
 		includeRenotedMyNotes: { type: 'boolean', default: true },
 		includeLocalRenotes: { type: 'boolean', default: true },
-		withFiles: {
-			type: 'boolean',
-			default: false,
-			description: 'Only show notes that have attached files.',
-		},
+		withFiles: { type: 'boolean', default: false },
+		withReplies: { type: 'boolean', default: false },
 	},
 	required: [],
 } as const;
 
-// eslint-disable-next-line import/no-default-export
 @Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> {
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
 		@Inject(DI.notesRepository)
 		private notesRepository: NotesRepository,
@@ -57,45 +58,40 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 		private noteEntityService: NoteEntityService,
 		private queryService: QueryService,
 		private activeUsersChart: ActiveUsersChart,
+		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const hasFollowing = (await this.followingsRepository.count({
-				where: {
-					followerId: me.id,
-				},
-				take: 1,
-			})) !== 0;
+			const followees = await this.followingsRepository.createQueryBuilder('following')
+				.select('following.followeeId')
+				.where('following.followerId = :followerId', { followerId: me.id })
+				.getMany();
 
 			//#region Construct query
-			const followingQuery = this.followingsRepository.createQueryBuilder('following')
-				.select('following.followeeId')
-				.where('following.followerId = :followerId', { followerId: me.id });
-
 			const query = this.queryService.makePaginationQuery(this.notesRepository.createQueryBuilder('note'),
 				ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate)
-				.andWhere(new Brackets(qb => { qb
-					.where('note.userId = :meId', { meId: me.id });
-				if (hasFollowing) qb.orWhere(`note.userId IN (${ followingQuery.getQuery() })`);
-				}))
+				// パフォーマンス上の利点が無さそう？
+				//.andWhere('note.id > :minId', { minId: this.idService.genId(new Date(Date.now() - (1000 * 60 * 60 * 24 * 10))) }) // 10日前まで
 				.innerJoinAndSelect('note.user', 'user')
-				.leftJoinAndSelect('user.avatar', 'avatar')
-				.leftJoinAndSelect('user.banner', 'banner')
 				.leftJoinAndSelect('note.reply', 'reply')
 				.leftJoinAndSelect('note.renote', 'renote')
 				.leftJoinAndSelect('reply.user', 'replyUser')
-				.leftJoinAndSelect('replyUser.avatar', 'replyUserAvatar')
-				.leftJoinAndSelect('replyUser.banner', 'replyUserBanner')
-				.leftJoinAndSelect('renote.user', 'renoteUser')
-				.leftJoinAndSelect('renoteUser.avatar', 'renoteUserAvatar')
-				.leftJoinAndSelect('renoteUser.banner', 'renoteUserBanner')
-				.setParameters(followingQuery.getParameters());
+				.leftJoinAndSelect('renote.user', 'renoteUser');
+
+			if (followees.length > 0) {
+				const meOrFolloweeIds = [me.id, ...followees.map(f => f.followeeId)];
+
+				query.andWhere('note.userId IN (:...meOrFolloweeIds)', { meOrFolloweeIds: meOrFolloweeIds });
+			} else {
+				query.andWhere('note.userId = :meId', { meId: me.id });
+			}
 
 			this.queryService.generateChannelQuery(query, me);
-			this.queryService.generateRepliesQuery(query, me);
+			this.queryService.generateRepliesQuery(query, ps.withReplies, me);
 			this.queryService.generateVisibilityQuery(query, me);
 			this.queryService.generateMutedUserQuery(query, me);
 			this.queryService.generateMutedNoteQuery(query, me);
 			this.queryService.generateBlockedUserQuery(query, me);
+			this.queryService.generateMutedUserRenotesQueryForNotes(query, me);
 
 			if (ps.includeMyRenotes === false) {
 				query.andWhere(new Brackets(qb => {
@@ -132,7 +128,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 			}
 			//#endregion
 
-			const timeline = await query.take(ps.limit).getMany();
+			const timeline = await query.limit(ps.limit).getMany();
 
 			process.nextTick(() => {
 				this.activeUsersChart.read(me);

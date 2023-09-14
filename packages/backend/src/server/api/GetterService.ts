@@ -1,10 +1,16 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
 import type { NotesRepository, UsersRepository } from '@/models/index.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
-import type { User } from '@/models/entities/User.js';
-import type { Note } from '@/models/entities/Note.js';
+import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/entities/User.js';
+import type { MiNote } from '@/models/entities/Note.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
+import { bindThis } from '@/decorators.js';
 
 @Injectable()
 export class GetterService {
@@ -22,7 +28,8 @@ export class GetterService {
 	/**
 	 * Get note for API processing
 	 */
-	public async getNote(noteId: Note['id']) {
+	@bindThis
+	public async getNote(noteId: MiNote['id']) {
 		const note = await this.notesRepository.findOneBy({ id: noteId });
 
 		if (note == null) {
@@ -35,20 +42,22 @@ export class GetterService {
 	/**
 	 * Get user for API processing
 	 */
-	public async getUser(userId: User['id']) {
+	@bindThis
+	public async getUser(userId: MiUser['id']) {
 		const user = await this.usersRepository.findOneBy({ id: userId });
 
 		if (user == null) {
 			throw new IdentifiableError('15348ddd-432d-49c2-8a5a-8069753becff', 'No such user.');
 		}
 
-		return user;
+		return user as MiLocalUser | MiRemoteUser;
 	}
 
 	/**
 	 * Get remote user for API processing
 	 */
-	public async getRemoteUser(userId: User['id']) {
+	@bindThis
+	public async getRemoteUser(userId: MiUser['id']) {
 		const user = await this.getUser(userId);
 
 		if (!this.userEntityService.isRemoteUser(user)) {
@@ -61,7 +70,8 @@ export class GetterService {
 	/**
 	 * Get local user for API processing
 	 */
-	public async getLocalUser(userId: User['id']) {
+	@bindThis
+	public async getLocalUser(userId: MiUser['id']) {
 		const user = await this.getUser(userId);
 
 		if (!this.userEntityService.isLocalUser(user)) {

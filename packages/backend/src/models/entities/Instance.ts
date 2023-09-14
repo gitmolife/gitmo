@@ -1,8 +1,13 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Entity, PrimaryColumn, Index, Column } from 'typeorm';
 import { id } from '../id.js';
 
-@Entity()
-export class Instance {
+@Entity('instance')
+export class MiInstance {
 	@PrimaryColumn(id())
 	public id: string;
 
@@ -13,7 +18,7 @@ export class Instance {
 	@Column('timestamp with time zone', {
 		comment: 'The caught date of the Instance.',
 	})
-	public caughtAt: Date;
+	public firstRetrievedAt: Date;
 
 	/**
 	 * ホスト
@@ -60,34 +65,12 @@ export class Instance {
 	public followersCount: number;
 
 	/**
-	 * 直近のリクエスト送信日時
-	 */
-	@Column('timestamp with time zone', {
-		nullable: true,
-	})
-	public latestRequestSentAt: Date | null;
-
-	/**
-	 * 直近のリクエスト送信時のHTTPステータスコード
-	 */
-	@Column('integer', {
-		nullable: true,
-	})
-	public latestStatus: number | null;
-
-	/**
 	 * 直近のリクエスト受信日時
 	 */
 	@Column('timestamp with time zone', {
 		nullable: true,
 	})
 	public latestRequestReceivedAt: Date | null;
-
-	/**
-	 * このインスタンスと最後にやり取りした日時
-	 */
-	@Column('timestamp with time zone')
-	public lastCommunicatedAt: Date;
 
 	/**
 	 * このインスタンスと不通かどうか

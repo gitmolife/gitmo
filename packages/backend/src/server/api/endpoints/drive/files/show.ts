@@ -1,9 +1,15 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Inject, Injectable } from '@nestjs/common';
-import type { DriveFile } from '@/models/entities/DriveFile.js';
+import type { MiDriveFile } from '@/models/entities/DriveFile.js';
 import type { DriveFilesRepository } from '@/models/index.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DriveFileEntityService } from '@/core/entities/DriveFileEntityService.js';
 import { DI } from '@/di-symbols.js';
+import { RoleService } from '@/core/RoleService.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -38,33 +44,27 @@ export const meta = {
 
 export const paramDef = {
 	type: 'object',
+	properties: {
+		fileId: { type: 'string', format: 'misskey:id' },
+		url: { type: 'string' },
+	},
 	anyOf: [
-		{
-			properties: {
-				fileId: { type: 'string', format: 'misskey:id' },
-			},
-			required: ['fileId'],
-		},
-		{
-			properties: {
-				url: { type: 'string' },
-			},
-			required: ['url'],
-		},
+		{ required: ['fileId'] },
+		{ required: ['url'] },
 	],
 } as const;
 
-// eslint-disable-next-line import/no-default-export
 @Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> {
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
 		@Inject(DI.driveFilesRepository)
 		private driveFilesRepository: DriveFilesRepository,
 
 		private driveFileEntityService: DriveFileEntityService,
+		private roleService: RoleService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			let file: DriveFile | null = null;
+			let file: MiDriveFile | null = null;
 
 			if (ps.fileId) {
 				file = await this.driveFilesRepository.findOneBy({ id: ps.fileId });
@@ -84,7 +84,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 				throw new ApiError(meta.errors.noSuchFile);
 			}
 
-			if ((!me.isAdmin && !me.isModerator) && (file.userId !== me.id)) {
+			if (!await this.roleService.isModerator(me) && (file.userId !== me.id)) {
 				throw new ApiError(meta.errors.accessDenied);
 			}
 

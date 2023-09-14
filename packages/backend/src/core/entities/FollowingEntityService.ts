@@ -1,32 +1,38 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
 import type { FollowingsRepository } from '@/models/index.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
-import type { Packed } from '@/misc/schema.js';
+import type { Packed } from '@/misc/json-schema.js';
 import type { } from '@/models/entities/Blocking.js';
-import type { User } from '@/models/entities/User.js';
-import type { Following } from '@/models/entities/Following.js';
+import type { MiUser } from '@/models/entities/User.js';
+import type { MiFollowing } from '@/models/entities/Following.js';
+import { bindThis } from '@/decorators.js';
 import { UserEntityService } from './UserEntityService.js';
 
-type LocalFollowerFollowing = Following & {
+type LocalFollowerFollowing = MiFollowing & {
 	followerHost: null;
 	followerInbox: null;
 	followerSharedInbox: null;
 };
 
-type RemoteFollowerFollowing = Following & {
+type RemoteFollowerFollowing = MiFollowing & {
 	followerHost: string;
 	followerInbox: string;
 	followerSharedInbox: string;
 };
 
-type LocalFolloweeFollowing = Following & {
+type LocalFolloweeFollowing = MiFollowing & {
 	followeeHost: null;
 	followeeInbox: null;
 	followeeSharedInbox: null;
 };
 
-type RemoteFolloweeFollowing = Following & {
+type RemoteFolloweeFollowing = MiFollowing & {
 	followeeHost: string;
 	followeeInbox: string;
 	followeeSharedInbox: string;
@@ -42,25 +48,30 @@ export class FollowingEntityService {
 	) {
 	}
 
-	public isLocalFollower(following: Following): following is LocalFollowerFollowing {
+	@bindThis
+	public isLocalFollower(following: MiFollowing): following is LocalFollowerFollowing {
 		return following.followerHost == null;
 	}
 
-	public isRemoteFollower(following: Following): following is RemoteFollowerFollowing {
+	@bindThis
+	public isRemoteFollower(following: MiFollowing): following is RemoteFollowerFollowing {
 		return following.followerHost != null;
 	}
 
-	public isLocalFollowee(following: Following): following is LocalFolloweeFollowing {
+	@bindThis
+	public isLocalFollowee(following: MiFollowing): following is LocalFolloweeFollowing {
 		return following.followeeHost == null;
 	}
 
-	public isRemoteFollowee(following: Following): following is RemoteFolloweeFollowing {
+	@bindThis
+	public isRemoteFollowee(following: MiFollowing): following is RemoteFolloweeFollowing {
 		return following.followeeHost != null;
 	}
 
+	@bindThis
 	public async pack(
-		src: Following['id'] | Following,
-		me?: { id: User['id'] } | null | undefined,
+		src: MiFollowing['id'] | MiFollowing,
+		me?: { id: MiUser['id'] } | null | undefined,
 		opts?: {
 			populateFollowee?: boolean;
 			populateFollower?: boolean;
@@ -84,9 +95,10 @@ export class FollowingEntityService {
 		});
 	}
 
+	@bindThis
 	public packMany(
 		followings: any[],
-		me?: { id: User['id'] } | null | undefined,
+		me?: { id: MiUser['id'] } | null | undefined,
 		opts?: {
 			populateFollowee?: boolean;
 			populateFollower?: boolean;
