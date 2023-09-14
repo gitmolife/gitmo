@@ -10,18 +10,18 @@ argDev="NODE_ENV=development"
 argPrd="NODE_ENV=production"
 argCmd=""
 # Script Cmd to execute
-srcCmd="npm start"
+srcCmd="pnpm start"
 
 # Tmux instance variables
 tmuxFile="/tmp/worker"
 tmuxName="misskey"
 
-checkCmd="git checkout halls-develop"
-fetchCmd="git pull origin halls-develop"
-yarncCmd="yarn clean"
-yarniCmd="yarn install"
-buildCmd="yarn build"
-migraCmd="yarn migrate"
+checkCmd="git checkout develop-metrix"
+fetchCmd="git pull origin develop-metrix"
+instlCmd="pnpm install"
+buildCmd="NODE_ENV=production pnpm run build"
+cleanCmd="pnpm clean"
+migraCmd="pnpm migrate"
 
 
 #############################
@@ -291,10 +291,8 @@ msgc "Fetching Latest Data.." $dark_green
 $fetchCmd
 msgc "Checkout Complete! Cleaning Cells.." $dark_green
 sleep 1
-$yarncCmd
+$cleanCmd
 msgc "Complex Cleansed! Rebuilding Complex Cells.." $dark_green
-sleep 1
-$yarniCmd
 sleep 1
 # Rebuild..
 eval "$argCmd $buildCmd"
@@ -355,10 +353,8 @@ msgc "Fetching Latest Complex Data.." $dark_green
 $fetchCmd
 msgc "Checkout Complete! Cleaning Cells.." $dark_green
 sleep 1
-$yarncCmd
+$cleanCmd
 msgc "Complex Cleansed! Rebuilding Complex Cells.." $dark_green
-sleep 1
-$yarniCmd
 sleep 1
 # Rebuild..
 eval "$argCmd $buildCmd"
